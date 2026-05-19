@@ -1,0 +1,4 @@
+{
+    "kiroAgent.configureMCP": "Disabled",
+    "snyk.advanced.autoSelectOrganization": true
+}

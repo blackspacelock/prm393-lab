@@ -1,9 +1,10 @@
 Description: Build a desktop app with Flutter to manage student score
 - The app is an extension of previous app in folder subject-1\Tool FUGE, which is an fpt app to grade student score through the semester (no need to implement all functions, just for logic and UI reference)
 - As a teacher, i want to import file .fg from fpt and display multiple student lists inside, the example fg is in file subject-1\phuonglhkSpring2024.fg
-- As a teacher, i want to save changes back to the file .fg
+- As a teacher, i want to save changes back to the file .fg, support both "Save" (overwrite with confirm) and "Save As" (new file). Always round-trip all original .fg fields.
 - As a teacher, i want to export the file to excel, each sheet in the the excel file is 1 class student list with score, example file is in subject-1\SE1812_PRN232_PHUONGLHK_SUMMER2026_93048060-50d2-4948-9a9c-f7ff2fbf0ea6.xls
-- As a teacher, i want to copy one or many students score collumn to another collumn, with an option to add an amount of bonus score
+- As a teacher, i want to copy one or many students score collumn to another collumn, with an option to add an amount of bonus score, The result is clamped at 10.0. A preview is shown before applying.
 - As a teacher, i want to check if any score field is missing
-- As a teacher, i want a simple but good-looking UI that is not harm my eye when working in a long period
-- As a teacher, i want to view student detail by click in in the student row, the pop up must show the student score in two collumns, 1 for field name (like assignment, progress test, .etc), 1 for score value
+- As a teacher, i want a simple but good-looking UI that is not harmed my eye when working in a long period of time
+- As a teacher, i want to view student detail by clicking in the student name, the pop up must show the student score in two collumns, 1 for field name (like assignment, progress test, .etc), 1 for score value, Field labels use human-readable names mapped from the .fg schema. Scores are editable inline in the popup and save on close.
+- As a teacher, i want to view a pop up to confirm for any important action, like update, delete, save, .etc.

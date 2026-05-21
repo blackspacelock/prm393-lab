@@ -26,11 +26,17 @@ class AppState extends ChangeNotifier {
   /// The file path of the currently loaded document, or null if not saved yet.
   String? _filePath;
 
+  /// The class index and student index that should be focused in the table.
+  int? _focusedClassIndex;
+  int? _focusedStudentIndex;
+
   // Getters
 
   FgDocument? get document => _document;
   int get activeClassIndex => _activeClassIndex;
   String? get filePath => _filePath;
+  int? get focusedClassIndex => _focusedClassIndex;
+  int? get focusedStudentIndex => _focusedStudentIndex;
 
   /// Returns true if the document has unsaved changes.
   bool get isDirty => _document?.isDirty ?? false;
@@ -364,11 +370,28 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Focuses a specific student row in the active table.
+  void focusStudent(int classIndex, int studentIndex) {
+    _focusedClassIndex = classIndex;
+    _focusedStudentIndex = studentIndex;
+    notifyListeners();
+  }
+
+  /// Clears any requested student focus.
+  void clearFocusedStudent() {
+    if (_focusedClassIndex == null && _focusedStudentIndex == null) return;
+    _focusedClassIndex = null;
+    _focusedStudentIndex = null;
+    notifyListeners();
+  }
+
   /// Resets the state (e.g., when closing a file).
   void reset() {
     _document = null;
     _filePath = null;
     _activeClassIndex = 0;
+    _focusedClassIndex = null;
+    _focusedStudentIndex = null;
     notifyListeners();
   }
 }

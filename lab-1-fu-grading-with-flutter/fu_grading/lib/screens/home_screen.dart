@@ -373,6 +373,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         subjectClassGrade: activeScg,
                         classIndex: appState.activeClassIndex,
                         onStudentTap: (studentIndex) {
+                          appState.focusStudent(
+                            appState.activeClassIndex,
+                            studentIndex,
+                          );
                           showStudentDetailDialog(
                             context,
                             classIndex: appState.activeClassIndex,

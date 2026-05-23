@@ -1,0 +1,968 @@
+[
+    {
+        "code": "PRN221",
+        "assessment": [
+            {
+                "name": "Assignment",
+                "type": "on-going",
+                "weight": 0.1,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Group Project",
+                "type": "on-going",
+                "weight": 0.25,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test",
+                "type": "on-going",
+                "weight": 0.1,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Practical Exam",
+                "type": "practical exam",
+                "weight": 0.25,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Final Exam",
+                "type": "final exam",
+                "weight": 0.3,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "SWD392",
+        "assessment": [
+            {
+                "name": "Course Project",
+                "type": "on-going",
+                "weight": 0.25,
+                "completion_criteria": "5"
+            },
+            {
+                "name": "Progress test",
+                "type": "on-going",
+                "weight": 0.15,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Practical Exam",
+                "type": "practical exam",
+                "weight": 0.2,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Theory Exam",
+                "type": "final exam",
+                "weight": 0.4,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "PRU212",
+        "assessment": [
+            {
+                "name": "Final project",
+                "type": "on-going",
+                "weight": 0.3,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Labs",
+                "type": "on-going",
+                "weight": 0.2,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Quizzes",
+                "type": "on-going",
+                "weight": 0.2,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Final exam",
+                "type": "final exam",
+                "weight": 0.3,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "PRC392c",
+        "assessment": [
+            {
+                "name": "Final exam",
+                "type": "final exam",
+                "weight": 1,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "SYB302c",
+        "assessment": [
+            {
+                "name": "Final exam",
+                "type": "final exam",
+                "weight": 1,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "PRC392a",
+        "assessment": [
+            {
+                "name": "Final exam",
+                "type": "final exam",
+                "weight": 1,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "SEP490",
+        "assessment": [
+            {
+                "name": "On-going Assessment",
+                "type": "on-going",
+                "weight": 0.5,
+                "completion_criteria": "5"
+            },
+            {
+                "name": "Final exam",
+                "type": "final exam",
+                "weight": 0.5,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "PRN212",
+        "assessment": [
+            {
+                "name": "Assignment",
+                "type": "on-going",
+                "weight": 0.15,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Group Project",
+                "type": "on-going",
+                "weight": 0.20,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Practical Exam",
+                "type": "final exam",
+                "weight": 0.25,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Theoretical exam",
+                "type": "final exam",
+                "weight": 0.30,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "PRN222",
+        "assessment": [
+            {
+                "name": "Assignment",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Group Project",
+                "type": "on-going",
+                "weight": 0.25,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Practical Exam",
+                "type": "final exam",
+                "weight": 0.25,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Theoretical exam",
+                "type": "final exam",
+                "weight": 0.30,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "PRN232",
+        "assessment": [
+            {
+                "name": "Assignment",
+                "type": "on-going",
+                "weight": 0.15,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Group Project",
+                "type": "on-going",
+                "weight": 0.25,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Practical Exam",
+                "type": "final exam",
+                "weight": 0.25,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Theoretical exam",
+                "type": "final exam",
+                "weight": 0.30,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "SWR302",
+        "assessment": [
+            {
+                "name": "Assignment",
+                "type": "on-going",
+                "weight": 0.20,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "LAB",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress Test",
+                "type": "on-going",
+                "weight": 0.20,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Practical Exam",
+                "type": "final exam",
+                "weight": 0.25,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Theory",
+                "type": "final exam",
+                "weight": 0.25,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "SWT301",
+        "assessment": [
+            {
+                "name": "Lab",
+                "type": "on-going",
+                "weight": 0.25,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Presentation",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress Test",
+                "type": "on-going",
+                "weight": 0.15,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Practical Exam",
+                "type": "final exam",
+                "weight": 0.25,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Theory Exam",
+                "type": "final exam",
+                "weight": 0.25,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "SWP391",
+        "assessment": [
+            {
+                "name": "Assessment 1 (Week3) Milestone 1: Requirement Analysis & Design",
+                "type": "on-going",
+                "weight": 0.15,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Assessment 2 (Week 8) Milestone 2: Workflow 1 & 2 Implementation",
+                "type": "on-going",
+                "weight": 0.20,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Assessment 3 Milestone 3 (Week 10): Full System Completion & Testing",
+                "type": "on-going",
+                "weight": 0.25,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Final Project Presentation",
+                "type": "final exam",
+                "weight": 0.40,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "SWP493",
+        "assessment": [
+            {
+                "name": "On-going Assessment",
+                "type": "on-going",
+                "weight": 0.50,
+                "completion_criteria": "5"
+            },
+            {
+                "name": "Final Project Presentation",
+                "type": "final exam",
+                "weight": 0.50,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "PMG201c",
+        "assessment": [
+            {
+                "name": "PE",
+                "type": "final exam",
+                "weight": 0.50,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "TE",
+                "type": "final exam",
+                "weight": 0.50,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "SWE201c",
+        "assessment": [
+            {
+                "name": "PE",
+                "type": "final exam",
+                "weight": 0.40,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "TE",
+                "type": "final exam",
+                "weight": 0.60,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "SAP490",
+        "assessment": [
+            {
+                "name": "Report 1",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": "2"
+            },
+            {
+                "name": "Report 2",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": "2"
+            },
+            {
+
+                "name": "Report 3",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": "2"
+            },
+            {
+                "name": "Report 4_Final Report",
+                "type": "on-going",
+                "weight": 0.20,
+                "completion_criteria": "2"
+            },
+            {
+                "name": "Final Project Presentation",
+                "type": "final exam",
+                "weight": 0.50,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "ACD301",
+        "assessment": [
+            {
+                "name": "Assignment / Lab",
+                "type": "on-going",
+                "weight": 0.30,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Exercises",
+                "type": "on-going",
+                "weight": 0.15,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test",
+                "type": "on-going",
+                "weight": 0.15,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Final exam",
+                "type": "final exam",
+                "weight": 0.40,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "AEE301",
+        "assessment": [
+            {
+                "name": "Assignment / Lab",
+                "type": "on-going",
+                "weight": 0.20,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Exercise",
+                "type": "on-going",
+                "weight": 0.40,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Final exam",
+                "type": "final exam",
+                "weight": 0.40,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "AIP491",
+        "assessment": [
+            {
+                "name": "On-going Assessment",
+                "type": "on-going",
+                "weight": 0.50,
+                "completion_criteria": "5"
+            },
+            {
+                "name": "Final Project Presentation",
+                "type": "final exam",
+                "weight": 0.50,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "ATS301",
+        "assessment": [
+            {
+                "name": "Assignment 1: RTE Integration",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Assignment 2: Timing & Scheduling",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Assignment 3: DEM & NvM Integration",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Final Exam",
+                "type": "final exam",
+                "weight": 0.30,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Lab 1: SWC & VFB Design",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 2: OS Configuration",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 3: UDS & Diagnostics",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Mini-Project",
+                "type": "on-going",
+                "weight": 0.25,
+                "completion_criteria": ">0"
+            }
+        ]
+    },
+    {
+        "code": "IAP491",
+        "assessment": [
+            {
+                "name": "Process",
+                "type": "on-going",
+                "weight": 0.50,
+                "completion_criteria": "5"
+            },
+            {
+                "name": "Final Product &Presentation",
+                "type": "final exam",
+                "weight": 0.50,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "ISP490",
+        "assessment": [
+            {
+                "name": "On-going Assessment",
+                "type": "on-going",
+                "weight": 0.50,
+                "completion_criteria": "5"
+            },
+            {
+                "name": "Final Project Presentation",
+                "type": "final exam",
+                "weight": 0.50,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "ROI201",
+        "assessment": [
+            {
+                "name": "Assignment",
+                "type": "on-going",
+                "weight": 0.30,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test",
+                "type": "on-going",
+                "weight": 0.20,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Final exam",
+                "type": "final exam",
+                "weight": 0.40,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "HSF302",
+        "assessment": [
+            {
+                "name": "Assignment",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Group Project",
+                "type": "on-going",
+                "weight": 0.25,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Final exam",
+                "type": "final exam",
+                "weight": 0.55,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Practical Exam",
+                "type": "final exam",
+                "weight": 0.25,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Theory Exam",
+                "type": "final exam",
+                "weight": 0.30,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "PEB301",
+        "assessment": [
+            {
+                "name": "Assignment 1",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Assignment 2",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Assignment 3",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Assignment 4",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 1",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 2",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 3",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 4",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 5",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 6",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Practical Exam",
+                "type": "on-going",
+                "weight": 0.30,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "PRM393",
+        "assessment": [
+            {
+                "name": "Practical Exam",
+                "type": "on-going",
+                "weight": 0.25,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Progress Test",
+                "type": "on-going",
+                "weight": 0.15,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Project",
+                "type": "on-going",
+                "weight": 0.30,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Final exam",
+                "type": "final exam",
+                "weight": 0.30,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "SBA301",
+        "assessment": [
+            {
+                "name": "Assignment",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Group Project",
+                "type": "on-going",
+                "weight": 0.25,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Practical Exam",
+                "type": "final exam",
+                "weight": 0.25,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Theory Exam",
+                "type": "final exam",
+                "weight": 0.30,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "DCD301",
+        "assessment": [
+            {
+                "name": "Assignments 1",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Assignments 2",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab1",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab2",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab3",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress Tests 1",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress Tests 2",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Final Exam",
+                "type": "final exam",
+                "weight": 0.40,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "EBS311",
+        "assessment": [
+            {
+                "name": "Assignment 1",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Assignment 2",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Group Project",
+                "type": "on-going",
+                "weight": 0.15,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 1",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 2",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test 1",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test 2",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test 3",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Final exam",
+                "type": "final exam",
+                "weight": 0.30,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "EBS211",
+        "assessment": [
+            {
+                "name": "Assignment",
+                "type": "on-going",
+                "weight": 0.10,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Group Project",
+                "type": "on-going",
+                "weight": 0.2,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 1",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 2",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Lab 3",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test 1",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test 2",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test 3",
+                "type": "on-going",
+                "weight": 0.05,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Final exam",
+                "type": "final exam",
+                "weight": 0.40,
+                "completion_criteria": "4"
+            }
+        ]
+    }
+]

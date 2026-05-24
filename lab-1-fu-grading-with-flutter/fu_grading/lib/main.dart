@@ -20,7 +20,6 @@ void main() async {
       minimumSize: Size(1024, 600),
       size: Size(1280, 720),
       center: true,
-      maximum: true,
     );
 
     await windowManager.waitUntilReadyToShow(windowOptions, () async {

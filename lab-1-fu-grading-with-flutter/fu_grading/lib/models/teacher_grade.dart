@@ -107,3 +107,38 @@ class GradeComponent {
 /// was not supplied (so the existing value is preserved).
 const Object _keepGrade = Object();
 const Object _keepRaw = Object();
+
+extension TeacherGradeExport on TeacherGrade {
+  Map<String, dynamic> toJson() {
+    return {
+      "Version": versio,
+      "Semester": semester,
+      "Login": logi,
+      "Password": password,
+      "SubjectClassGrades": subjectClassGrades
+          .map(
+            (scg) => {
+              "Subject": scg.subject,
+              "Class": scg.classCode,
+              "Components": scg.components,
+              "Students": scg.students
+                  .map(
+                    (s) => {
+                      "Roll": s.roll,
+                      "Name": s.name,
+                      "Comment": s.comment,
+                      // Chỉ xuất ra JSON những ô có điểm để C# tự sinh cấu trúc chuẩn
+                      "Grades": s.grades
+                          .map(
+                            (g) => {"Component": g.component, "Grade": g.grade},
+                          )
+                          .toList(),
+                    },
+                  )
+                  .toList(),
+            },
+          )
+          .toList(),
+    };
+  }
+}

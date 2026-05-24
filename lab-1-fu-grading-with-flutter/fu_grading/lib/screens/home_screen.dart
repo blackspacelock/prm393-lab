@@ -96,9 +96,21 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await appState.saveFile();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File saved successfully')),
-        );
+        final skipped = appState.unsavableEditCount;
+        if (skipped > 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'File saved. Note: $skipped grade(s) that were originally missing could not be written to the .fg format.',
+              ),
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('File saved successfully')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -136,9 +148,21 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await appState.saveFileAs(savePath);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File saved successfully')),
-        );
+        final skipped = appState.unsavableEditCount;
+        if (skipped > 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'File saved. Note: $skipped grade(s) that were originally missing could not be written to the .fg format.',
+              ),
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('File saved successfully')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

@@ -17,7 +17,7 @@ import '../utils/component_labels.dart';
 /// original buffer bytes, and the grade-offset map needed by [FgWriter].
 class FgParser {
   final Uint8List _buf;
-
+  final List<(int, int)> _forbiddenRanges = [];
   FgParser(this._buf);
 
   /// Parses the buffer and returns a fully populated [FgDocument].
@@ -58,23 +58,32 @@ class FgParser {
   /// records) are silently skipped via try/catch.
   Map<int, String> _extractStrings() {
     final result = <int, String>{};
+    _forbiddenRanges.clear();
+    _forbiddenRanges.add((0, 50));
+
     for (int i = 0; i < _buf.length - 6; i++) {
       if (_buf[i] == 0x06) {
         try {
           final id = _readInt32LE(i + 1);
           final (len, advance) = _read7BitEncodedInt(i + 5);
           if (len > 0 && len < 1000 && i + 5 + advance + len <= _buf.length) {
-            final str = utf8.decode(
-              _buf.sublist(i + 5 + advance, i + 5 + advance + len),
-            );
+            final startStr = i + 5 + advance;
+            final endStr = startStr + len;
+            final str = utf8.decode(_buf.sublist(startStr, endStr));
             result[id] = str;
+            _forbiddenRanges.add((i, endStr));
           }
-        } catch (_) {
-          // Not a valid string record at this position — skip.
-        }
+        } catch (_) {}
       }
     }
     return result;
+  }
+
+  bool _isForbidden(int index) {
+    for (final range in _forbiddenRanges) {
+      if (index >= range.$1 && index <= range.$2) return true;
+    }
+    return false;
   }
 
   // ---------------------------------------------------------------------------
@@ -111,24 +120,22 @@ class FgParser {
     // We need at least 6 bytes remaining: 08 0B + 4 float bytes.
     for (int i = 0; i < _buf.length - 5; i++) {
       if (_buf[i] == 0x08 && _buf[i + 1] == 0x0B) {
-        // The float starts at i+2.
+        if (_isForbidden(i)) continue;
+
         final floatOffset = i + 2;
         final value = _readFloat32LE(floatOffset);
 
-        // Indices will be assigned later by _assembleModel; use 0 as placeholders.
         entries.add(
           _GradeEntry(
             classIndex: 0,
             studentIndex: 0,
             componentIndex: 0,
             value: value,
-            byteOffset: floatOffset, // Store the byte offset for later use
+            byteOffset: floatOffset,
           ),
         );
 
-        // Skip past the 4-byte float so we don't re-scan its bytes as a
-        // potential marker (avoids false positives inside float data).
-        i += 5; // i will be incremented by the loop, landing at i+6 next.
+        i += 5;
       }
     }
 

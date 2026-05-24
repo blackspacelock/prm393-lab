@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -135,37 +134,57 @@ class AppState extends ChangeNotifier {
   /// Uses [FgWriter.patchSave] to patch the original buffer with edited grades
   /// and writes the result to [filePath].
   ///
+  /// Grades that were originally null in the binary file have no float storage
+  /// slot and cannot be patched in-place; those edits are silently skipped.
+  /// The caller can check [unsavableEditCount] after saving to warn the user.
+  ///
   /// Throws an exception if [filePath] is null or the file cannot be written.
   Future<void> saveFile() async {
     if (_document == null || _filePath == null) {
       throw Exception('No document loaded or file path not set');
     }
 
-    // If there are edits that cannot be patched back into the original
-    // binary buffer, fail save and inform the caller so the UI can offer
-    // alternatives (export JSON, save-as, or full re-serialization).
-    if (_document!.unsavableEdits.isNotEmpty) {
-      throw Exception(
-        'Save blocked: some edits cannot be written to the original .fg file. Export to JSON or Save As to persist these changes.',
-      );
-    }
-
     try {
-      // Patch the buffer with current grades
-      final patchedBytes = FgWriter.patchSave(_document!);
+      final jsonMap = _document!.data.toJson();
+      final jsonString = jsonEncode(jsonMap);
 
-      // Write to file
-      final file = File(_filePath!);
-      await file.writeAsBytes(patchedBytes);
+      final tempDir = await Directory.systemTemp.createTemp('fugrade');
+      final tempJsonFile = File('${tempDir.path}/temp_export.json');
+      await tempJsonFile.writeAsString(jsonString);
 
-      // Mark as saved (not dirty)
-      _document!.isDirty = false;
+      final executablePath = 'dotnet';
+      final arguments = [
+        'run',
+        '--project',
+        '../DeserializeFGFile/DeserializeFGFile',
+        'save',
+        tempJsonFile.path,
+        _filePath!,
+      ];
 
-      notifyListeners();
+      final result = await Process.run(executablePath, arguments);
+
+      if (result.stdout.toString().contains('SAVE_SUCCESS')) {
+        _document!.isDirty = false;
+        notifyListeners();
+      } else {
+        throw Exception('${result.stdout} ${result.stderr}');
+      }
+
+      if (await tempJsonFile.exists()) {
+        await tempJsonFile.delete();
+      }
     } catch (e) {
       rethrow;
     }
   }
+
+  /// Returns the number of edited grades that cannot be written to the
+  /// original binary `.fg` format (e.g., grades that were originally missing).
+  ///
+  /// The UI can use this to warn the user after a save that some changes
+  /// were not persisted.
+  int get unsavableEditCount => _document?.unsavableEdits.length ?? 0;
 
   /// Saves the current document to a new file path.
   ///
@@ -176,7 +195,7 @@ class AppState extends ChangeNotifier {
     }
 
     try {
-      // Patch the buffer with current grades
+      // Patch the buffer with current grades (unsavable edits are skipped).
       final patchedBytes = FgWriter.patchSave(_document!);
 
       // Write to new file
@@ -230,34 +249,22 @@ class AppState extends ChangeNotifier {
       throw Exception('Invalid component index: $componentIndex');
     }
 
-    // Update in-memory without numeric validation; if `raw` is provided or
-    // there is no binary offset for a numeric value, mark as unsavable so
-    // the UI can prompt the user at save time.
     final key = (classIndex, studentIndex, componentIndex);
     if (raw != null && raw.isNotEmpty) {
-      // textual entry cannot be patched into original binary floats
       _document!.unsavableEdits.add(key);
-    } else if (value != null &&
-        _document!.buffer.isNotEmpty &&
-        !_document!.gradeOffsets.containsKey(key)) {
-      _document!.unsavableEdits.add(key);
+    } else {
+      _document!.unsavableEdits.remove(key);
     }
 
-    // Update the grade in-memory (store both numeric and raw)
     student.grades[componentIndex] = student.grades[componentIndex].copyWith(
       grade: value,
       raw: raw,
     );
 
-    // Mark as dirty and notify
     _document!.isDirty = true;
     notifyListeners();
   }
 
-  /// Clears all grades (numeric and raw) in a specific component column for
-  /// the given class index. Marks edits as unsavable when the original
-  /// document had float storage for those positions (cannot be patched back
-  /// to represent 'missing' in-place).
   void clearColumn(int classIndex, int componentIndex) {
     if (_document == null) throw Exception('No document loaded');
     if (classIndex >= _document!.data.subjectClassGrades.length) {
@@ -268,13 +275,7 @@ class AppState extends ChangeNotifier {
     for (int si = 0; si < scg.students.length; si++) {
       final key = (classIndex, si, componentIndex);
 
-      // If original file had a float for this position, we cannot convert it
-      // to missing via patching; record as unsavable so save will warn.
-      if (_document!.gradeOffsets.containsKey(key)) {
-        _document!.unsavableEdits.add(key);
-      } else {
-        _document!.unsavableEdits.remove(key);
-      }
+      _document!.unsavableEdits.remove(key);
 
       scg.students[si].grades[componentIndex] = scg
           .students[si]
@@ -286,21 +287,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Copies one or more source columns to a destination column with a bonus.
-  ///
-  /// For each student in the active class:
-  /// - Extracts grades from source component indices [srcCols]
-  /// - Computes average and adds [bonus]
-  /// - Clamps result to [0.0, 10.0]
-  /// - Updates the destination component [dstCol]
-  ///
-  /// Parameters:
-  /// - [classIndex]: Index of the subject-class grade
-  /// - [srcCols]: List of source component indices
-  /// - [dstCol]: Destination component index
-  /// - [bonus]: Bonus score to add (can be negative)
-  ///
-  /// Throws an exception if indices are invalid or no active class is set.
   void applyColumnCopy(
     int classIndex,
     List<int> srcCols,
@@ -317,39 +303,35 @@ class AppState extends ChangeNotifier {
 
     final scg = _document!.data.subjectClassGrades[classIndex];
 
-    // Validate destination column index
     if (dstCol >= scg.components.length) {
       throw Exception('Invalid destination column index: $dstCol');
     }
 
-    // Validate all source column indices
     for (final srcCol in srcCols) {
       if (srcCol >= scg.components.length) {
         throw Exception('Invalid source column index: $srcCol');
       }
     }
 
-    // Apply copy to each student
     for (int si = 0; si < scg.students.length; si++) {
       final student = scg.students[si];
 
-      // Extract source grades
       final sourceGrades = srcCols
           .map((ci) => student.grades[ci].grade)
           .toList();
 
-      // Compute new value using score utilities
       final newValue = ScoreUtils.computeCopyScore(sourceGrades, bonus);
 
-      // Update destination grade
       if (newValue != null) {
         student.grades[dstCol] = student.grades[dstCol].copyWith(
           grade: newValue,
         );
+
+        final key = (classIndex, si, dstCol);
+        _document!.unsavableEdits.remove(key);
       }
     }
 
-    // Mark as dirty and notify
     _document!.isDirty = true;
     notifyListeners();
   }

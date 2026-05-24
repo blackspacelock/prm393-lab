@@ -5,6 +5,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using FuGradeLib;
 
 namespace FuGradeLib
 {
@@ -42,6 +43,35 @@ namespace FuGradeLib
         public string Component { get; set; }
         public float? Grade { get; set; }
     }
+
+    public class FgBuilder
+    {
+        public static void SaveFromJson(string jsonFilePath, string outputFgPath)
+        {
+            string jsonContent = File.ReadAllText(jsonFilePath);
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                IncludeFields = true
+            };
+
+            TeacherGrade data = JsonSerializer.Deserialize<TeacherGrade>(jsonContent, options);
+
+            if (data == null)
+            {
+                throw new Exception("Invalid JSON format.");
+            }
+
+#pragma warning disable SYSLIB0011
+            BinaryFormatter formatter = new BinaryFormatter();
+            using (FileStream fs = new FileStream(outputFgPath, FileMode.Create))
+            {
+                formatter.Serialize(fs, data);
+            }
+#pragma warning restore SYSLIB0011
+        }
+    }
 }
 
 class CustomBinder : SerializationBinder
@@ -70,6 +100,24 @@ class Program
 {
     static void Main(string[] args)
     {
+        // THÊM MỚI: Xử lý lệnh Save từ Dart truyền sang
+        if (args.Length >= 3 && args[0].ToLower() == "save")
+        {
+            string jsonInputPath = args[1];
+            string fgOutputPath = args[2];
+            try
+            {
+                FgBuilder.SaveFromJson(jsonInputPath, fgOutputPath);
+                Console.WriteLine("SAVE_SUCCESS");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("SAVE_ERROR: " + ex.Message);
+            }
+            return; // Chạy xong lệnh save thì thoát
+        }
+
+        // GIỮ NGUYÊN: Code xử lý lệnh Parse cũ của bạn
         string filePath = args.Length > 0 && !string.IsNullOrWhiteSpace(args[0])
             ? args[0]
             : @"D:\6_repositories\prm393-lab\lab-1-fu-grading-with-flutter\subject-1\phuonglhkSpring2024.fg";

@@ -292,84 +292,103 @@ class _GradeTableState extends State<GradeTable> {
                               ),
                             ),
                           ),
-                          ...List.generate(student.grades.length, (
-                            componentIndex,
-                          ) {
-                            final grade = student.grades[componentIndex];
-                            final hasNumeric = grade.grade != null;
-                            final hasRaw =
-                                grade.raw != null && grade.raw!.isNotEmpty;
-                            final cellColor = (hasNumeric || hasRaw)
-                                ? Colors.transparent
-                                : const Color(0xFF5C2A2A);
+                          ...List.generate(
+                            widget.subjectClassGrade.components.length,
+                            (componentIndex) {
+                              final componentName = widget
+                                  .subjectClassGrade
+                                  .components[componentIndex];
 
-                            final displayText = hasRaw
-                                ? grade.raw!
-                                : (hasNumeric ? grade.grade!.toString() : '');
+                              // Tìm đúng điểm của cột này (tránh bị xô lệch dữ liệu nếu danh sách điểm bị thiếu)
+                              final actualGradeIndex = student.grades
+                                  .indexWhere(
+                                    (g) => g.component == componentName,
+                                  );
+                              final grade = actualGradeIndex >= 0
+                                  ? student.grades[actualGradeIndex]
+                                  : GradeComponent(
+                                      component: componentName,
+                                      grade: null,
+                                    );
 
-                            return Container(
-                              color: cellColor,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 8.0,
-                                horizontal: 12.0,
-                              ),
-                              alignment: Alignment.center,
-                              child: SizedBox(
-                                width: 120,
-                                child: TextFormField(
-                                  key: ValueKey(
-                                    'grade-${widget.classIndex}-$studentIndex-$componentIndex-$displayText',
-                                  ),
-                                  initialValue: displayText,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(height: 1.1),
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  keyboardType: TextInputType.text,
-                                  onFieldSubmitted: (text) {
-                                    final trimmed = text.trim();
-                                    double? newValue;
-                                    String? newRaw;
+                              final hasNumeric = grade.grade != null;
+                              final hasRaw =
+                                  grade.raw != null && grade.raw!.isNotEmpty;
+                              final cellColor = (hasNumeric || hasRaw)
+                                  ? Colors.transparent
+                                  : const Color(0xFF5C2A2A);
 
-                                    if (trimmed.isEmpty) {
-                                      newValue = null;
-                                      newRaw = null;
-                                    } else {
-                                      final parsed = double.tryParse(
-                                        trimmed.replaceAll(',', '.'),
-                                      );
-                                      if (parsed != null) {
-                                        newValue = parsed;
+                              final displayText = hasRaw
+                                  ? grade.raw!
+                                  : (hasNumeric ? grade.grade!.toString() : '');
+
+                              return Container(
+                                color: cellColor,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                  horizontal: 12.0,
+                                ),
+                                alignment: Alignment.center,
+                                child: SizedBox(
+                                  width: 120,
+                                  child: TextFormField(
+                                    key: ValueKey(
+                                      'grade-${widget.classIndex}-$studentIndex-$componentIndex-$displayText',
+                                    ),
+                                    initialValue: displayText,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(height: 1.1),
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                    keyboardType: TextInputType.text,
+                                    onFieldSubmitted: (text) {
+                                      final trimmed = text.trim();
+                                      double? newValue;
+                                      String? newRaw;
+
+                                      if (trimmed.isEmpty) {
+                                        newValue = null;
                                         newRaw = null;
                                       } else {
-                                        newValue = null;
-                                        newRaw = trimmed;
+                                        final parsed = double.tryParse(
+                                          trimmed.replaceAll(',', '.'),
+                                        );
+                                        if (parsed != null) {
+                                          newValue = parsed;
+                                          newRaw = null;
+                                        } else {
+                                          newValue = null;
+                                          newRaw = trimmed;
+                                        }
                                       }
-                                    }
 
-                                    try {
-                                      context.read<AppState>().updateGrade(
-                                        widget.classIndex,
-                                        studentIndex,
-                                        componentIndex,
-                                        newValue,
-                                        newRaw,
-                                      );
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(content: Text('Error: $e')),
-                                      );
-                                    }
-                                  },
+                                      try {
+                                        context.read<AppState>().updateGrade(
+                                          widget.classIndex,
+                                          studentIndex,
+                                          // Truyền đúng index thực tế để app_state xử lý không bị lỗi
+                                          actualGradeIndex >= 0
+                                              ? actualGradeIndex
+                                              : componentIndex,
+                                          newValue,
+                                          newRaw,
+                                        );
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(content: Text('Error: $e')),
+                                        );
+                                      }
+                                    },
+                                  ),
                                 ),
-                              ),
-                            );
-                          }),
+                              );
+                            },
+                          ),
                         ],
                       );
                     }),

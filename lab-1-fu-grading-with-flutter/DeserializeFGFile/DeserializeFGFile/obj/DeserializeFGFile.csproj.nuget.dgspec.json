@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "d:\\6_repositories\\prm393-lab\\lab-1-fu-grading-with-flutter\\DeserializeFGFile\\DeserializeFGFile\\DeserializeFGFile.csproj": {}
+    "D:\\6_repositories\\blackspacelock\\prm393-lab\\lab-1-fu-grading-with-flutter\\DeserializeFGFile\\DeserializeFGFile\\DeserializeFGFile.csproj": {}
   },
   "projects": {
-    "d:\\6_repositories\\prm393-lab\\lab-1-fu-grading-with-flutter\\DeserializeFGFile\\DeserializeFGFile\\DeserializeFGFile.csproj": {
+    "D:\\6_repositories\\blackspacelock\\prm393-lab\\lab-1-fu-grading-with-flutter\\DeserializeFGFile\\DeserializeFGFile\\DeserializeFGFile.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\6_repositories\\prm393-lab\\lab-1-fu-grading-with-flutter\\DeserializeFGFile\\DeserializeFGFile\\DeserializeFGFile.csproj",
+        "projectUniqueName": "D:\\6_repositories\\blackspacelock\\prm393-lab\\lab-1-fu-grading-with-flutter\\DeserializeFGFile\\DeserializeFGFile\\DeserializeFGFile.csproj",
         "projectName": "DeserializeFGFile",
-        "projectPath": "d:\\6_repositories\\prm393-lab\\lab-1-fu-grading-with-flutter\\DeserializeFGFile\\DeserializeFGFile\\DeserializeFGFile.csproj",
+        "projectPath": "D:\\6_repositories\\blackspacelock\\prm393-lab\\lab-1-fu-grading-with-flutter\\DeserializeFGFile\\DeserializeFGFile\\DeserializeFGFile.csproj",
         "packagesPath": "C:\\Users\\ACER\\.nuget\\packages\\",
-        "outputPath": "d:\\6_repositories\\prm393-lab\\lab-1-fu-grading-with-flutter\\DeserializeFGFile\\DeserializeFGFile\\obj\\",
+        "outputPath": "D:\\6_repositories\\blackspacelock\\prm393-lab\\lab-1-fu-grading-with-flutter\\DeserializeFGFile\\DeserializeFGFile\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

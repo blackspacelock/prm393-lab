@@ -23,6 +23,7 @@ void main() async {
     );
 
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.maximize();
       await windowManager.show();
       await windowManager.focus();
     });

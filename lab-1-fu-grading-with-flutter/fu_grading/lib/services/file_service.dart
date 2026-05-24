@@ -23,8 +23,8 @@ class FileService {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['fg', 'json'],
-        dialogTitle: 'Open FU Grading File (.fg or .json)',
+        allowedExtensions: ['fg', 'json', 'xlsx', 'xls'],
+        dialogTitle: 'Open FU Grading File (.fg, .json) or Excel (.xlsx)',
         lockParentWindow: !kIsWeb,
       );
 

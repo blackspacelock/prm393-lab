@@ -16,7 +16,6 @@ import 'dart:typed_data';
 
 import '../models/fg_document.dart';
 import '../models/teacher_grade.dart';
-import 'fg_parser.dart';
 
 class JsonParser {
   final String jsonString;

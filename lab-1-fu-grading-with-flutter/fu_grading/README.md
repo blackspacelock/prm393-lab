@@ -15,3 +15,10 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+## File Import and Save
+
+- Use `Open` to load `.fg`, `.json`, or Excel files (`.xlsx`, `.xls`).
+- When an Excel file is opened, `Save` and `Save As` write back to Excel.
+- The current file path is shown in the top-left toolbar area.
+- On desktop, the app opens maximized.

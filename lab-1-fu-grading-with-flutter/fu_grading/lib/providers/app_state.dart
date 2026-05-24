@@ -1,5 +1,6 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 
@@ -7,7 +8,7 @@ import '../models/fg_document.dart';
 import '../models/teacher_grade.dart';
 import '../parser/fg_parser.dart';
 import '../parser/json_parser.dart';
-import '../parser/fg_writer.dart';
+import '../services/excel_service.dart';
 import '../services/fg_deserializer_service.dart';
 import '../utils/score_utils.dart';
 
@@ -16,20 +17,11 @@ import '../utils/score_utils.dart';
 /// Manages the loaded `.fg` document, the currently active class, file path,
 /// and provides methods for loading, saving, and editing grades.
 class AppState extends ChangeNotifier {
-  /// The loaded `.fg` file document, or null if no file is loaded.
   FgDocument? _document;
-
-  /// The index of the currently selected subject-class grade.
   int _activeClassIndex = 0;
-
-  /// The file path of the currently loaded document, or null if not saved yet.
   String? _filePath;
-
-  /// The class index and student index that should be focused in the table.
   int? _focusedClassIndex;
   int? _focusedStudentIndex;
-
-  // Getters
 
   FgDocument? get document => _document;
   int get activeClassIndex => _activeClassIndex;
@@ -37,10 +29,8 @@ class AppState extends ChangeNotifier {
   int? get focusedClassIndex => _focusedClassIndex;
   int? get focusedStudentIndex => _focusedStudentIndex;
 
-  /// Returns true if the document has unsaved changes.
   bool get isDirty => _document?.isDirty ?? false;
 
-  /// Returns the currently active [SubjectClassGrade], or null if no document is loaded.
   SubjectClassGrade? get activeSubjectClassGrade {
     if (_document == null ||
         _activeClassIndex >= _document!.data.subjectClassGrades.length) {
@@ -49,32 +39,18 @@ class AppState extends ChangeNotifier {
     return _document!.data.subjectClassGrades[_activeClassIndex];
   }
 
-  // --- File Operations ---
-
-  /// Loads a `.fg` file from the given [path].
-  ///
-  /// Reads the file and updates the state using the C# bridge on desktop when
-  /// available, falling back to the Dart parser if needed.
-  /// Throws an exception if the file cannot be read or parsed.
   Future<void> loadFile(String path) async {
     try {
       final file = File(path);
       final bytes = await file.readAsBytes();
-
       await loadFileFromBytes(bytes, filePath: path);
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Loads a `.fg` file from bytes (used for web).
-  ///
-  /// Parses the provided bytes using the C# bridge on desktop when a file
-  /// path is available, otherwise falls back to [FgParser].
-  /// Throws an exception if the bytes cannot be parsed.
   Future<void> loadFileFromBytes(List<int> bytes, {String? filePath}) async {
     try {
-      // Convert to Uint8List if needed
       final uint8bytes = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
 
       late final FgDocument doc;
@@ -94,136 +70,205 @@ class AppState extends ChangeNotifier {
         doc = parser.parse();
       }
 
-      // Update state
       _document = doc;
       _filePath = filePath;
       _activeClassIndex = 0;
-
       notifyListeners();
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Loads a JSON file from bytes (exported grade data).
-  ///
-  /// Parses the provided bytes as JSON using [JsonParser] and updates the state.
-  /// Throws an exception if the JSON cannot be parsed.
   Future<void> loadJsonFromBytes(List<int> bytes) async {
     try {
-      // Decode bytes to string
       final jsonString = utf8.decode(bytes);
-
-      // Parse the JSON
       final parser = JsonParser(jsonString);
       final doc = parser.parse();
 
-      // Update state
       _document = doc;
-      _filePath = null; // No file path on web
+      _filePath = null;
       _activeClassIndex = 0;
-
       notifyListeners();
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Saves the current document to the current file path.
-  ///
-  /// Uses [FgWriter.patchSave] to patch the original buffer with edited grades
-  /// and writes the result to [filePath].
-  ///
-  /// Grades that were originally null in the binary file have no float storage
-  /// slot and cannot be patched in-place; those edits are silently skipped.
-  /// The caller can check [unsavableEditCount] after saving to warn the user.
-  ///
-  /// Throws an exception if [filePath] is null or the file cannot be written.
+  Future<void> loadExcelFromBytes(List<int> bytes, {String? filePath}) async {
+    try {
+      final uint8bytes = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
+      final doc = await ExcelService.importFromExcel(uint8bytes);
+
+      _document = doc;
+      _filePath = filePath;
+      _activeClassIndex = 0;
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> saveFile() async {
     if (_document == null || _filePath == null) {
       throw Exception('No document loaded or file path not set');
     }
 
     try {
-      final jsonMap = _document!.data.toJson();
-      final jsonString = jsonEncode(jsonMap);
-
-      final tempDir = await Directory.systemTemp.createTemp('fugrade');
-      final tempJsonFile = File('${tempDir.path}/temp_export.json');
-      await tempJsonFile.writeAsString(jsonString);
-
-      final executablePath = 'dotnet';
-      final arguments = [
-        'run',
-        '--project',
-        '../DeserializeFGFile/DeserializeFGFile',
-        'save',
-        tempJsonFile.path,
-        _filePath!,
-      ];
-
-      final result = await Process.run(executablePath, arguments);
-
-      if (result.stdout.toString().contains('SAVE_SUCCESS')) {
+      final lowerPath = _filePath!.toLowerCase();
+      if (lowerPath.endsWith('.xlsx') || lowerPath.endsWith('.xls')) {
+        await ExcelService.exportToExcel(_document!, _filePath!);
         _document!.isDirty = false;
         notifyListeners();
       } else {
-        throw Exception('${result.stdout} ${result.stderr}');
-      }
+        final jsonMap = _document!.data.toJson();
+        final jsonString = jsonEncode(jsonMap);
 
-      if (await tempJsonFile.exists()) {
-        await tempJsonFile.delete();
+        final tempDir = await Directory.systemTemp.createTemp('fugrade');
+        final tempJsonFile = File('${tempDir.path}/temp_export.json');
+        await tempJsonFile.writeAsString(jsonString);
+
+        final result = await Process.run('dotnet', [
+          'run',
+          '--project',
+          '../DeserializeFGFile/DeserializeFGFile',
+          'save',
+          tempJsonFile.path,
+          _filePath!,
+        ]);
+
+        if (result.stdout.toString().contains('SAVE_SUCCESS')) {
+          _document!.isDirty = false;
+          notifyListeners();
+        } else {
+          throw Exception('${result.stdout} ${result.stderr}');
+        }
+
+        if (await tempJsonFile.exists()) {
+          await tempJsonFile.delete();
+        }
       }
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Returns the number of edited grades that cannot be written to the
-  /// original binary `.fg` format (e.g., grades that were originally missing).
-  ///
-  /// The UI can use this to warn the user after a save that some changes
-  /// were not persisted.
   int get unsavableEditCount => _document?.unsavableEdits.length ?? 0;
 
-  /// Saves the current document to a new file path.
-  ///
-  /// Similar to [saveFile], but writes to [newPath] and updates [filePath].
   Future<void> saveFileAs(String newPath) async {
     if (_document == null) {
       throw Exception('No document loaded');
     }
 
     try {
-      // Patch the buffer with current grades (unsavable edits are skipped).
-      final patchedBytes = FgWriter.patchSave(_document!);
-
-      // Write to new file
-      final file = File(newPath);
-      await file.writeAsBytes(patchedBytes);
-
-      // Update file path and mark as saved
+      await _writeDocumentToPath(_document!, newPath);
       _filePath = newPath;
       _document!.isDirty = false;
-
       notifyListeners();
     } catch (e) {
       rethrow;
     }
   }
 
-  // --- Grade Operations ---
+  Future<void> exportSelectedClassesAs(
+    String newPath,
+    List<int> classIndices,
+  ) async {
+    if (_document == null) {
+      throw Exception('No document loaded');
+    }
 
-  /// Updates a single grade value.
-  ///
-  /// Parameters:
-  /// - [classIndex]: Index of the subject-class grade
-  /// - [studentIndex]: Index of the student within the class
-  /// - [componentIndex]: Index of the grade component
-  /// - [value]: New grade value (or null for missing grade)
-  ///
-  /// Sets [isDirty] to true and notifies listeners.
-  /// Throws an exception if indices are out of bounds.
+    if (classIndices.isEmpty) {
+      throw Exception('No classes selected');
+    }
+
+    try {
+      final filteredDocument = _buildFilteredDocument(classIndices);
+      await _writeDocumentToPath(filteredDocument, newPath);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> _writeDocumentToPath(FgDocument document, String path) async {
+    final lowerPath = path.toLowerCase();
+    if (lowerPath.endsWith('.xlsx') || lowerPath.endsWith('.xls')) {
+      await ExcelService.exportToExcel(document, path);
+      return;
+    }
+
+    final jsonMap = document.data.toJson();
+    final jsonString = jsonEncode(jsonMap);
+
+    final tempDir = await Directory.systemTemp.createTemp('fugrade');
+    final tempJsonFile = File('${tempDir.path}/temp_export.json');
+    await tempJsonFile.writeAsString(jsonString);
+
+    final result = await Process.run('dotnet', [
+      'run',
+      '--project', '../DeserializeFGFile/DeserializeFGFile',
+      'save',
+      tempJsonFile.path,
+      path,
+    ]);
+
+    if (!result.stdout.toString().contains('SAVE_SUCCESS')) {
+      throw Exception('${result.stdout} ${result.stderr}');
+    }
+
+    if (await tempJsonFile.exists()) {
+      await tempJsonFile.delete();
+    }
+  }
+
+  FgDocument _buildFilteredDocument(List<int> classIndices) {
+    final uniqueIndices = classIndices.toSet().toList()..sort();
+    final selectedClasses = <SubjectClassGrade>[];
+    final selectedOffsets = <(int, int, int), int>{};
+    final selectedUnsavable = <(int, int, int)>{};
+
+    for (final classIndex in uniqueIndices) {
+      if (classIndex < 0 || classIndex >= _document!.data.subjectClassGrades.length) {
+        continue;
+      }
+
+      final scg = _document!.data.subjectClassGrades[classIndex];
+      final newClassIndex = selectedClasses.length;
+      selectedClasses.add(scg);
+
+      for (int studentIndex = 0; studentIndex < scg.students.length; studentIndex++) {
+        for (int componentIndex = 0; componentIndex < scg.students[studentIndex].grades.length; componentIndex++) {
+          final originalKey = (classIndex, studentIndex, componentIndex);
+          final newKey = (newClassIndex, studentIndex, componentIndex);
+
+          final offset = _document!.gradeOffsets[originalKey];
+          if (offset != null) {
+            selectedOffsets[newKey] = offset;
+          }
+
+          if (_document!.unsavableEdits.contains(originalKey)) {
+            selectedUnsavable.add(newKey);
+          }
+        }
+      }
+    }
+
+    final teacherGrade = TeacherGrade(
+      versio: _document!.data.versio,
+      semester: _document!.data.semester,
+      logi: _document!.data.logi,
+      password: _document!.data.password,
+      subjectClassGrades: selectedClasses,
+    );
+
+    return FgDocument(
+      buffer: _document!.buffer,
+      data: teacherGrade,
+      gradeOffsets: selectedOffsets,
+      unsavableEdits: selectedUnsavable,
+      isDirty: _document!.isDirty,
+    );
+  }
+
   void updateGrade(
     int classIndex,
     int studentIndex,
@@ -274,9 +319,7 @@ class AppState extends ChangeNotifier {
     final scg = _document!.data.subjectClassGrades[classIndex];
     for (int si = 0; si < scg.students.length; si++) {
       final key = (classIndex, si, componentIndex);
-
       _document!.unsavableEdits.remove(key);
-
       scg.students[si].grades[componentIndex] = scg
           .students[si]
           .grades[componentIndex]
@@ -315,18 +358,15 @@ class AppState extends ChangeNotifier {
 
     for (int si = 0; si < scg.students.length; si++) {
       final student = scg.students[si];
-
       final sourceGrades = srcCols
           .map((ci) => student.grades[ci].grade)
           .toList();
-
       final newValue = ScoreUtils.computeCopyScore(sourceGrades, bonus);
 
       if (newValue != null) {
         student.grades[dstCol] = student.grades[dstCol].copyWith(
           grade: newValue,
         );
-
         final key = (classIndex, si, dstCol);
         _document!.unsavableEdits.remove(key);
       }
@@ -336,9 +376,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sets the active class index.
-  ///
-  /// Throws an exception if the index is out of bounds.
   void setActiveClassIndex(int index) {
     if (_document == null) {
       throw Exception('No document loaded');
@@ -352,14 +389,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Focuses a specific student row in the active table.
   void focusStudent(int classIndex, int studentIndex) {
     _focusedClassIndex = classIndex;
     _focusedStudentIndex = studentIndex;
     notifyListeners();
   }
 
-  /// Clears any requested student focus.
   void clearFocusedStudent() {
     if (_focusedClassIndex == null && _focusedStudentIndex == null) return;
     _focusedClassIndex = null;
@@ -367,7 +402,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Resets the state (e.g., when closing a file).
   void reset() {
     _document = null;
     _filePath = null;

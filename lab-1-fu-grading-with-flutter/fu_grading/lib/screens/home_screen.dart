@@ -131,7 +131,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     if (selectedIndices.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Select at least one class')),
+                        const SnackBar(
+                          content: Text('Select at least one class'),
+                        ),
                       );
                       return;
                     }
@@ -393,9 +395,9 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error exporting selected classes: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error exporting selected classes: $e')),
+        );
       }
     } finally {
       setState(() => _isLoading = false);
@@ -519,16 +521,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           Builder(
                             builder: (context) {
-                              final sourceIsExcel = _isExcelPath(appState.filePath);
-                              final exportAllLabel = sourceIsExcel
-                                ? 'Export all to FG'
-                                : 'Export all to Excel';
+                              final sourceIsExcel = _isExcelPath(
+                                appState.filePath,
+                              );
                               final exportSelectedLabel = sourceIsExcel
-                                ? 'Export selected to FG'
-                                : 'Export selected to Excel';
-                              final exportAllIcon = sourceIsExcel
-                                ? Icons.upload_file
-                                : Icons.download;
+                                  ? 'Export to FG'
+                                  : 'Export to Excel';
+                              final exportSelectedIcon = sourceIsExcel
+                                  ? Icons.checklist
+                                  : Icons.checklist;
 
                               return SizedBox(
                                 width: double.infinity,
@@ -538,19 +539,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                     mainAxisAlignment: MainAxisAlignment.start,
                                     children: [
                                       ElevatedButton.icon(
-                                        onPressed: _isLoading ? null : _openFile,
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _openFile,
                                         icon: const Icon(Icons.folder_open),
                                         label: const Text('Open'),
                                       ),
                                       const SizedBox(width: 8),
                                       ElevatedButton.icon(
-                                        onPressed: _isLoading ? null : _saveFile,
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _saveFile,
                                         icon: const Icon(Icons.save),
                                         label: const Text('Save'),
                                       ),
                                       const SizedBox(width: 8),
                                       ElevatedButton.icon(
-                                        onPressed: _isLoading ? null : _saveFileAs,
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _saveFileAs,
                                         icon: const Icon(Icons.save_as),
                                         label: const Text('Save As'),
                                       ),
@@ -558,22 +565,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ElevatedButton.icon(
                                         onPressed: _isLoading
                                             ? null
-                                            : _exportCurrentFormat,
-                                        icon: Icon(exportAllIcon),
-                                        label: Text(exportAllLabel),
+                                            : _exportSelectedFormat,
+                                        icon: Icon(exportSelectedIcon),
+                                        label: Text(exportSelectedLabel),
                                       ),
                                       const SizedBox(width: 8),
                                       ElevatedButton.icon(
                                         onPressed: _isLoading
                                             ? null
-                                            : _exportSelectedFormat,
-                                        icon: const Icon(Icons.checklist),
-                                        label: Text(exportSelectedLabel),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ElevatedButton.icon(
-                                        onPressed:
-                                            _isLoading ? null : _checkMissingScores,
+                                            : _checkMissingScores,
                                         icon: const Icon(
                                           Icons.check_circle_outline,
                                         ),

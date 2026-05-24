@@ -205,7 +205,8 @@ class AppState extends ChangeNotifier {
 
     final result = await Process.run('dotnet', [
       'run',
-      '--project', '../DeserializeFGFile/DeserializeFGFile',
+      '--project',
+      '../DeserializeFGFile/DeserializeFGFile',
       'save',
       tempJsonFile.path,
       path,
@@ -227,7 +228,8 @@ class AppState extends ChangeNotifier {
     final selectedUnsavable = <(int, int, int)>{};
 
     for (final classIndex in uniqueIndices) {
-      if (classIndex < 0 || classIndex >= _document!.data.subjectClassGrades.length) {
+      if (classIndex < 0 ||
+          classIndex >= _document!.data.subjectClassGrades.length) {
         continue;
       }
 
@@ -235,8 +237,16 @@ class AppState extends ChangeNotifier {
       final newClassIndex = selectedClasses.length;
       selectedClasses.add(scg);
 
-      for (int studentIndex = 0; studentIndex < scg.students.length; studentIndex++) {
-        for (int componentIndex = 0; componentIndex < scg.students[studentIndex].grades.length; componentIndex++) {
+      for (
+        int studentIndex = 0;
+        studentIndex < scg.students.length;
+        studentIndex++
+      ) {
+        for (
+          int componentIndex = 0;
+          componentIndex < scg.students[studentIndex].grades.length;
+          componentIndex++
+        ) {
           final originalKey = (classIndex, studentIndex, componentIndex);
           final newKey = (newClassIndex, studentIndex, componentIndex);
 

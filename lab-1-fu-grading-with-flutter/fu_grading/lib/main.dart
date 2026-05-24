@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:fu_grading/providers/theme_provider.dart';
+import 'package:fu_grading/providers/chat_provider.dart';
+
 import 'providers/app_state.dart';
 import 'screens/home_screen.dart';
 
@@ -30,8 +33,12 @@ void main() async {
   }
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppState(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppState()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
+      ],
       child: const FuGradingApp(),
     ),
   );
@@ -42,19 +49,17 @@ class FuGradingApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'FU Grading',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF4A90D9),
-          surface: Color(0xFF1E1E2E),
-        ),
-        scaffoldBackgroundColor: const Color(0xFF1E1E2E),
-        cardColor: const Color(0xFF2A2A3E),
-      ),
-      home: const HomeScreen(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'FU Grading',
+          debugShowCheckedModeBanner: false,
+          themeMode: themeProvider.themeMode,
+          theme: MyThemes.lightTheme,
+          darkTheme: MyThemes.darkTheme,
+          home: const HomeScreen(),
+        );
+      },
     );
   }
 }

@@ -596,7 +596,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     icon: const Icon(Icons.chat),
                                     label: const Text('Chat'),
                                   ),
-                                  const Spacer(),
+                                  const SizedBox(width: 8),
                                   const ThemeSwitcher(),
                                   const SizedBox(width: 16),
                                   if (_isLoading)

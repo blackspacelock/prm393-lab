@@ -3,7 +3,12 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 class OllamaService {
-  final Dio _dio = Dio();
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 120),
+    ),
+  );
   final String _apiUrl = 'http://localhost:11434/api/generate';
 
   Stream<String> generate(String prompt) {

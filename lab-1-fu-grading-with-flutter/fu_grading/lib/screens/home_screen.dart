@@ -10,6 +10,8 @@ import '../widgets/copy_columns_dialog.dart';
 import '../widgets/grade_table.dart';
 import '../widgets/missing_scores_dialog.dart';
 import '../widgets/student_detail_dialog.dart';
+import 'package:fu_grading/widgets/theme_switcher.dart';
+import '../widgets/chat_widget.dart';
 
 /// The main home screen of the FU Grading app.
 ///
@@ -26,6 +28,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
+  // Right-side chat panel state
+  bool _isChatVisible = false;
+  double _chatWidth = 360.0;
+  final double _chatMinWidth = 260.0;
+  final double _chatMaxWidth = 700.0;
 
   bool _isExcelPath(String? path) {
     if (path == null) return false;
@@ -484,237 +491,311 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final sidebarWidth = constraints.maxWidth < 1200 ? 220.0 : 250.0;
+            final textColor =
+                theme.textTheme.bodyMedium?.color ??
+                theme.colorScheme.onSurface;
+            final placeholderColor = textColor.withOpacity(0.75);
 
             return Column(
               children: [
-                // --- Toolbar ---
                 Container(
-                  color: const Color(0xFF2A2A3E),
+                  color: theme.cardColor,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
                   ),
                   child: Consumer<AppState>(
                     builder: (context, appState, _) {
+                      final filePathLabel =
+                          appState.filePath ?? 'No file loaded';
+                      final sourceIsExcel = _isExcelPath(appState.filePath);
+                      final exportSelectedLabel = sourceIsExcel
+                          ? 'Export to FG'
+                          : 'Export to Excel';
+
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8),
                             child: Tooltip(
-                              message: appState.filePath ?? 'No file loaded',
+                              message: filePathLabel,
                               child: Text(
-                                appState.filePath ?? 'No file loaded',
+                                filePathLabel,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                ),
+                                style: theme.textTheme.bodySmall,
                               ),
                             ),
                           ),
-                          Builder(
-                            builder: (context) {
-                              final sourceIsExcel = _isExcelPath(
-                                appState.filePath,
-                              );
-                              final exportSelectedLabel = sourceIsExcel
-                                  ? 'Export to FG'
-                                  : 'Export to Excel';
-                              final exportSelectedIcon = sourceIsExcel
-                                  ? Icons.checklist
-                                  : Icons.checklist;
-
-                              return SizedBox(
-                                width: double.infinity,
-                                child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      ElevatedButton.icon(
-                                        onPressed: _isLoading
-                                            ? null
-                                            : _openFile,
-                                        icon: const Icon(Icons.folder_open),
-                                        label: const Text('Open'),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ElevatedButton.icon(
-                                        onPressed: _isLoading
-                                            ? null
-                                            : _saveFile,
-                                        icon: const Icon(Icons.save),
-                                        label: const Text('Save'),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ElevatedButton.icon(
-                                        onPressed: _isLoading
-                                            ? null
-                                            : _saveFileAs,
-                                        icon: const Icon(Icons.save_as),
-                                        label: const Text('Save As'),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ElevatedButton.icon(
-                                        onPressed: _isLoading
-                                            ? null
-                                            : _exportSelectedFormat,
-                                        icon: Icon(exportSelectedIcon),
-                                        label: Text(exportSelectedLabel),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ElevatedButton.icon(
-                                        onPressed: _isLoading
-                                            ? null
-                                            : _checkMissingScores,
-                                        icon: const Icon(
-                                          Icons.check_circle_outline,
-                                        ),
-                                        label: const Text('Check Missing'),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ElevatedButton.icon(
-                                        onPressed: _isLoading
-                                            ? null
-                                            : _openCopyColumnsDialog,
-                                        icon: const Icon(Icons.content_copy),
-                                        label: const Text('Copy Columns'),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      if (_isLoading)
-                                        const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                    ],
+                          SizedBox(
+                            width: double.infinity,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  ElevatedButton.icon(
+                                    onPressed: _isLoading ? null : _openFile,
+                                    icon: const Icon(Icons.folder_open),
+                                    label: const Text('Open'),
                                   ),
-                                ),
-                              );
-                            },
+                                  const SizedBox(width: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: _isLoading ? null : _saveFile,
+                                    icon: const Icon(Icons.save),
+                                    label: const Text('Save'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: _isLoading ? null : _saveFileAs,
+                                    icon: const Icon(Icons.save_as),
+                                    label: const Text('Save As'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _exportSelectedFormat,
+                                    icon: const Icon(Icons.checklist),
+                                    label: Text(exportSelectedLabel),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _checkMissingScores,
+                                    icon: const Icon(
+                                      Icons.check_circle_outline,
+                                    ),
+                                    label: const Text('Check Missing'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _openCopyColumnsDialog,
+                                    icon: const Icon(Icons.content_copy),
+                                    label: const Text('Copy Columns'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _isChatVisible = !_isChatVisible;
+                                      });
+                                    },
+                                    icon: const Icon(Icons.chat),
+                                    label: const Text('Chat'),
+                                  ),
+                                  const Spacer(),
+                                  const ThemeSwitcher(),
+                                  const SizedBox(width: 16),
+                                  if (_isLoading)
+                                    const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       );
                     },
                   ),
                 ),
-                // Loading indicator
                 if (_isLoading) const LinearProgressIndicator(minHeight: 2),
-                // --- Main Content Area ---
                 Expanded(
-                  child: Row(
+                  child: Stack(
                     children: [
-                      // --- Left Sidebar ---
-                      Consumer<AppState>(
-                        builder: (context, appState, _) {
-                          final document = appState.document;
-                          if (document == null) {
-                            return Container(
-                              width: sidebarWidth,
-                              color: const Color(0xFF2A2A3E),
-                              child: const Center(
-                                child: Text('No file loaded'),
-                              ),
-                            );
-                          }
-
-                          return Container(
-                            width: sidebarWidth,
-                            color: const Color(0xFF2A2A3E),
-                            child: ListView.builder(
-                              itemCount:
-                                  document.data.subjectClassGrades.length,
-                              itemBuilder: (context, index) {
-                                final scg =
-                                    document.data.subjectClassGrades[index];
-                                final isActive =
-                                    appState.activeClassIndex == index;
-
-                                return ListTile(
-                                  title: Text(
-                                    '${scg.subject} - ${scg.classCode}',
-                                    style: TextStyle(
-                                      color: isActive
-                                          ? const Color(0xFF4A90D9)
-                                          : Colors.white70,
-                                      fontWeight: isActive
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
+                      Row(
+                        children: [
+                          Consumer<AppState>(
+                            builder: (context, appState, _) {
+                              final document = appState.document;
+                              if (document == null) {
+                                return Container(
+                                  width: sidebarWidth,
+                                  color: theme.cardColor,
+                                  child: Center(
+                                    child: Text(
+                                      'No file loaded',
+                                      style: TextStyle(color: placeholderColor),
                                     ),
                                   ),
-                                  subtitle: Text(
-                                    '${scg.students.length} students',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  selected: isActive,
-                                  selectedTileColor: const Color(0xFF1E1E2E),
-                                  onTap: () {
-                                    appState.setActiveClassIndex(index);
+                                );
+                              }
+
+                              return Container(
+                                width: sidebarWidth,
+                                color: theme.cardColor,
+                                child: ListView.builder(
+                                  itemCount:
+                                      document.data.subjectClassGrades.length,
+                                  itemBuilder: (context, index) {
+                                    final scg =
+                                        document.data.subjectClassGrades[index];
+                                    final isActive =
+                                        appState.activeClassIndex == index;
+
+                                    return ListTile(
+                                      title: Text(
+                                        '${scg.subject} - ${scg.classCode}',
+                                        style: TextStyle(
+                                          color: isActive
+                                              ? theme.colorScheme.primary
+                                              : textColor,
+                                          fontWeight: isActive
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        '${scg.students.length} students',
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                      selected: isActive,
+                                      selectedTileColor:
+                                          theme.scaffoldBackgroundColor,
+                                      onTap: () {
+                                        appState.setActiveClassIndex(index);
+                                      },
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                          Expanded(
+                            child: Consumer<AppState>(
+                              builder: (context, appState, _) {
+                                final document = appState.document;
+                                if (document == null) {
+                                  return Center(
+                                    child: Text(
+                                      'Select a class',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: placeholderColor,
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                final activeScg =
+                                    appState.activeSubjectClassGrade;
+                                if (activeScg == null) {
+                                  return Center(
+                                    child: Text(
+                                      'No class selected',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: placeholderColor,
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                return GradeTable(
+                                  subjectClassGrade: activeScg,
+                                  classIndex: appState.activeClassIndex,
+                                  onStudentTap: (studentIndex) {
+                                    appState.focusStudent(
+                                      appState.activeClassIndex,
+                                      studentIndex,
+                                    );
+                                    showStudentDetailDialog(
+                                      context,
+                                      classIndex: appState.activeClassIndex,
+                                      studentIndex: studentIndex,
+                                      student: activeScg.students[studentIndex],
+                                    );
                                   },
                                 );
                               },
                             ),
-                          );
-                        },
+                          ),
+                        ],
                       ),
-                      // --- Main Content Area ---
-                      Expanded(
-                        child: Consumer<AppState>(
-                          builder: (context, appState, _) {
-                            final document = appState.document;
-                            if (document == null) {
-                              return const Center(
-                                child: Text(
-                                  'Select a class',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.white54,
+                      if (_isChatVisible)
+                        Positioned(
+                          top: 0,
+                          bottom: 0,
+                          right: 0,
+                          width: _chatWidth,
+                          child: Material(
+                            elevation: 12,
+                            color: theme.scaffoldBackgroundColor,
+                            child: Column(
+                              children: [
+                                Container(
+                                  height: 44,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: theme.cardColor,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.06),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.chat_bubble_outline),
+                                      const SizedBox(width: 8),
+                                      const Text('Chat'),
+                                      const Spacer(),
+                                      IconButton(
+                                        icon: const Icon(Icons.close),
+                                        onPressed: () {
+                                          setState(
+                                            () => _isChatVisible = false,
+                                          );
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              );
-                            }
-
-                            final activeScg = appState.activeSubjectClassGrade;
-                            if (activeScg == null) {
-                              return const Center(
-                                child: Text(
-                                  'No class selected',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.white54,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            return GradeTable(
-                              subjectClassGrade: activeScg,
-                              classIndex: appState.activeClassIndex,
-                              onStudentTap: (studentIndex) {
-                                appState.focusStudent(
-                                  appState.activeClassIndex,
-                                  studentIndex,
-                                );
-                                showStudentDetailDialog(
-                                  context,
-                                  classIndex: appState.activeClassIndex,
-                                  studentIndex: studentIndex,
-                                  student: activeScg.students[studentIndex],
-                                );
-                              },
-                            );
-                          },
+                                Expanded(child: ChatWidget()),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
+                      if (_isChatVisible)
+                        Positioned(
+                          top: 0,
+                          bottom: 0,
+                          right: _chatWidth - 6,
+                          width: 12,
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.resizeLeftRight,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.translucent,
+                              onHorizontalDragUpdate: (details) {
+                                setState(() {
+                                  _chatWidth = (_chatWidth - details.delta.dx)
+                                      .clamp(_chatMinWidth, _chatMaxWidth);
+                                });
+                              },
+                              child: const SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

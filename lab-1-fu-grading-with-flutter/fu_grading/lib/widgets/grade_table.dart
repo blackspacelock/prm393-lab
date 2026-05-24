@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/teacher_grade.dart';
 import '../providers/app_state.dart';
+import '../providers/theme_provider.dart';
 import '../utils/component_labels.dart';
 import 'confirm_dialog.dart';
 
@@ -100,6 +101,9 @@ class _GradeTableState extends State<GradeTable> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+
     final double rollWidth = 130;
     final double nameWidth = 200;
 
@@ -128,16 +132,30 @@ class _GradeTableState extends State<GradeTable> {
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: Table(
-                  border: const TableBorder(
-                    verticalInside: BorderSide(color: Color(0xFF44444F)),
-                  ),
+                  border: isDarkMode
+                      ? const TableBorder(
+                          verticalInside: BorderSide(color: Color(0xFF44444F)),
+                        )
+                      : TableBorder.all(
+                          color: const Color(0xFFD0D7DE),
+                          width: 1,
+                        ),
                   columnWidths: columnWidths,
                   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                   children: [
                     TableRow(
-                      decoration: const BoxDecoration(
-                        border: Border(bottom: BorderSide(color: Colors.grey)),
-                      ),
+                      decoration: isDarkMode
+                          ? const BoxDecoration(
+                              border:
+                                  Border(bottom: BorderSide(color: Colors.grey)),
+                            )
+                          : BoxDecoration(
+                              color: const Color(0xFF4A789C),
+                              border: Border.all(
+                                color: const Color(0xFFADCDE3),
+                                width: 1,
+                              ),
+                            ),
                       children: [
                         const Padding(
                           padding: EdgeInsets.symmetric(
@@ -146,7 +164,9 @@ class _GradeTableState extends State<GradeTable> {
                           ),
                           child: Text(
                             'Roll',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white),
                             maxLines: 1,
                           ),
                         ),
@@ -157,7 +177,9 @@ class _GradeTableState extends State<GradeTable> {
                           ),
                           child: Text(
                             'Name',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white),
                             maxLines: 1,
                           ),
                         ),
@@ -180,8 +202,10 @@ class _GradeTableState extends State<GradeTable> {
                                     textAlign: TextAlign.center,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontWeight: FontWeight.bold,
+                                      color:
+                                          isDarkMode ? null : Colors.white,
                                     ),
                                   ),
                                 ),
@@ -193,7 +217,9 @@ class _GradeTableState extends State<GradeTable> {
                                     padding: EdgeInsets.zero,
                                     iconSize: 18,
                                     tooltip: 'Clear column',
-                                    color: Colors.white70,
+                                    color: isDarkMode
+                                        ? Colors.white70
+                                        : Colors.white.withOpacity(0.8),
                                     icon: const Icon(Icons.delete_outline),
                                     onPressed: () async {
                                       final appState = context.read<AppState>();
@@ -242,23 +268,37 @@ class _GradeTableState extends State<GradeTable> {
                       final isEvenRow = studentIndex % 2 == 0;
                       final isFocusedRow =
                           appState.focusedClassIndex == widget.classIndex &&
-                          appState.focusedStudentIndex == studentIndex;
-                      final rowColor = isFocusedRow
-                          ? const Color(0xFF365D3D)
-                          : (isEvenRow
-                                ? Colors.transparent
-                                : const Color(0xFF2A2A3E));
+                              appState.focusedStudentIndex == studentIndex;
+                      final rowColor = isDarkMode
+                          ? (isFocusedRow
+                              ? const Color(0xFF365D3D)
+                              : (isEvenRow
+                                  ? Colors.transparent
+                                  : const Color(0xFF2A2A3E)))
+                          : (isFocusedRow
+                              ? const Color(0xFFACD5F2)
+                              : (isEvenRow
+                                  ? Colors.white
+                                  : const Color(0xFFEAF1F7)));
 
                       return TableRow(
-                        decoration: BoxDecoration(
-                          color: rowColor,
-                          border: isFocusedRow
-                              ? Border.all(
-                                  color: const Color(0xFF8ED08E),
+                        decoration: isDarkMode
+                            ? BoxDecoration(
+                                color: rowColor,
+                                border: isFocusedRow
+                                    ? Border.all(
+                                        color: const Color(0xFF8ED08E),
+                                        width: 1,
+                                      )
+                                    : null,
+                              )
+                            : BoxDecoration(
+                                color: rowColor,
+                                border: Border.all(
+                                  color: const Color(0xFFADCDE3),
                                   width: 1,
-                                )
-                              : null,
-                        ),
+                                ),
+                              ),
                         children: [
                           Container(
                             key: _studentRowKeys[studentIndex],
@@ -282,7 +322,9 @@ class _GradeTableState extends State<GradeTable> {
                                 onPressed: () =>
                                     widget.onStudentTap?.call(studentIndex),
                                 style: TextButton.styleFrom(
-                                  foregroundColor: const Color(0xFF4A90D9),
+                                  foregroundColor: isDarkMode
+                                      ? const Color(0xFF4A90D9)
+                                      : const Color(0xFF0366D6),
                                   padding: EdgeInsets.zero,
                                   minimumSize: const Size(50, 36),
                                   tapTargetSize:
@@ -298,25 +340,21 @@ class _GradeTableState extends State<GradeTable> {
                               final componentName = widget
                                   .subjectClassGrade
                                   .components[componentIndex];
-
-                              // Tìm đúng điểm của cột này (tránh bị xô lệch dữ liệu nếu danh sách điểm bị thiếu)
-                              final actualGradeIndex = student.grades
-                                  .indexWhere(
-                                    (g) => g.component == componentName,
-                                  );
+                              final actualGradeIndex = student.grades.indexWhere(
+                                (grade) => grade.component == componentName,
+                              );
                               final grade = actualGradeIndex >= 0
                                   ? student.grades[actualGradeIndex]
-                                  : GradeComponent(
-                                      component: componentName,
-                                      grade: null,
-                                    );
+                                  : GradeComponent(component: componentName);
 
                               final hasNumeric = grade.grade != null;
                               final hasRaw =
                                   grade.raw != null && grade.raw!.isNotEmpty;
                               final cellColor = (hasNumeric || hasRaw)
                                   ? Colors.transparent
-                                  : const Color(0xFF5C2A2A);
+                                  : (isDarkMode
+                                      ? const Color(0xFF5C2A2A)
+                                      : const Color(0xFFFFFBD7));
 
                               final displayText = hasRaw
                                   ? grade.raw!
@@ -333,7 +371,7 @@ class _GradeTableState extends State<GradeTable> {
                                   width: 120,
                                   child: TextFormField(
                                     key: ValueKey(
-                                      'grade-${widget.classIndex}-$studentIndex-$componentIndex-$displayText',
+                                      'grade-${widget.classIndex}-$studentIndex-$componentIndex-$componentName-$displayText',
                                     ),
                                     initialValue: displayText,
                                     textAlign: TextAlign.center,
@@ -369,7 +407,6 @@ class _GradeTableState extends State<GradeTable> {
                                         context.read<AppState>().updateGrade(
                                           widget.classIndex,
                                           studentIndex,
-                                          // Truyền đúng index thực tế để app_state xử lý không bị lỗi
                                           actualGradeIndex >= 0
                                               ? actualGradeIndex
                                               : componentIndex,

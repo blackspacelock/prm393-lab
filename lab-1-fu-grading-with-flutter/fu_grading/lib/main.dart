@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:fu_grading/providers/theme_provider.dart';
+import 'package:fu_grading/providers/chat_provider.dart';
 
 import 'providers/app_state.dart';
 import 'screens/home_screen.dart';
@@ -36,6 +37,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AppState()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
       ],
       child: const FuGradingApp(),
     ),

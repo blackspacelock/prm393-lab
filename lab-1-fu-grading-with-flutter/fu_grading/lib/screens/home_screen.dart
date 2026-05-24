@@ -11,6 +11,7 @@ import '../widgets/grade_table.dart';
 import '../widgets/missing_scores_dialog.dart';
 import '../widgets/student_detail_dialog.dart';
 import 'package:fu_grading/widgets/theme_switcher.dart';
+import '../widgets/chat_widget.dart';
 
 /// The main home screen of the FU Grading app.
 ///
@@ -27,6 +28,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
+  // Right-side chat panel state
+  bool _isChatVisible = false;
+  double _chatWidth = 360.0;
+  final double _chatMinWidth = 260.0;
+  final double _chatMaxWidth = 700.0;
 
   Future<void> _openFile() async {
     final appState = context.read<AppState>();
@@ -276,6 +282,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.content_copy),
                   label: const Text('Copy Columns'),
                 ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _isChatVisible = !_isChatVisible;
+                    });
+                  },
+                  icon: const Icon(Icons.chat),
+                  label: const Text('Chat'),
+                ),
                 const Spacer(),
                 const ThemeSwitcher(),
                 const SizedBox(width: 16),
@@ -292,8 +308,10 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_isLoading) const LinearProgressIndicator(minHeight: 2),
           // --- Main Content Area ---
           Expanded(
-            child: Row(
+            child: Stack(
               children: [
+                Row(
+                  children: [
                 // --- Left Sidebar ---
                 Consumer<AppState>(
                   builder: (context, appState, _) {
@@ -395,6 +413,74 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
                 ),
+              ],
+            ),
+                // Chat panel overlay
+                if (_isChatVisible)
+                  Positioned(
+                    top: 0,
+                    bottom: 0,
+                    right: 0,
+                    width: _chatWidth,
+                    child: Material(
+                      elevation: 12,
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      child: Column(
+                        children: [
+                          // Header
+                          Container(
+                            height: 44,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.06),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.chat_bubble_outline),
+                                const SizedBox(width: 8),
+                                const Text('Chat'),
+                                const Spacer(),
+                                IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () {
+                                    setState(() => _isChatVisible = false);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(child: ChatWidget()),
+                        ],
+                      ),
+                    ),
+                  ),
+                // Left-edge drag detector for resizing
+                if (_isChatVisible)
+                  Positioned(
+                    top: 0,
+                    bottom: 0,
+                    right: _chatWidth - 6,
+                    width: 12,
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.resizeLeftRight,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onHorizontalDragUpdate: (details) {
+                          setState(() {
+                            _chatWidth = (_chatWidth - details.delta.dx)
+                                .clamp(_chatMinWidth, _chatMaxWidth);
+                          });
+                        },
+                        child: const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

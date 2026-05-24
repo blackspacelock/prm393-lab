@@ -10,6 +10,7 @@ import '../widgets/copy_columns_dialog.dart';
 import '../widgets/grade_table.dart';
 import '../widgets/missing_scores_dialog.dart';
 import '../widgets/student_detail_dialog.dart';
+import 'package:fu_grading/widgets/theme_switcher.dart';
 
 /// The main home screen of the FU Grading app.
 ///
@@ -236,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // --- Toolbar ---
           Container(
-            color: const Color(0xFF2A2A3E),
+            color: Theme.of(context).cardColor,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
@@ -276,6 +277,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: const Text('Copy Columns'),
                 ),
                 const Spacer(),
+                const ThemeSwitcher(),
+                const SizedBox(width: 16),
                 if (_isLoading)
                   const SizedBox(
                     width: 20,
@@ -298,14 +301,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (document == null) {
                       return Container(
                         width: 250,
-                        color: const Color(0xFF2A2A3E),
+                        color: Theme.of(context).cardColor,
                         child: const Center(child: Text('No file loaded')),
                       );
                     }
 
                     return Container(
                       width: 250,
-                      color: const Color(0xFF2A2A3E),
+                      color: Theme.of(context).cardColor,
                       child: ListView.builder(
                         itemCount: document.data.subjectClassGrades.length,
                         itemBuilder: (context, index) {
@@ -317,8 +320,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               '${scg.subject} - ${scg.classCode}',
                               style: TextStyle(
                                 color: isActive
-                                    ? const Color(0xFF4A90D9)
-                                    : Colors.white70,
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.color,
                                 fontWeight: isActive
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -329,7 +335,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               style: const TextStyle(fontSize: 12),
                             ),
                             selected: isActive,
-                            selectedTileColor: const Color(0xFF1E1E2E),
+                            selectedTileColor:
+                                Theme.of(context).scaffoldBackgroundColor,
                             onTap: () {
                               appState.setActiveClassIndex(index);
                             },

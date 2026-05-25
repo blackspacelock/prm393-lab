@@ -44,7 +44,7 @@ class _GradeTableState extends State<GradeTable> {
       return grade.grade!.toStringAsFixed(1);
     }
 
-    return '-';
+    return '';
   }
 
   @override

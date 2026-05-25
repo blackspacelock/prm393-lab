@@ -9,6 +9,22 @@ Future<void> showStudentDetailDialog(
   required int studentIndex,
   required Student student,
 }) async {
+  String formatGrade(GradeComponent grade) {
+    if (grade.raw != null && grade.raw!.isNotEmpty) {
+      final parsedRaw = double.tryParse(grade.raw!);
+      if (parsedRaw != null) {
+        return parsedRaw.toStringAsFixed(1);
+      }
+      return grade.raw!;
+    }
+
+    if (grade.grade != null) {
+      return grade.grade!.toStringAsFixed(1);
+    }
+
+    return '-';
+  }
+
   await showDialog<void>(
     context: context,
     builder: (context) {
@@ -22,9 +38,7 @@ Future<void> showStudentDetailDialog(
               const SizedBox(height: 8),
               ...List.generate(student.grades.length, (i) {
                 final g = student.grades[i];
-                final display = (g.raw != null && g.raw!.isNotEmpty)
-                    ? g.raw!
-                    : (g.grade != null ? g.grade!.toString() : '-');
+                final display = formatGrade(g);
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6.0),
                   child: Row(

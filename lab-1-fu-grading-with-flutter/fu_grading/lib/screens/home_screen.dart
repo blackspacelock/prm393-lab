@@ -22,9 +22,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
   bool _isChatVisible = false;
-  double _chatWidth = 360.0;
-  final double _chatMinWidth = 260.0;
-  final double _chatMaxWidth = 700.0;
+  final double _chatWidth = 360.0;
 
   bool _isExcelPath(String? path) {
     if (path == null) return false;

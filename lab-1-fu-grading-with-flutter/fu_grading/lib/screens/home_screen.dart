@@ -3,22 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_state.dart';
-import '../services/excel_service.dart';
 import '../services/file_service.dart';
-import '../widgets/confirm_dialog.dart';
-import '../widgets/copy_columns_dialog.dart';
 import '../widgets/grade_table.dart';
-import '../widgets/missing_scores_dialog.dart';
 import '../widgets/student_detail_dialog.dart';
+import '../widgets/copy_columns_dialog.dart';
+import '../widgets/missing_scores_dialog.dart';
+import '../widgets/select_columns_dialog.dart';
 import 'package:fu_grading/widgets/theme_switcher.dart';
 import '../widgets/chat_widget.dart';
 
-/// The main home screen of the FU Grading app.
-///
-/// Layout:
-/// - Top toolbar with action buttons (Open, Save, Save As, Export Excel, Check Missing, Copy Columns)
-/// - Left sidebar with list of subject-class grades
-/// - Main content area showing the grade table or placeholder
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -28,7 +21,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
-  // Right-side chat panel state
   bool _isChatVisible = false;
   double _chatWidth = 360.0;
   final double _chatMinWidth = 260.0;
@@ -36,167 +28,48 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _isExcelPath(String? path) {
     if (path == null) return false;
-    final lowerPath = path.toLowerCase();
-    return lowerPath.endsWith('.xlsx') || lowerPath.endsWith('.xls');
-  }
-
-  Future<String?> _pickSavePathForCurrentFileType(AppState appState) async {
-    if (_isExcelPath(appState.filePath)) {
-      return FileService.pickExcelSavePath();
-    }
-    return FileService.pickSavePath();
-  }
-
-  Future<String?> _pickExportPathForOppositeFormat(AppState appState) async {
-    if (_isExcelPath(appState.filePath)) {
-      return FileService.pickSavePath();
-    }
-    return FileService.pickExcelSavePath();
-  }
-
-  Future<List<int>?> _showClassSelectionDialog(AppState appState) async {
-    final document = appState.document;
-    if (document == null) return null;
-
-    final selected = List<bool>.filled(
-      document.data.subjectClassGrades.length,
-      false,
-    );
-
-    return showDialog<List<int>>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            return AlertDialog(
-              title: const Text('Select classes to export'),
-              content: SizedBox(
-                width: 500,
-                height: 420,
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            setDialogState(() {
-                              for (int i = 0; i < selected.length; i++) {
-                                selected[i] = true;
-                              }
-                            });
-                          },
-                          child: const Text('Select all'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            setDialogState(() {
-                              for (int i = 0; i < selected.length; i++) {
-                                selected[i] = false;
-                              }
-                            });
-                          },
-                          child: const Text('Clear all'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: document.data.subjectClassGrades.length,
-                        itemBuilder: (context, index) {
-                          final scg = document.data.subjectClassGrades[index];
-                          return CheckboxListTile(
-                            value: selected[index],
-                            onChanged: (value) {
-                              setDialogState(() {
-                                selected[index] = value ?? false;
-                              });
-                            },
-                            title: Text('${scg.subject} - ${scg.classCode}'),
-                            subtitle: Text('${scg.students.length} students'),
-                            controlAffinity: ListTileControlAffinity.leading,
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    final selectedIndices = <int>[];
-                    for (int i = 0; i < selected.length; i++) {
-                      if (selected[i]) {
-                        selectedIndices.add(i);
-                      }
-                    }
-
-                    if (selectedIndices.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Select at least one class'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    Navigator.of(dialogContext).pop(selectedIndices);
-                  },
-                  child: const Text('Export'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+    final lower = path.toLowerCase();
+    return lower.endsWith('.xlsx') || lower.endsWith('.xls');
   }
 
   Future<void> _openFile() async {
     final appState = context.read<AppState>();
-
-    // Check if current document has unsaved changes
     if (appState.isDirty) {
-      final shouldDiscard = await showConfirmDialog(
-        context,
-        title: 'Unsaved Changes',
-        message: 'You have unsaved changes. Do you want to discard them?',
-        confirmText: 'Discard',
-        cancelText: 'Cancel',
+      final discard = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Unsaved changes'),
+          content: const Text('Discard unsaved changes?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Discard'),
+            ),
+          ],
+        ),
       );
-
-      if (!shouldDiscard || !mounted) return;
+      if (discard != true || !mounted) return;
     }
 
     setState(() => _isLoading = true);
-
     try {
-      final (fileBytes, fileName, filePath) =
-          await FileService.pickGradeFileBytes();
-      if (fileBytes != null && fileName != null && mounted) {
-        // Detect file type by extension
-        if (fileName.toLowerCase().endsWith('.json')) {
-          // Load as JSON
-          await context.read<AppState>().loadJsonFromBytes(fileBytes);
-        } else if (fileName.toLowerCase().endsWith('.xlsx') ||
-            fileName.toLowerCase().endsWith('.xls')) {
-          // Load from Excel workbook
-          await context.read<AppState>().loadExcelFromBytes(
-            fileBytes,
-            filePath: filePath,
-          );
-        } else {
-          // Load as binary .fg file
-          await context.read<AppState>().loadFileFromBytes(
-            fileBytes,
-            filePath: filePath,
-          );
-        }
+      final (bytes, name, path) = await FileService.pickGradeFileBytes();
+      if (bytes == null || name == null) return;
+
+      final lower = name.toLowerCase();
+      if (lower.endsWith('.json')) {
+        await context.read<AppState>().loadJsonFromBytes(bytes);
+      } else if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
+        await context.read<AppState>().loadExcelFromBytes(
+          bytes,
+          filePath: path,
+        );
+      } else {
+        await context.read<AppState>().loadFileFromBytes(bytes, filePath: path);
       }
     } catch (e) {
       if (mounted) {
@@ -205,603 +78,562 @@ class _HomeScreenState extends State<HomeScreen> {
         ).showSnackBar(SnackBar(content: Text('Error opening file: $e')));
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _openConfig() async {
+    setState(() => _isLoading = true);
+    try {
+      final (bytes, name, path) = await FileService.pickConfigFileBytes();
+      if (bytes != null && name != null) {
+        await context.read<AppState>().loadSubjectConfigFromBytes(
+          bytes,
+          filePath: path,
+        );
+        if (mounted)
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Config loaded')));
+      }
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading config: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _saveFile() async {
     final appState = context.read<AppState>();
     if (appState.filePath == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No file loaded')));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('No file loaded')));
       return;
     }
-
-    final confirmed = await showConfirmDialog(
-      context,
-      title: 'Save File',
-      message: 'Save changes to ${appState.filePath}?',
-      confirmText: 'Save',
-      cancelText: 'Cancel',
-    );
-
-    if (!confirmed || !mounted) return;
-
     setState(() => _isLoading = true);
-
     try {
       await appState.saveFile();
-      if (mounted) {
-        final skipped = appState.unsavableEditCount;
-        if (skipped > 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'File saved. Note: $skipped grade(s) that were originally missing could not be written to the .fg format.',
-              ),
-              duration: const Duration(seconds: 5),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('File saved successfully')),
-          );
-        }
-      }
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('File saved')));
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error saving file: $e')));
-      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _saveFileAs() async {
     final appState = context.read<AppState>();
     if (appState.document == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No document loaded')));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('No document loaded')));
       return;
     }
-
     if (kIsWeb) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Save As is not supported on web')),
-      );
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Save As is not supported on web')),
+        );
       return;
     }
-
-    final savePath = await _pickSavePathForCurrentFileType(appState);
-    if (savePath == null || !mounted) return;
-
+    final savePath = await (_isExcelPath(appState.filePath)
+        ? FileService.pickExcelSavePath()
+        : FileService.pickSavePath());
+    if (savePath == null) return;
     setState(() => _isLoading = true);
-
     try {
       await appState.saveFileAs(savePath);
-      if (mounted) {
-        final skipped = appState.unsavableEditCount;
-        if (skipped > 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'File saved. Note: $skipped grade(s) that were originally missing could not be written to the .fg format.',
-              ),
-              duration: const Duration(seconds: 5),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('File saved successfully')),
-          );
-        }
-      }
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('File saved')));
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error saving file: $e')));
-      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _exportCurrentFormat() async {
+  Future<void> _exportActiveClassAsExcel() async {
     final appState = context.read<AppState>();
-    if (appState.document == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No document loaded')));
-      return;
-    }
-
-    if (kIsWeb) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Export is not supported on web')),
-      );
-      return;
-    }
-
-    final sourceWasExcel = _isExcelPath(appState.filePath);
-    final savePath = await _pickExportPathForOppositeFormat(appState);
-    if (savePath == null || !mounted) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      await appState.saveFileAs(savePath);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              sourceWasExcel
-                  ? 'FG file exported successfully'
-                  : 'Excel file exported successfully',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
+    final doc = appState.document;
+    if (doc == null) {
+      if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error exporting file: $e')));
-      }
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _exportSelectedFormat() async {
-    final appState = context.read<AppState>();
-    if (appState.document == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No document loaded')));
+        ).showSnackBar(const SnackBar(content: Text('No document loaded')));
       return;
     }
 
-    if (kIsWeb) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Export is not supported on web')),
-      );
-      return;
-    }
+    final classes = doc.data.subjectClassGrades;
+    final classIndices = List<int>.generate(classes.length, (i) => i);
 
-    final selectedIndices = await _showClassSelectionDialog(appState);
-    if (selectedIndices == null || selectedIndices.isEmpty || !mounted) {
-      return;
-    }
-
-    final sourceWasExcel = _isExcelPath(appState.filePath);
-    final savePath = await _pickExportPathForOppositeFormat(appState);
-    if (savePath == null || !mounted) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      await appState.exportSelectedClassesAs(savePath, selectedIndices);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              sourceWasExcel
-                  ? 'Selected classes exported to FG successfully'
-                  : 'Selected classes exported to Excel successfully',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error exporting selected classes: $e')),
-        );
-      }
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _checkMissingScores() async {
-    final appState = context.read<AppState>();
-    if (appState.document == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No document loaded')));
-      return;
-    }
-
-    if (!mounted) return;
-    await showMissingScoresDialog(context, document: appState.document!);
-  }
-
-  Future<void> _openCopyColumnsDialog() async {
-    final appState = context.read<AppState>();
-    if (appState.document == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No document loaded')));
-      return;
-    }
-
-    final activeScg = appState.activeSubjectClassGrade;
-    if (activeScg == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No class selected')));
-      return;
-    }
-
-    if (!mounted) return;
-    await showCopyColumnsDialog(
+    // Ask user to select both tables and columns in one dialog.
+    final selected = await showSelectColumnsDialog(
       context,
-      subjectClassGrade: activeScg,
-      classIndex: appState.activeClassIndex,
+      classes: classes,
+      classIndices: classIndices,
+      initialSelection: appState.savedExportColumns,
     );
-  }
+    if (selected == null || selected.isEmpty) return;
 
-  Future<void> _exportExcel() async {
-    final appState = context.read<AppState>();
-    if (appState.document == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No document loaded')));
-      return;
-    }
-
-    if (kIsWeb) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Excel export is not supported on web')),
-      );
-      return;
-    }
-
+    final selectedClassIndices = selected.keys.toList()..sort();
     final savePath = await FileService.pickExcelSavePath();
-    if (savePath == null || !mounted) return;
-
-    setState(() => _isLoading = true);
+    if (savePath == null) return;
 
     try {
-      await ExcelService.exportToExcel(appState.document!, savePath);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Excel file exported successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
+      await appState.exportSelectedClassesAndColumnsAs(
+        savePath,
+        selectedClassIndices,
+        selected,
+      );
+      if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error exporting Excel: $e')));
-      }
-    } finally {
-      setState(() => _isLoading = false);
+        ).showSnackBar(const SnackBar(content: Text('Export successful')));
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
     }
+  }
+
+  /// Shows a dialog to input a new component name. Returns the entered
+  /// component name or null if cancelled.
+  Future<String?> showAddComponentDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    String? error;
+    final res = await showDialog<String?>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (c, setState) {
+            return AlertDialog(
+              title: const Text('Add grading component'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: 'Component name',
+                      errorText: error,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final v = controller.text.trim();
+                    if (v.isEmpty) {
+                      setState(() => error = 'Name cannot be empty');
+                      return;
+                    }
+                    Navigator.of(ctx).pop(v);
+                  },
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+    return res;
+  }
+
+  Widget _legendItem(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(color: Colors.black12),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final sidebarWidth = MediaQuery.of(context).size.width < 1200
+        ? 220.0
+        : 250.0;
+    final placeholderColor =
+        theme.textTheme.bodyMedium?.color?.withOpacity(0.75) ?? Colors.white70;
+
+    final appState = context.watch<AppState>();
+    final openedPath = appState.filePath;
+    final configPath = appState.subjectConfigPath;
 
     return Scaffold(
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final sidebarWidth = constraints.maxWidth < 1200 ? 220.0 : 250.0;
-            final textColor =
-                theme.textTheme.bodyMedium?.color ??
-                theme.colorScheme.onSurface;
-            final placeholderColor = textColor.withOpacity(0.75);
-
-            return Column(
-              children: [
-                Container(
-                  color: theme.cardColor,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Consumer<AppState>(
-                    builder: (context, appState, _) {
-                      final filePathLabel =
-                          appState.filePath ?? 'No file loaded';
-                      final sourceIsExcel = _isExcelPath(appState.filePath);
-                      final exportSelectedLabel = sourceIsExcel
-                          ? 'Export to FG'
-                          : 'Export to Excel';
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Tooltip(
-                              message: filePathLabel,
-                              child: Text(
-                                filePathLabel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall,
-                              ),
+        child: Column(
+          children: [
+            // Simple top bar
+            Container(
+              color: theme.cardColor,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top-left file/config path display
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: Tooltip(
+                            message: openedPath ?? 'No file loaded',
+                            child: Text(
+                              openedPath ?? 'No file loaded',
+                              style: const TextStyle(fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
-                          SizedBox(
-                            width: double.infinity,
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: [
-                                  ElevatedButton.icon(
-                                    onPressed: _isLoading ? null : _openFile,
-                                    icon: const Icon(Icons.folder_open),
-                                    label: const Text('Open'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton.icon(
-                                    onPressed: _isLoading ? null : _saveFile,
-                                    icon: const Icon(Icons.save),
-                                    label: const Text('Save'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton.icon(
-                                    onPressed: _isLoading ? null : _saveFileAs,
-                                    icon: const Icon(Icons.save_as),
-                                    label: const Text('Save As'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton.icon(
-                                    onPressed: _isLoading
-                                        ? null
-                                        : _exportSelectedFormat,
-                                    icon: const Icon(Icons.checklist),
-                                    label: Text(exportSelectedLabel),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton.icon(
-                                    onPressed: _isLoading
-                                        ? null
-                                        : _checkMissingScores,
-                                    icon: const Icon(
-                                      Icons.check_circle_outline,
-                                    ),
-                                    label: const Text('Check Missing'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton.icon(
-                                    onPressed: _isLoading
-                                        ? null
-                                        : _openCopyColumnsDialog,
-                                    icon: const Icon(Icons.content_copy),
-                                    label: const Text('Copy Columns'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton.icon(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isChatVisible = !_isChatVisible;
-                                      });
-                                    },
-                                    icon: const Icon(Icons.chat),
-                                    label: const Text('Chat'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const ThemeSwitcher(),
-                                  const SizedBox(width: 16),
-                                  if (_isLoading)
-                                    const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
+                        ),
+                        const SizedBox(height: 2),
+                        SizedBox(
+                          width: double.infinity,
+                          child: Tooltip(
+                            message: configPath ?? 'No config loaded',
+                            child: Text(
+                              configPath ?? 'No config',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: theme.brightness == Brightness.light
+                                    ? Colors.black
+                                    : Colors.white70,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _openFile,
+                        icon: const Icon(Icons.folder_open),
+                        label: const Text('Open'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _openConfig,
+                        icon: const Icon(Icons.settings),
+                        label: const Text('Open Config'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _saveFile,
+                        icon: const Icon(Icons.save),
+                        label: const Text('Save'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _saveFileAs,
+                        icon: const Icon(Icons.save_as),
+                        label: const Text('Save As'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _isLoading
+                            ? null
+                            : _exportActiveClassAsExcel,
+                        icon: const Icon(Icons.grid_on),
+                        label: const Text('Export Excel'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                final appState = context.read<AppState>();
+                                final doc = appState.document;
+                                if (doc == null) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('No document loaded'),
                                       ),
+                                    );
+                                  }
+                                  return;
+                                }
+
+                                final name = await showAddComponentDialog(
+                                  context,
+                                );
+                                if (name == null || name.trim().isEmpty) return;
+
+                                try {
+                                  appState.addComponent(
+                                    appState.activeClassIndex,
+                                    name.trim(),
+                                  );
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Added component "$name"',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Component'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          final appState = context.read<AppState>();
+                          final doc = appState.document;
+                          if (doc == null) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('No document loaded'),
+                                ),
+                              );
+                            }
+                            return;
+                          }
+                          showCopyColumnsDialog(
+                            context,
+                            subjectClassGrade: doc
+                                .data
+                                .subjectClassGrades[appState.activeClassIndex],
+                            classIndex: appState.activeClassIndex,
+                          );
+                        },
+                        icon: const Icon(Icons.copy_all),
+                        label: const Text('Copy Columns'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          final appState = context.read<AppState>();
+                          final doc = appState.document;
+                          if (doc == null) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('No document loaded'),
+                                ),
+                              );
+                            }
+                            return;
+                          }
+                          showMissingScoresDialog(context, document: doc);
+                        },
+                        icon: const Icon(Icons.error_outline),
+                        label: const Text('Missing Scores'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _legendItem(Colors.yellow.shade700, 'On-going'),
+                              const SizedBox(width: 8),
+                              _legendItem(Colors.deepOrange.shade700, 'PE/FE'),
+                              const SizedBox(width: 8),
+                              _legendItem(Colors.redAccent.shade200, 'Caution'),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const ThemeSwitcher(),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () =>
+                            setState(() => _isChatVisible = !_isChatVisible),
+                        icon: const Icon(Icons.chat),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (_isLoading) const LinearProgressIndicator(minHeight: 2),
+            Expanded(
+              child: Stack(
+                children: [
+                  Row(
+                    children: [
+                      // Sidebar
+                      Container(
+                        width: sidebarWidth,
+                        color: theme.cardColor,
+                        child: Consumer<AppState>(
+                          builder: (context, appState, _) {
+                            final doc = appState.document;
+                            if (doc == null) {
+                              return const Center(
+                                child: Text('No file loaded'),
+                              );
+                            }
+                            return ListView.builder(
+                              itemCount: doc.data.subjectClassGrades.length,
+                              itemBuilder: (context, index) {
+                                final scg = doc.data.subjectClassGrades[index];
+                                final isActive =
+                                    appState.activeClassIndex == index;
+                                return ListTile(
+                                  title: Text(
+                                    '${scg.subject} - ${scg.classCode}',
+                                    style: TextStyle(
+                                      color: isActive
+                                          ? theme.colorScheme.primary
+                                          : null,
+                                      fontWeight: isActive
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
                                     ),
+                                  ),
+                                  subtitle: Text(
+                                    '${scg.students.length} students',
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                  selected: isActive,
+                                  onTap: () =>
+                                      appState.setActiveClassIndex(index),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+
+                      // Main
+                      Expanded(
+                        child: Consumer<AppState>(
+                          builder: (context, appState, _) {
+                            final doc = appState.document;
+                            if (doc == null)
+                              return Center(
+                                child: Text(
+                                  'Select a class',
+                                  style: TextStyle(color: placeholderColor),
+                                ),
+                              );
+                            final active = appState.activeSubjectClassGrade;
+                            if (active == null)
+                              return Center(
+                                child: Text(
+                                  'No class selected',
+                                  style: TextStyle(color: placeholderColor),
+                                ),
+                              );
+                            return GradeTable(
+                              subjectClassGrade: active,
+                              classIndex: appState.activeClassIndex,
+                              onStudentTap: (studentIndex) {
+                                appState.focusStudent(
+                                  appState.activeClassIndex,
+                                  studentIndex,
+                                );
+                                showStudentDetailDialog(
+                                  context,
+                                  classIndex: appState.activeClassIndex,
+                                  studentIndex: studentIndex,
+                                  student: active.students[studentIndex],
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  if (_isChatVisible)
+                    Positioned(
+                      top: 0,
+                      bottom: 0,
+                      right: 0,
+                      width: _chatWidth,
+                      child: Material(
+                        elevation: 12,
+                        color: theme.scaffoldBackgroundColor,
+                        child: Column(
+                          children: [
+                            Container(
+                              height: 44,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                              decoration: BoxDecoration(color: theme.cardColor),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.chat_bubble_outline),
+                                  const SizedBox(width: 8),
+                                  const Text('Chat'),
+                                  const Spacer(),
+                                  IconButton(
+                                    icon: const Icon(Icons.close),
+                                    onPressed: () =>
+                                        setState(() => _isChatVisible = false),
+                                  ),
                                 ],
                               ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-                if (_isLoading) const LinearProgressIndicator(minHeight: 2),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Row(
-                        children: [
-                          Consumer<AppState>(
-                            builder: (context, appState, _) {
-                              final document = appState.document;
-                              if (document == null) {
-                                return Container(
-                                  width: sidebarWidth,
-                                  color: theme.cardColor,
-                                  child: Center(
-                                    child: Text(
-                                      'No file loaded',
-                                      style: TextStyle(color: placeholderColor),
-                                    ),
-                                  ),
-                                );
-                              }
-
-                              return Container(
-                                width: sidebarWidth,
-                                color: theme.cardColor,
-                                child: ListView.builder(
-                                  itemCount:
-                                      document.data.subjectClassGrades.length,
-                                  itemBuilder: (context, index) {
-                                    final scg =
-                                        document.data.subjectClassGrades[index];
-                                    final isActive =
-                                        appState.activeClassIndex == index;
-
-                                    return ListTile(
-                                      title: Text(
-                                        '${scg.subject} - ${scg.classCode}',
-                                        style: TextStyle(
-                                          color: isActive
-                                              ? theme.colorScheme.primary
-                                              : textColor,
-                                          fontWeight: isActive
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        '${scg.students.length} students',
-                                        style: theme.textTheme.bodySmall,
-                                      ),
-                                      selected: isActive,
-                                      selectedTileColor:
-                                          theme.scaffoldBackgroundColor,
-                                      onTap: () {
-                                        appState.setActiveClassIndex(index);
-                                      },
-                                    );
-                                  },
-                                ),
-                              );
-                            },
-                          ),
-                          Expanded(
-                            child: Consumer<AppState>(
-                              builder: (context, appState, _) {
-                                final document = appState.document;
-                                if (document == null) {
-                                  return Center(
-                                    child: Text(
-                                      'Select a class',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: placeholderColor,
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                final activeScg =
-                                    appState.activeSubjectClassGrade;
-                                if (activeScg == null) {
-                                  return Center(
-                                    child: Text(
-                                      'No class selected',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: placeholderColor,
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                return GradeTable(
-                                  subjectClassGrade: activeScg,
-                                  classIndex: appState.activeClassIndex,
-                                  onStudentTap: (studentIndex) {
-                                    appState.focusStudent(
-                                      appState.activeClassIndex,
-                                      studentIndex,
-                                    );
-                                    showStudentDetailDialog(
-                                      context,
-                                      classIndex: appState.activeClassIndex,
-                                      studentIndex: studentIndex,
-                                      student: activeScg.students[studentIndex],
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ],
+                            const Expanded(child: ChatWidget()),
+                          ],
+                        ),
                       ),
-                      if (_isChatVisible)
-                        Positioned(
-                          top: 0,
-                          bottom: 0,
-                          right: 0,
-                          width: _chatWidth,
-                          child: Material(
-                            elevation: 12,
-                            color: theme.scaffoldBackgroundColor,
-                            child: Column(
-                              children: [
-                                Container(
-                                  height: 44,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: theme.cardColor,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.06),
-                                        blurRadius: 4,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.chat_bubble_outline),
-                                      const SizedBox(width: 8),
-                                      const Text('Chat'),
-                                      const Spacer(),
-                                      IconButton(
-                                        icon: const Icon(Icons.close),
-                                        onPressed: () {
-                                          setState(
-                                            () => _isChatVisible = false,
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(child: ChatWidget()),
-                              ],
-                            ),
-                          ),
-                        ),
-                      if (_isChatVisible)
-                        Positioned(
-                          top: 0,
-                          bottom: 0,
-                          right: _chatWidth - 6,
-                          width: 12,
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.resizeLeftRight,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onHorizontalDragUpdate: (details) {
-                                setState(() {
-                                  _chatWidth = (_chatWidth - details.delta.dx)
-                                      .clamp(_chatMinWidth, _chatMaxWidth);
-                                });
-                              },
-                              child: const SizedBox.shrink(),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

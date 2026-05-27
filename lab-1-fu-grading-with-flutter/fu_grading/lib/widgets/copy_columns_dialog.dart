@@ -71,9 +71,9 @@ class _CopyColumnsDialogState extends State<CopyColumnsDialog> {
   /// Generates preview results.
   void _generatePreview() {
     if (_selectedSource == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select at least one source column')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Select a source column')));
       return;
     }
 
@@ -101,9 +101,9 @@ class _CopyColumnsDialogState extends State<CopyColumnsDialog> {
   /// Applies the column copy operation.
   Future<void> _applyChanges() async {
     if (_selectedSource == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select at least one source column')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Select a source column')));
       return;
     }
 
@@ -167,34 +167,38 @@ class _CopyColumnsDialogState extends State<CopyColumnsDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Source columns selector
+              // Source column selector
               const Text(
-                'Source Columns:',
+                'Source Column:',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white24),
-                  borderRadius: BorderRadius.circular(4),
+              DropdownButtonFormField<int>(
+                value: _selectedSource,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: widget.subjectClassGrade.components.length,
-                  itemBuilder: (context, index) {
-                    final component =
-                        widget.subjectClassGrade.components[index];
-                    return RadioListTile<int>(
-                      dense: true,
-                      title: Text(labelFor(component)),
-                      value: index,
-                      groupValue: _selectedSource,
-                      onChanged: (value) {
-                        setState(() => _selectedSource = value);
-                      },
-                    );
-                  },
+                hint: const Text('Select source column'),
+                items: List.generate(
+                  widget.subjectClassGrade.components.length,
+                  (index) => DropdownMenuItem(
+                    value: index,
+                    child: Text(
+                      labelFor(widget.subjectClassGrade.components[index]),
+                    ),
+                  ),
                 ),
+                onChanged: (value) {
+                  setState(() => _selectedSource = value);
+                },
               ),
               const SizedBox(height: 16),
 

@@ -1,0 +1,10 @@
+# Repo-wide generated output
+**/bin/
+**/obj/
+.vs/
+
+# Flutter generated output
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/build/

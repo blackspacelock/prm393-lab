@@ -31,6 +31,22 @@ class _GradeTableState extends State<GradeTable> {
   int? _lastAutoScrolledClassIndex;
   int? _lastAutoScrolledStudentIndex;
 
+  String _formatGradeDisplay(GradeComponent grade) {
+    if (grade.raw != null && grade.raw!.isNotEmpty) {
+      final parsedRaw = double.tryParse(grade.raw!);
+      if (parsedRaw != null) {
+        return parsedRaw.toStringAsFixed(1);
+      }
+      return grade.raw!;
+    }
+
+    if (grade.grade != null) {
+      return grade.grade!.toStringAsFixed(1);
+    }
+
+    return '';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -146,8 +162,9 @@ class _GradeTableState extends State<GradeTable> {
                     TableRow(
                       decoration: isDarkMode
                           ? const BoxDecoration(
-                              border:
-                                  Border(bottom: BorderSide(color: Colors.grey)),
+                              border: Border(
+                                bottom: BorderSide(color: Colors.grey),
+                              ),
                             )
                           : BoxDecoration(
                               color: const Color(0xFF4A789C),
@@ -165,8 +182,9 @@ class _GradeTableState extends State<GradeTable> {
                           child: Text(
                             'Roll',
                             style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                             maxLines: 1,
                           ),
                         ),
@@ -178,8 +196,9 @@ class _GradeTableState extends State<GradeTable> {
                           child: Text(
                             'Name',
                             style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                             maxLines: 1,
                           ),
                         ),
@@ -204,8 +223,7 @@ class _GradeTableState extends State<GradeTable> {
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color:
-                                          isDarkMode ? null : Colors.white,
+                                      color: isDarkMode ? null : Colors.white,
                                     ),
                                   ),
                                 ),
@@ -268,18 +286,18 @@ class _GradeTableState extends State<GradeTable> {
                       final isEvenRow = studentIndex % 2 == 0;
                       final isFocusedRow =
                           appState.focusedClassIndex == widget.classIndex &&
-                              appState.focusedStudentIndex == studentIndex;
+                          appState.focusedStudentIndex == studentIndex;
                       final rowColor = isDarkMode
                           ? (isFocusedRow
-                              ? const Color(0xFF365D3D)
-                              : (isEvenRow
-                                  ? Colors.transparent
-                                  : const Color(0xFF2A2A3E)))
+                                ? const Color(0xFF365D3D)
+                                : (isEvenRow
+                                      ? Colors.transparent
+                                      : const Color(0xFF2A2A3E)))
                           : (isFocusedRow
-                              ? const Color(0xFFACD5F2)
-                              : (isEvenRow
-                                  ? Colors.white
-                                  : const Color(0xFFEAF1F7)));
+                                ? const Color(0xFFACD5F2)
+                                : (isEvenRow
+                                      ? Colors.white
+                                      : const Color(0xFFEAF1F7)));
 
                       return TableRow(
                         decoration: isDarkMode
@@ -340,9 +358,10 @@ class _GradeTableState extends State<GradeTable> {
                               final componentName = widget
                                   .subjectClassGrade
                                   .components[componentIndex];
-                              final actualGradeIndex = student.grades.indexWhere(
-                                (grade) => grade.component == componentName,
-                              );
+                              final actualGradeIndex = student.grades
+                                  .indexWhere(
+                                    (grade) => grade.component == componentName,
+                                  );
                               final grade = actualGradeIndex >= 0
                                   ? student.grades[actualGradeIndex]
                                   : GradeComponent(component: componentName);
@@ -353,12 +372,10 @@ class _GradeTableState extends State<GradeTable> {
                               final cellColor = (hasNumeric || hasRaw)
                                   ? Colors.transparent
                                   : (isDarkMode
-                                      ? const Color(0xFF5C2A2A)
-                                      : const Color(0xFFFFFBD7));
+                                        ? const Color(0xFF5C2A2A)
+                                        : const Color(0xFFFFFBD7));
 
-                              final displayText = hasRaw
-                                  ? grade.raw!
-                                  : (hasNumeric ? grade.grade!.toString() : '');
+                              final displayText = _formatGradeDisplay(grade);
 
                               return Container(
                                 color: cellColor,

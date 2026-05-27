@@ -146,33 +146,31 @@ class _SelectColumnsDialogState extends State<SelectColumnsDialog> {
                         _expandedClasses[ci] = expanded;
                       });
                     },
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: 8.0,
-                          ),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: Wrap(
-                              alignment: WrapAlignment.start,
-                              spacing: 8,
-                              runSpacing: 6,
-                              children: List.generate(scg.components.length, (
-                                k,
-                              ) {
-                                return FilterChip(
-                                  label: Text(scg.components[k]),
-                                  selected: _selected[ci][k],
-                                  onSelected: (v) {
-                                    setState(() => _selected[ci][k] = v);
-                                  },
-                                );
-                              }),
-                            ),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12.0,
+                          vertical: 8.0,
+                        ),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: Wrap(
+                            alignment: WrapAlignment.start,
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: List.generate(scg.components.length, (k) {
+                              return FilterChip(
+                                label: Text(scg.components[k]),
+                                selected: _selected[ci][k],
+                                onSelected: (v) {
+                                  setState(() => _selected[ci][k] = v);
+                                },
+                              );
+                            }),
                           ),
                         ),
-                      ],
+                      ),
+                    ],
                   ),
                 );
               }),

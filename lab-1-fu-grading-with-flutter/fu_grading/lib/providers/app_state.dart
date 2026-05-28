@@ -542,6 +542,16 @@ class AppState extends ChangeNotifier {
 
     final scg = _document!.data.subjectClassGrades[classIndex];
 
+    // Prevent adding duplicate component names (normalize for robust comparison)
+    String _norm(String s) =>
+        s.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final newNorm = _norm(componentName);
+    for (final existing in scg.components) {
+      if (_norm(existing) == newNorm) {
+        throw Exception('Component name already exists');
+      }
+    }
+
     // Append component name
     scg.components.add(componentName);
 

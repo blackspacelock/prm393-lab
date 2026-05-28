@@ -417,16 +417,19 @@ class _GradeTableState extends State<GradeTable> {
                                       }
                                     }
                                   },
-                                  child: SizedBox(
-                                    width: 120,
-                                    child: Text(
-                                      labelFor(component),
-                                      textAlign: TextAlign.center,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                  child: Tooltip(
+                                    message: labelFor(component),
+                                    child: SizedBox(
+                                      width: 160,
+                                      child: Text(
+                                        labelFor(component),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
                                   ),

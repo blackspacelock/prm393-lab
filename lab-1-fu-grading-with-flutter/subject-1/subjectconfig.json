@@ -209,24 +209,7 @@
                 "completion_criteria": "4"
             }
         ]
-    },
-    {
-        "code": "SEP490",
-        "assessment": [
-            {
-                "name": "On-going Assessment",
-                "type": "on-going",
-                "weight": 0.5,
-                "completion_criteria": "5"
-            },
-            {
-                "name": "Final exam",
-                "type": "final exam",
-                "weight": 0.5,
-                "completion_criteria": "4"
-            }
-        ]
-    },
+    },    
     {
         "code": "PRN212",
         "assessment": [

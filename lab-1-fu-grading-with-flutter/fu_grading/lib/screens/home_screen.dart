@@ -7,7 +7,6 @@ import '../services/file_service.dart';
 import '../widgets/grade_table.dart';
 import '../widgets/student_detail_dialog.dart';
 import '../widgets/copy_columns_dialog.dart';
-import '../widgets/missing_scores_dialog.dart';
 import '../widgets/select_columns_dialog.dart';
 import 'package:fu_grading/widgets/theme_switcher.dart';
 import '../widgets/chat_widget.dart';
@@ -162,6 +161,44 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error saving file: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _exportToFg() async {
+    final appState = context.read<AppState>();
+    if (appState.document == null) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('No document loaded')));
+      return;
+    }
+
+    if (kIsWeb) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Export to FG not supported on web')),
+        );
+      return;
+    }
+
+    final savePath = await FileService.pickSavePath();
+    if (savePath == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await appState.saveFileAs(savePath);
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Exported to .fg')));
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -378,6 +415,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         label: const Text('Export Excel'),
                       ),
                       ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _exportToFg,
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('Export to FG'),
+                      ),
+                      ElevatedButton.icon(
                         onPressed: _isLoading
                             ? null
                             : () async {
@@ -449,25 +491,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         icon: const Icon(Icons.copy_all),
                         label: const Text('Copy Columns'),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          final appState = context.read<AppState>();
-                          final doc = appState.document;
-                          if (doc == null) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('No document loaded'),
-                                ),
-                              );
-                            }
-                            return;
-                          }
-                          showMissingScoresDialog(context, document: doc);
-                        },
-                        icon: const Icon(Icons.error_outline),
-                        label: const Text('Missing Scores'),
-                      ),
+                      // "Missing Scores" feature removed from UI
                     ],
                   ),
                   const SizedBox(height: 10),

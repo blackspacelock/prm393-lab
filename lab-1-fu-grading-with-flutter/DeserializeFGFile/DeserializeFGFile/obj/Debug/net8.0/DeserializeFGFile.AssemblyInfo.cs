@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DeserializeFGFile")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+82e32e666e9920ae43e8ed067c299912c8f2d022")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ce0df31531cbd7ecb918c485c2ab370a43e13221")]
 [assembly: System.Reflection.AssemblyProductAttribute("DeserializeFGFile")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DeserializeFGFile")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

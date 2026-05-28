@@ -49,6 +49,37 @@ class FileService {
     }
   }
 
+  /// Picks a JSON config file (e.g., `subjectconfig.json`) and returns its bytes.
+  ///
+  /// Returns a tuple `(bytes, fileName, path)` similar to `pickGradeFileBytes()`.
+  static Future<(Uint8List?, String?, String?)> pickConfigFileBytes() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        dialogTitle: 'Open subjectconfig.json',
+        lockParentWindow: !kIsWeb,
+      );
+
+      if (result == null) return (null, null, null);
+
+      final fileName = result.files.single.name;
+
+      if (kIsWeb) {
+        return (result.files.single.bytes, fileName, null);
+      }
+
+      final path = result.files.single.path;
+      if (path == null) return (null, null, null);
+
+      final file = File(path);
+      final bytes = await file.readAsBytes();
+      return (bytes, fileName, path);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Picks a .fg file and returns its bytes. (Alias for backward compatibility)
   ///
   /// On desktop platforms, reads the file at the returned path and returns bytes.

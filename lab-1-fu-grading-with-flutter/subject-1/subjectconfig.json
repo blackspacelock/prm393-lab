@@ -3,7 +3,19 @@
         "code": "PRN221",
         "assessment": [
             {
-                "name": "Assignment",
+                "name": "Assignment 1",
+                "type": "on-going",
+                "weight": 0.1,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Assignment 2",
+                "type": "on-going",
+                "weight": 0.1,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Assignment 3",
                 "type": "on-going",
                 "weight": 0.1,
                 "completion_criteria": ">0"
@@ -15,7 +27,13 @@
                 "completion_criteria": ">0"
             },
             {
-                "name": "Progress test",
+                "name": "Progress test 1",
+                "type": "on-going",
+                "weight": 0.1,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test 2",
                 "type": "on-going",
                 "weight": 0.1,
                 "completion_criteria": ">0"
@@ -28,6 +46,12 @@
             },
             {
                 "name": "Final Exam",
+                "type": "final exam",
+                "weight": 0.3,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Final Exam (Resit)",
                 "type": "final exam",
                 "weight": 0.3,
                 "completion_criteria": "4"
@@ -44,7 +68,19 @@
                 "completion_criteria": "5"
             },
             {
-                "name": "Progress test",
+                "name": "Progress test 1",
+                "type": "on-going",
+                "weight": 0.15,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test 2",
+                "type": "on-going",
+                "weight": 0.15,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Progress test 3",
                 "type": "on-going",
                 "weight": 0.15,
                 "completion_criteria": ">0"
@@ -60,7 +96,20 @@
                 "type": "final exam",
                 "weight": 0.4,
                 "completion_criteria": "4"
+            },
+            {
+                "name": "Final Exam",
+                "type": "final exam",
+                "weight": 0.3,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Final Exam Resit",
+                "type": "final exam",
+                "weight": 0.3,
+                "completion_criteria": "4"
             }
+            
         ]
     },
     {
@@ -73,19 +122,55 @@
                 "completion_criteria": ">0"
             },
             {
-                "name": "Labs",
+                "name": "Lab 1",
                 "type": "on-going",
                 "weight": 0.2,
                 "completion_criteria": ">0"
             },
             {
-                "name": "Quizzes",
+                "name": "Lab 2",
                 "type": "on-going",
                 "weight": 0.2,
                 "completion_criteria": ">0"
             },
+            {
+                "name": "Lab 3",
+                "type": "on-going",
+                "weight": 0.2,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Quiz 1",
+                "type": "on-going",
+                "weight": 0.2,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Quiz 2",
+                "type": "on-going",
+                "weight": 0.2,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Quiz 3",
+                "type": "on-going",
+                "weight": 0.2,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Quiz 4",
+                "type": "on-going",
+                "weight": 0.2,
+                "completion_criteria": ">0"
+            },            
             {
                 "name": "Final exam",
+                "type": "final exam",
+                "weight": 0.3,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Final exam (Resit)",
                 "type": "final exam",
                 "weight": 0.3,
                 "completion_criteria": "4"
@@ -124,24 +209,7 @@
                 "completion_criteria": "4"
             }
         ]
-    },
-    {
-        "code": "SEP490",
-        "assessment": [
-            {
-                "name": "On-going Assessment",
-                "type": "on-going",
-                "weight": 0.5,
-                "completion_criteria": "5"
-            },
-            {
-                "name": "Final exam",
-                "type": "final exam",
-                "weight": 0.5,
-                "completion_criteria": "4"
-            }
-        ]
-    },
+    },    
     {
         "code": "PRN212",
         "assessment": [
@@ -961,6 +1029,65 @@
                 "name": "Final exam",
                 "type": "final exam",
                 "weight": 0.40,
+                "completion_criteria": "4"
+            }
+        ]
+    },
+    {
+        "code": "SEP490",
+        "assessment": [
+            {
+                "name": "Project Introduction",
+                "type": "on-going",
+                "weight": 0.04,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Project Management Plan",
+                "type": "on-going",
+                "weight": 0.08,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Software Requirement",
+                "type": "on-going",
+                "weight": 0.16,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Software Design",
+                "type": "on-going",
+                "weight": 0.18,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Testing",
+                "type": "on-going",
+                "weight": 0.18,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "User Guides",
+                "type": "on-going",
+                "weight": 0.04,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Implementation",
+                "type": "on-going",
+                "weight": 0.32,
+                "completion_criteria": ">0"
+            },            
+            {
+                "name": "Final Project Presentation",
+                "type": "final exam",
+                "weight": 0.5,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Final Project Presentation Resit",
+                "type": "final exam",
+                "weight": 0.5,
                 "completion_criteria": "4"
             }
         ]

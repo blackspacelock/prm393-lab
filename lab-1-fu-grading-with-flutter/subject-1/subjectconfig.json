@@ -70,19 +70,19 @@
             {
                 "name": "Progress test 1",
                 "type": "on-going",
-                "weight": 0.15,
+                "weight": 0.05,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Progress test 2",
                 "type": "on-going",
-                "weight": 0.15,
+                "weight": 0.05,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Progress test 3",
                 "type": "on-going",
-                "weight": 0.15,
+                "weight": 0.05,
                 "completion_criteria": ">0"
             },
             {
@@ -92,21 +92,15 @@
                 "completion_criteria": "4"
             },
             {
-                "name": "Theory Exam",
+                "name": "Final Exam",
                 "type": "final exam",
                 "weight": 0.4,
                 "completion_criteria": "4"
             },
             {
-                "name": "Final Exam",
-                "type": "final exam",
-                "weight": 0.3,
-                "completion_criteria": "4"
-            },
-            {
                 "name": "Final Exam Resit",
                 "type": "final exam",
-                "weight": 0.3,
+                "weight": 0.4,
                 "completion_criteria": "4"
             }
             

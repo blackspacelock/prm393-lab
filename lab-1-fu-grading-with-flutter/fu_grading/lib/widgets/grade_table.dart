@@ -140,21 +140,33 @@ class _GradeTableState extends State<GradeTable> {
       builder: (context, appState, _) {
         _maybeScrollToFocusedStudent(appState);
 
+        // Helper to produce a normalized key for component matching.
+        String _norm(String s) =>
+            s.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
         // Build a component -> full assessment info map from loaded subjectconfig (if any)
         final Map<String, Map<String, dynamic>> compInfoMap = {};
         final subjectConfigs = appState.subjectConfigs;
+        // Keep ordered assessment list from subjectconfig when available
+        List<Map<String, dynamic>>? subjectAssessmentList;
         if (subjectConfigs != null) {
           final code = widget.subjectClassGrade.subject;
-          final matched = subjectConfigs.firstWhere(
-            (c) => (c['code'] as String?)?.toLowerCase() == code.toLowerCase(),
-            orElse: () => null,
-          );
+          final codeNorm = _norm(code);
+          final matched = subjectConfigs.firstWhere((c) {
+            final cc = (c['code'] as String?) ?? '';
+            final cn = _norm(cc);
+            return cn == codeNorm ||
+                codeNorm.startsWith(cn) ||
+                cn.startsWith(codeNorm);
+          }, orElse: () => null);
           if (matched != null && matched['assessment'] is List) {
-            for (final a in matched['assessment']) {
-              final name = (a['name'] as String?)?.trim().toLowerCase();
-              if (name != null) {
-                compInfoMap[name] = Map<String, dynamic>.from(a as Map);
-              }
+            subjectAssessmentList = (matched['assessment'] as List)
+                .map((e) => Map<String, dynamic>.from(e as Map))
+                .toList();
+            for (final a in subjectAssessmentList) {
+              final rawName = (a['name'] as String?)?.trim() ?? '';
+              final key = _norm(rawName);
+              compInfoMap[key] = a;
             }
           }
         }
@@ -231,9 +243,7 @@ class _GradeTableState extends State<GradeTable> {
                         ) {
                           final componentIndex = entry.key;
                           final component = entry.value;
-                          final normalized = labelFor(
-                            component,
-                          ).trim().toLowerCase();
+                          final normalized = _norm(labelFor(component));
                           final info = compInfoMap[normalized];
 
                           // Determine header background color when component info exists
@@ -624,9 +634,7 @@ class _GradeTableState extends State<GradeTable> {
                                   grade.raw != null && grade.raw!.isNotEmpty;
 
                               // Determine component type from loaded config (if any)
-                              final normalizedName = componentName
-                                  .trim()
-                                  .toLowerCase();
+                              final normalizedName = _norm(componentName);
                               final compType =
                                   compInfoMap.containsKey(normalizedName)
                                   ? (compInfoMap[normalizedName]?['type']
@@ -732,20 +740,47 @@ class _GradeTableState extends State<GradeTable> {
                           // Total cell (read-only) computed from weights
                           Builder(
                             builder: (ctx) {
+                              // Determine if student has a resit final value by
+                              // inspecting actual student grade entries (robust)
+                              bool hasResitFinal = false;
+                              for (final g in student.grades) {
+                                final gname = _norm(g.component);
+                                if (gname.contains('resit') &&
+                                    gname.contains('final')) {
+                                  if (g.grade != null ||
+                                      (g.raw != null &&
+                                          g.raw!.trim().isNotEmpty)) {
+                                    hasResitFinal = true;
+                                    break;
+                                  }
+                                }
+                              }
+
                               double total = 0.0;
-                              for (
-                                int ci = 0;
-                                ci < widget.subjectClassGrade.components.length;
-                                ci++
-                              ) {
-                                final compName =
-                                    widget.subjectClassGrade.components[ci];
-                                final normalized = compName
-                                    .trim()
-                                    .toLowerCase();
-                                final gradeIndex = student.grades.indexWhere(
-                                  (g) => g.component == compName,
-                                );
+                              // Use the ordered assessment list from subjectconfig when available;
+                              // otherwise fall back to the components present in the .fg file.
+                              final assessments =
+                                  subjectAssessmentList ??
+                                  widget.subjectClassGrade.components
+                                      .map((c) => {'name': c})
+                                      .toList();
+                              for (final a in assessments) {
+                                final aname = (a['name'] as String).trim();
+                                final anorm = _norm(aname);
+
+                                final isOriginalFinal =
+                                    anorm.contains('final') &&
+                                    !anorm.contains('resit');
+                                if (hasResitFinal && isOriginalFinal) continue;
+
+                                // Find student's grade for this assessment by matching normalized component names
+                                final gradeIndex = student.grades.indexWhere((
+                                  g,
+                                ) {
+                                  final gcomp = _norm(g.component);
+                                  return gcomp == anorm ||
+                                      g.component.trim() == aname;
+                                });
                                 double? value;
                                 if (gradeIndex >= 0) {
                                   final g = student.grades[gradeIndex];
@@ -758,8 +793,10 @@ class _GradeTableState extends State<GradeTable> {
                                     );
                                   }
                                 }
+
                                 final weightVal =
-                                    compInfoMap[normalized]?['weight'];
+                                    a['weight'] ??
+                                    compInfoMap[anorm]?['weight'];
                                 final weight = weightVal is num
                                     ? weightVal.toDouble()
                                     : 0.0;
@@ -772,19 +809,187 @@ class _GradeTableState extends State<GradeTable> {
                                   ? total.toStringAsFixed(1)
                                   : '0.0';
 
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8.0,
-                                  horizontal: 12.0,
-                                ),
-                                alignment: Alignment.center,
-                                child: SizedBox(
-                                  width: 80,
-                                  child: Text(
-                                    totalText,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
+                              return InkWell(
+                                onTap: () {
+                                  // Build breakdown using only components defined in subjectconfig
+                                  final rows = <Map<String, dynamic>>[];
+                                  double sumWeights = 0.0;
+                                  for (
+                                    int ci = 0;
+                                    ci <
+                                        widget
+                                            .subjectClassGrade
+                                            .components
+                                            .length;
+                                    ci++
+                                  ) {
+                                    final compName =
+                                        widget.subjectClassGrade.components[ci];
+                                    final normalized = _norm(compName);
+
+                                    // skip components not defined in subjectconfig
+                                    if (!compInfoMap.containsKey(normalized))
+                                      continue;
+
+                                    // skip original final when resit present
+                                    final isOriginalFinal =
+                                        normalized.contains('final') &&
+                                        !normalized.contains('resit');
+                                    if (hasResitFinal && isOriginalFinal)
+                                      continue;
+
+                                    final gradeIndex = student.grades
+                                        .indexWhere(
+                                          (g) => g.component == compName,
+                                        );
+                                    double? value;
+                                    if (gradeIndex >= 0) {
+                                      final g = student.grades[gradeIndex];
+                                      if (g.grade != null) {
+                                        value = g.grade!;
+                                      } else if (g.raw != null &&
+                                          g.raw!.isNotEmpty) {
+                                        value = double.tryParse(
+                                          g.raw!.replaceAll(',', '.'),
+                                        );
+                                      }
+                                    }
+
+                                    final weightVal =
+                                        compInfoMap[normalized]?['weight'];
+                                    final weight = weightVal is num
+                                        ? weightVal.toDouble()
+                                        : 0.0;
+                                    sumWeights += weight;
+
+                                    rows.add({
+                                      'name':
+                                          compInfoMap[normalized]?['name'] ??
+                                          compName,
+                                      'weight': weight,
+                                      'value': value ?? 0.0,
+                                    });
+                                  }
+
+                                  showDialog<void>(
+                                    context: context,
+                                    builder: (dctx) {
+                                      return AlertDialog(
+                                        title: const Text('Total breakdown'),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            children: [
+                                              ...rows.map((r) {
+                                                return Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        vertical: 4.0,
+                                                      ),
+                                                  child: Row(
+                                                    children: [
+                                                      Expanded(
+                                                        flex: 3,
+                                                        child: Text(
+                                                          r['name'].toString(),
+                                                        ),
+                                                      ),
+                                                      Expanded(
+                                                        flex: 1,
+                                                        child: Text(
+                                                          r['weight']
+                                                              .toStringAsFixed(
+                                                                2,
+                                                              ),
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                        ),
+                                                      ),
+                                                      Expanded(
+                                                        flex: 1,
+                                                        child: Text(
+                                                          r['value']
+                                                              .toStringAsFixed(
+                                                                1,
+                                                              ),
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                              }).toList(),
+                                              const Divider(),
+                                              Row(
+                                                children: [
+                                                  const Expanded(
+                                                    flex: 3,
+                                                    child: Text(
+                                                      'Total',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    flex: 1,
+                                                    child: Text(
+                                                      sumWeights
+                                                          .toStringAsFixed(2),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    flex: 1,
+                                                    child: Text(
+                                                      totalText,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.of(dctx).pop(),
+                                            child: const Text('Close'),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8.0,
+                                    horizontal: 12.0,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: SizedBox(
+                                    width: 80,
+                                    child: Text(
+                                      totalText,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),

@@ -1049,5 +1049,64 @@
                 "completion_criteria": "4"
             }
         ]
+    },
+    {
+        "code": "SEP490",
+        "assessment": [
+            {
+                "name": "Project Introduction",
+                "type": "on-going",
+                "weight": 0.04,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Project Management Plan",
+                "type": "on-going",
+                "weight": 0.08,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Software Requirement",
+                "type": "on-going",
+                "weight": 0.16,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Software Design",
+                "type": "on-going",
+                "weight": 0.18,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Testing",
+                "type": "on-going",
+                "weight": 0.18,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "User Guides",
+                "type": "on-going",
+                "weight": 0.04,
+                "completion_criteria": ">0"
+            },
+            {
+                "name": "Implementation ",
+                "type": "on-going",
+                "weight": 0.32,
+                "completion_criteria": ">0"
+            },            
+            {
+                "name": "Final Project Presentation",
+                "type": "final exam",
+                "weight": 0.5,
+                "completion_criteria": "4"
+            },
+            {
+                "name": "Final Project Presentation Resit",
+                "type": "final exam",
+                "weight": 0.5,
+                "completion_criteria": "4"
+            }
+        ]
     }
 ]

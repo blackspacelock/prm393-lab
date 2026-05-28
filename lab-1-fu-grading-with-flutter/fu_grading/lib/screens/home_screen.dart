@@ -260,8 +260,10 @@ class _HomeScreenState extends State<HomeScreen> {
         return StatefulBuilder(
           builder: (c, setState) {
             final appState = context.read<AppState>();
-            final components = appState.activeSubjectClassGrade?.components ?? [];
-            String _norm(String s) => s.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+            final components =
+                appState.activeSubjectClassGrade?.components ?? [];
+            String _norm(String s) =>
+                s.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
             return AlertDialog(
               title: const Text('Add grading component'),
@@ -293,7 +295,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     final newNorm = _norm(v);
                     final exists = components.any((e) => _norm(e) == newNorm);
                     if (exists) {
-                      setState(() => error = 'A component with this name already exists');
+                      setState(
+                        () =>
+                            error = 'A component with this name already exists',
+                      );
                       return;
                     }
 

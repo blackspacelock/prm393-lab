@@ -745,7 +745,9 @@ class _GradeTableState extends State<GradeTable> {
                             builder: (ctx) {
                               double? valueForComponent(String componentName) {
                                 final componentNorm = _norm(componentName);
-                                final gradeIndex = student.grades.indexWhere((g) {
+                                final gradeIndex = student.grades.indexWhere((
+                                  g,
+                                ) {
                                   final gcomp = _norm(g.component);
                                   return gcomp == componentNorm ||
                                       g.component.trim() == componentName;
@@ -780,12 +782,26 @@ class _GradeTableState extends State<GradeTable> {
                                   widget.subjectClassGrade.components
                                       .map((c) => {'name': c})
                                       .toList();
+
+                              // Helper: decide whether an assessment should be treated as a "final".
+                              // Prefer the explicit `type` from `compInfoMap` when available
+                              // (so a component named "Final project" that is actually type "on-going"
+                              // won't be misclassified). Fall back to name-based detection.
+                              bool isFinalAssessmentByNorm(String anorm) {
+                                final infoType =
+                                    compInfoMap[anorm]?['type'] as String?;
+                                if (infoType != null) {
+                                  final t = infoType.toLowerCase();
+                                  return t.contains('final');
+                                }
+                                return anorm.contains('final');
+                              }
                               Map<String, dynamic>? finalAssessment;
                               Map<String, dynamic>? resitAssessment;
                               for (final a in assessments) {
                                 final aname = (a['name'] as String).trim();
                                 final anorm = _norm(aname);
-                                if (!anorm.contains('final')) continue;
+                                if (!isFinalAssessmentByNorm(anorm)) continue;
                                 if (anorm.contains('resit')) {
                                   resitAssessment ??= a;
                                 } else {
@@ -803,33 +819,36 @@ class _GradeTableState extends State<GradeTable> {
                               final resitValue = resitAssessmentName == null
                                   ? null
                                   : valueForComponent(resitAssessmentName);
-                                final useResitFinal = resitValue != null ||
+                              final useResitFinal =
+                                  resitValue != null ||
                                   (finalAssessment == null &&
-                                    resitAssessment != null);
+                                      resitAssessment != null);
                               final selectedFinalAssessment = useResitFinal
                                   ? resitAssessment
                                   : finalAssessment;
                               final selectedFinalName =
                                   selectedFinalAssessment?['name'] as String?;
-                                final selectedFinalNorm = selectedFinalName == null
+                              final selectedFinalNorm =
+                                  selectedFinalName == null
                                   ? null
                                   : _norm(selectedFinalName);
                               final selectedFinalValue = useResitFinal
                                   ? resitValue
                                   : finalValue;
-                                final selectedFinalWeight =
-                                  weightOf(selectedFinalAssessment);
+                              final selectedFinalWeight = weightOf(
+                                selectedFinalAssessment,
+                              );
 
                               for (final a in assessments) {
                                 final aname = (a['name'] as String).trim();
                                 final anorm = _norm(aname);
 
                                 final isOriginalFinal =
-                                    anorm.contains('final') &&
-                                    !anorm.contains('resit');
+                                  isFinalAssessmentByNorm(anorm) &&
+                                  !anorm.contains('resit');
                                 final isResitFinal =
-                                    anorm.contains('final') &&
-                                    anorm.contains('resit');
+                                  isFinalAssessmentByNorm(anorm) &&
+                                  anorm.contains('resit');
                                 if (isOriginalFinal || isResitFinal) {
                                   if (selectedFinalNorm == null ||
                                       anorm != selectedFinalNorm) {
@@ -862,36 +881,33 @@ class _GradeTableState extends State<GradeTable> {
 
                               return InkWell(
                                 onTap: () {
-                                  // Build breakdown using only components defined in subjectconfig
+                                  // Build breakdown using the subject config assessment list when available,
+                                  // otherwise fall back to components present in the .fg file.
                                   final rows = <Map<String, dynamic>>[];
                                   double sumWeights = 0.0;
-                                  for (
-                                    int ci = 0;
-                                    ci <
-                                        widget
-                                            .subjectClassGrade
-                                            .components
-                                            .length;
-                                    ci++
-                                  ) {
-                                    final compName =
-                                        widget.subjectClassGrade.components[ci];
-                                    final normalized = _norm(compName);
 
-                                    // skip components not defined in subjectconfig
-                                    if (!compInfoMap.containsKey(normalized)) {
-                                      continue;
-                                    }
+                                  final assessments =
+                                      subjectAssessmentList ??
+                                      widget.subjectClassGrade.components
+                                          .map((c) => {'name': c})
+                                          .toList();
+
+                                  for (final a in assessments) {
+                                    final compName = (a['name'] as String)
+                                        .trim();
+                                    final anorm = _norm(compName);
 
                                     final isOriginalFinal =
-                                        normalized.contains('final') &&
-                                        !normalized.contains('resit');
+                                      isFinalAssessmentByNorm(anorm) &&
+                                      !anorm.contains('resit');
                                     final isResitFinal =
-                                        normalized.contains('final') &&
-                                        normalized.contains('resit');
+                                      isFinalAssessmentByNorm(anorm) &&
+                                      anorm.contains('resit');
+
                                     if (isOriginalFinal || isResitFinal) {
                                       if (selectedFinalNorm == null ||
-                                        normalized != selectedFinalNorm) {
+                                          anorm != selectedFinalNorm) {
+                                        // skip other final/resit entries that are not the selected final
                                         continue;
                                       }
 
@@ -900,7 +916,7 @@ class _GradeTableState extends State<GradeTable> {
 
                                       rows.add({
                                         'name':
-                                            compInfoMap[normalized]?['name'] ??
+                                            compInfoMap[anorm]?['name'] ??
                                             compName,
                                         'weight': weight,
                                         'value': selectedFinalValue ?? 0.0,
@@ -908,25 +924,12 @@ class _GradeTableState extends State<GradeTable> {
                                       continue;
                                     }
 
-                                    final gradeIndex = student.grades
-                                        .indexWhere(
-                                          (g) => g.component == compName,
-                                        );
-                                    double? value;
-                                    if (gradeIndex >= 0) {
-                                      final g = student.grades[gradeIndex];
-                                      if (g.grade != null) {
-                                        value = g.grade!;
-                                      } else if (g.raw != null &&
-                                          g.raw!.isNotEmpty) {
-                                        value = double.tryParse(
-                                          g.raw!.replaceAll(',', '.'),
-                                        );
-                                      }
-                                    }
+                                    // Use valueForComponent to find student's grade by matching names
+                                    final value = valueForComponent(compName);
 
                                     final weightVal =
-                                        compInfoMap[normalized]?['weight'];
+                                        a['weight'] ??
+                                        compInfoMap[anorm]?['weight'];
                                     final weight = weightVal is num
                                         ? weightVal.toDouble()
                                         : 0.0;
@@ -934,7 +937,7 @@ class _GradeTableState extends State<GradeTable> {
 
                                     rows.add({
                                       'name':
-                                          compInfoMap[normalized]?['name'] ??
+                                          compInfoMap[anorm]?['name'] ??
                                           compName,
                                       'weight': weight,
                                       'value': value ?? 0.0,

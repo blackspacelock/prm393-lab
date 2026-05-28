@@ -1073,7 +1073,7 @@
                 "completion_criteria": ">0"
             },
             {
-                "name": "Implementation ",
+                "name": "Implementation",
                 "type": "on-going",
                 "weight": 0.32,
                 "completion_criteria": ">0"

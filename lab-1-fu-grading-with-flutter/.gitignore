@@ -8,3 +8,10 @@
 **/.flutter-plugins
 **/.flutter-plugins-dependencies
 **/build/
+
+DeserializeFGFile/DeserializeFGFile/bin
+DeserializeFGFile/DeserializeFGFile/obj
+
+.kiro
+
+.vscode

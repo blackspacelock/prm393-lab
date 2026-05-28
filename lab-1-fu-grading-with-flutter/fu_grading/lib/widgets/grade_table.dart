@@ -740,47 +740,118 @@ class _GradeTableState extends State<GradeTable> {
                           // Total cell (read-only) computed from weights
                           Builder(
                             builder: (ctx) {
-                              // Determine if student has a resit final value by
-                              // inspecting actual student grade entries (robust)
-                              bool hasResitFinal = false;
-                              for (final g in student.grades) {
-                                final gname = _norm(g.component);
-                                if (gname.contains('resit') &&
-                                    gname.contains('final')) {
-                                  if (g.grade != null ||
-                                      (g.raw != null &&
-                                          g.raw!.trim().isNotEmpty)) {
-                                    hasResitFinal = true;
-                                    break;
-                                  }
-                                }
-                              }
-
-                              double total = 0.0;
                               // Use the ordered assessment list from subjectconfig when available;
                               // otherwise fall back to the components present in the .fg file.
                               final assessments =
-                                  subjectAssessmentList ??
-                                  widget.subjectClassGrade.components
-                                      .map((c) => {'name': c})
+                                  (subjectAssessmentList ??
+                                          widget.subjectClassGrade.components
+                                              .map((c) => {'name': c})
+                                              .toList())
+                                      .map(
+                                        (a) =>
+                                            Map<String, dynamic>.from(a as Map),
+                                      )
                                       .toList();
-                              for (final a in assessments) {
-                                final aname = (a['name'] as String).trim();
-                                final anorm = _norm(aname);
 
-                                final isOriginalFinal =
-                                    anorm.contains('final') &&
-                                    !anorm.contains('resit');
-                                if (hasResitFinal && isOriginalFinal) continue;
+                              bool isFinalExamAssessment(
+                                Map<String, dynamic> assessment,
+                              ) {
+                                final type = (assessment['type'] as String?)
+                                    ?.trim()
+                                    .toLowerCase();
+                                return type == 'final exam';
+                              }
 
-                                // Find student's grade for this assessment by matching normalized component names
-                                final gradeIndex = student.grades.indexWhere((
-                                  g,
-                                ) {
+                              bool isResitFinalAssessment(
+                                Map<String, dynamic> assessment,
+                              ) {
+                                if (!isFinalExamAssessment(assessment)) {
+                                  return false;
+                                }
+                                final name =
+                                    (assessment['name'] as String?) ?? '';
+                                return _norm(name).contains('resit');
+                              }
+
+                              String finalBaseKey(
+                                Map<String, dynamic> assessment,
+                              ) {
+                                final name =
+                                    (assessment['name'] as String?) ?? '';
+                                return _norm(name).replaceAll('resit', '');
+                              }
+
+                              int findGradeIndexByAssessmentName(
+                                String assessmentName,
+                              ) {
+                                final anorm = _norm(assessmentName);
+                                return student.grades.indexWhere((g) {
                                   final gcomp = _norm(g.component);
                                   return gcomp == anorm ||
-                                      g.component.trim() == aname;
+                                      g.component.trim() == assessmentName;
                                 });
+                              }
+
+                              bool isAssessmentFilled(String assessmentName) {
+                                final gradeIndex = findGradeIndexByAssessmentName(
+                                  assessmentName,
+                                );
+                                if (gradeIndex < 0) return false;
+                                final g = student.grades[gradeIndex];
+                                return g.grade != null ||
+                                    (g.raw != null && g.raw!.trim().isNotEmpty);
+                              }
+
+                              final baseHasOriginal = <String>{};
+                              final baseHasResit = <String>{};
+                              for (final a in assessments) {
+                                if (!isFinalExamAssessment(a)) continue;
+                                final baseKey = finalBaseKey(a);
+                                if (isResitFinalAssessment(a)) {
+                                  baseHasResit.add(baseKey);
+                                } else {
+                                  baseHasOriginal.add(baseKey);
+                                }
+                              }
+
+                              final useResitByBase = <String, bool>{};
+                              for (final base in baseHasOriginal) {
+                                if (!baseHasResit.contains(base)) continue;
+                                final hasFilledResit = assessments.any((a) {
+                                  if (!isResitFinalAssessment(a)) return false;
+                                  if (finalBaseKey(a) != base) return false;
+                                  final name = (a['name'] as String?) ?? '';
+                                  return isAssessmentFilled(name);
+                                });
+                                useResitByBase[base] = hasFilledResit;
+                              }
+
+                              bool shouldSkipAssessment(
+                                Map<String, dynamic> assessment,
+                              ) {
+                                if (!isFinalExamAssessment(assessment)) {
+                                  return false;
+                                }
+                                final baseKey = finalBaseKey(assessment);
+                                final useResit = useResitByBase[baseKey];
+                                if (useResit == null) return false;
+                                final isResit = isResitFinalAssessment(
+                                  assessment,
+                                );
+                                return useResit ? !isResit : isResit;
+                              }
+
+                              double total = 0.0;
+                              for (final a in assessments) {
+                                if (shouldSkipAssessment(a)) continue;
+
+                                final aname = ((a['name'] as String?) ?? '')
+                                    .trim();
+                                final anorm = _norm(aname);
+
+                                final gradeIndex = findGradeIndexByAssessmentName(
+                                  aname,
+                                );
                                 double? value;
                                 if (gradeIndex >= 0) {
                                   final g = student.grades[gradeIndex];
@@ -814,34 +885,20 @@ class _GradeTableState extends State<GradeTable> {
                                   // Build breakdown using only components defined in subjectconfig
                                   final rows = <Map<String, dynamic>>[];
                                   double sumWeights = 0.0;
-                                  for (
-                                    int ci = 0;
-                                    ci <
-                                        widget
-                                            .subjectClassGrade
-                                            .components
-                                            .length;
-                                    ci++
-                                  ) {
+                                  for (final a in assessments) {
+                                    if (shouldSkipAssessment(a)) continue;
+
                                     final compName =
-                                        widget.subjectClassGrade.components[ci];
+                                        ((a['name'] as String?) ?? '').trim();
                                     final normalized = _norm(compName);
 
                                     // skip components not defined in subjectconfig
-                                    if (!compInfoMap.containsKey(normalized))
+                                    if (!compInfoMap.containsKey(normalized)) {
                                       continue;
+                                    }
 
-                                    // skip original final when resit present
-                                    final isOriginalFinal =
-                                        normalized.contains('final') &&
-                                        !normalized.contains('resit');
-                                    if (hasResitFinal && isOriginalFinal)
-                                      continue;
-
-                                    final gradeIndex = student.grades
-                                        .indexWhere(
-                                          (g) => g.component == compName,
-                                        );
+                                    final gradeIndex =
+                                        findGradeIndexByAssessmentName(compName);
                                     double? value;
                                     if (gradeIndex >= 0) {
                                       final g = student.grades[gradeIndex];
@@ -856,6 +913,7 @@ class _GradeTableState extends State<GradeTable> {
                                     }
 
                                     final weightVal =
+                                        a['weight'] ??
                                         compInfoMap[normalized]?['weight'];
                                     final weight = weightVal is num
                                         ? weightVal.toDouble()

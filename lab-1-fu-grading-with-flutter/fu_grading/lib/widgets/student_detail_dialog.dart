@@ -49,22 +49,95 @@ Future<void> showStudentDetailDialog(
       double computeTotal() {
         double total = 0.0;
         if (classConfig != null) {
-          final assessments = classConfig!['assessment'] as List<dynamic>;
-          for (int i = 0; i < student.grades.length; i++) {
-            final g = student.grades[i];
-            final compName = g.component;
-            double weight = 0.0;
-            for (final a in assessments) {
-              if (a is Map &&
-                  (a['name'] as String).toLowerCase() ==
-                      compName.toLowerCase()) {
-                weight = (a['weight'] is num)
-                    ? (a['weight'] as num).toDouble()
-                    : 0.0;
-                break;
+          String norm(String s) =>
+              s.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+          final assessments = (classConfig!['assessment'] as List<dynamic>)
+              .map((a) => Map<String, dynamic>.from(a as Map))
+              .toList();
+
+          bool isFinalExamAssessment(Map<String, dynamic> assessment) {
+            final type = (assessment['type'] as String?)?.trim().toLowerCase();
+            return type == 'final exam';
+          }
+
+          bool isResitFinalAssessment(Map<String, dynamic> assessment) {
+            if (!isFinalExamAssessment(assessment)) return false;
+            final name = (assessment['name'] as String?) ?? '';
+            return norm(name).contains('resit');
+          }
+
+          String finalBaseKey(Map<String, dynamic> assessment) {
+            final name = (assessment['name'] as String?) ?? '';
+            return norm(name).replaceAll('resit', '');
+          }
+
+          int findGradeIndexByAssessmentName(String assessmentName) {
+            final anorm = norm(assessmentName);
+            return student.grades.indexWhere((g) {
+              final gcomp = norm(g.component);
+              return gcomp == anorm || g.component.trim() == assessmentName;
+            });
+          }
+
+          bool isAssessmentFilled(String assessmentName) {
+            final gradeIndex = findGradeIndexByAssessmentName(assessmentName);
+            if (gradeIndex < 0) return false;
+            final g = student.grades[gradeIndex];
+            return g.grade != null || (g.raw != null && g.raw!.trim().isNotEmpty);
+          }
+
+          final baseHasOriginal = <String>{};
+          final baseHasResit = <String>{};
+          for (final a in assessments) {
+            if (!isFinalExamAssessment(a)) continue;
+            final baseKey = finalBaseKey(a);
+            if (isResitFinalAssessment(a)) {
+              baseHasResit.add(baseKey);
+            } else {
+              baseHasOriginal.add(baseKey);
+            }
+          }
+
+          final useResitByBase = <String, bool>{};
+          for (final base in baseHasOriginal) {
+            if (!baseHasResit.contains(base)) continue;
+            final hasFilledResit = assessments.any((a) {
+              if (!isResitFinalAssessment(a)) return false;
+              if (finalBaseKey(a) != base) return false;
+              final name = (a['name'] as String?) ?? '';
+              return isAssessmentFilled(name);
+            });
+            useResitByBase[base] = hasFilledResit;
+          }
+
+          bool shouldSkipAssessment(Map<String, dynamic> assessment) {
+            if (!isFinalExamAssessment(assessment)) return false;
+            final baseKey = finalBaseKey(assessment);
+            final useResit = useResitByBase[baseKey];
+            if (useResit == null) return false;
+            final isResit = isResitFinalAssessment(assessment);
+            return useResit ? !isResit : isResit;
+          }
+
+          for (final a in assessments) {
+            if (shouldSkipAssessment(a)) continue;
+
+            final name = ((a['name'] as String?) ?? '').trim();
+            final gradeIndex = findGradeIndexByAssessmentName(name);
+            double gradeVal = 0.0;
+            if (gradeIndex >= 0) {
+              final g = student.grades[gradeIndex];
+              if (g.grade != null) {
+                gradeVal = g.grade!;
+              } else if (g.raw != null && g.raw!.trim().isNotEmpty) {
+                gradeVal = double.tryParse(g.raw!.replaceAll(',', '.')) ?? 0.0;
               }
             }
-            final gradeVal = g.grade ?? 0.0;
+
+            final weight = (a['weight'] is num)
+                ? (a['weight'] as num).toDouble()
+                : 0.0;
             total += gradeVal * weight;
           }
         }

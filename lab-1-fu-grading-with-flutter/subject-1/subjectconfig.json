@@ -5,19 +5,19 @@
             {
                 "name": "Assignment 1",
                 "type": "on-going",
-                "weight": 0.1,
+                "weight": 0.0333,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Assignment 2",
                 "type": "on-going",
-                "weight": 0.1,
+                "weight": 0.0333,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Assignment 3",
                 "type": "on-going",
-                "weight": 0.1,
+                "weight": 0.0333,
                 "completion_criteria": ">0"
             },
             {
@@ -29,13 +29,13 @@
             {
                 "name": "Progress test 1",
                 "type": "on-going",
-                "weight": 0.1,
+                "weight": 0.05,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Progress test 2",
                 "type": "on-going",
-                "weight": 0.1,
+                "weight": 0.05,
                 "completion_criteria": ">0"
             },
             {
@@ -124,43 +124,37 @@
             {
                 "name": "Lab 1",
                 "type": "on-going",
-                "weight": 0.2,
+                "weight": 0.1,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Lab 2",
                 "type": "on-going",
-                "weight": 0.2,
-                "completion_criteria": ">0"
-            },
-            {
-                "name": "Lab 3",
-                "type": "on-going",
-                "weight": 0.2,
+                "weight": 0.1,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Quiz 1",
                 "type": "on-going",
-                "weight": 0.2,
+                "weight": 0.05,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Quiz 2",
                 "type": "on-going",
-                "weight": 0.2,
+                "weight": 0.05,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Quiz 3",
                 "type": "on-going",
-                "weight": 0.2,
+                "weight": 0.05,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Quiz 4",
                 "type": "on-going",
-                "weight": 0.2,
+                "weight": 0.05,
                 "completion_criteria": ">0"
             },            
             {
@@ -1039,43 +1033,43 @@
             {
                 "name": "Project Introduction",
                 "type": "on-going",
-                "weight": 0.04,
+                "weight": 0.02,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Project Management Plan",
                 "type": "on-going",
-                "weight": 0.08,
+                "weight": 0.04,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Software Requirement",
                 "type": "on-going",
-                "weight": 0.16,
+                "weight": 0.08,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Software Design",
                 "type": "on-going",
-                "weight": 0.18,
+                "weight": 0.09,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Testing",
                 "type": "on-going",
-                "weight": 0.18,
+                "weight": 0.09,
                 "completion_criteria": ">0"
             },
             {
                 "name": "User Guides",
                 "type": "on-going",
-                "weight": 0.04,
+                "weight": 0.02,
                 "completion_criteria": ">0"
             },
             {
                 "name": "Implementation",
                 "type": "on-going",
-                "weight": 0.32,
+                "weight": 0.16,
                 "completion_criteria": ">0"
             },            
             {

@@ -208,9 +208,19 @@ class _CopyColumnsDialogState extends State<CopyColumnsDialog> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              DropdownButton<int>(
+              DropdownButtonFormField<int>(
                 value: _destinationColumn,
                 isExpanded: true,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                ),
                 items: List.generate(
                   widget.subjectClassGrade.components.length,
                   (index) => DropdownMenuItem(

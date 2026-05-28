@@ -26,8 +26,10 @@ void main() async {
     );
 
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.maximize();
+      // Show the window first, then maximize so it expands to the full
+      // usable screen area on startup.
       await windowManager.show();
+      await windowManager.maximize();
       await windowManager.focus();
     });
   }

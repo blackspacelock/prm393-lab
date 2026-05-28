@@ -130,10 +130,34 @@ class _GradeTableState extends State<GradeTable> {
     for (int i = 0; i < widget.subjectClassGrade.components.length; i++) {
       columnWidths[i + 2] = const IntrinsicColumnWidth();
     }
+    // Ensure the Total column is always present and has a fixed width so
+    // it shows even when there are no component columns or when table is
+    // initially empty.
+    final totalColIndex = widget.subjectClassGrade.components.length + 2;
+    columnWidths[totalColIndex] = const FixedColumnWidth(80);
 
     return Consumer<AppState>(
       builder: (context, appState, _) {
         _maybeScrollToFocusedStudent(appState);
+
+        // Build a component -> full assessment info map from loaded subjectconfig (if any)
+        final Map<String, Map<String, dynamic>> compInfoMap = {};
+        final subjectConfigs = appState.subjectConfigs;
+        if (subjectConfigs != null) {
+          final code = widget.subjectClassGrade.subject;
+          final matched = subjectConfigs.firstWhere(
+            (c) => (c['code'] as String?)?.toLowerCase() == code.toLowerCase(),
+            orElse: () => null,
+          );
+          if (matched != null && matched['assessment'] is List) {
+            for (final a in matched['assessment']) {
+              final name = (a['name'] as String?)?.trim().toLowerCase();
+              if (name != null) {
+                compInfoMap[name] = Map<String, dynamic>.from(a as Map);
+              }
+            }
+          }
+        }
 
         return Scrollbar(
           controller: _horizontalScrollController,
@@ -203,47 +227,131 @@ class _GradeTableState extends State<GradeTable> {
                           ),
                         ),
                         ...widget.subjectClassGrade.components.asMap().entries.map((
-                          e,
+                          entry,
                         ) {
-                          final componentIndex = e.key;
-                          final component = e.value;
-                          return Padding(
+                          final componentIndex = entry.key;
+                          final component = entry.value;
+                          final normalized = labelFor(
+                            component,
+                          ).trim().toLowerCase();
+                          final info = compInfoMap[normalized];
+
+                          // Determine header background color when component info exists
+                          Color? headerColor;
+                          if (info != null) {
+                            final type = (info['type'] as String?)
+                                ?.toLowerCase();
+                            if (type == 'on-going') {
+                              headerColor = const Color(0xFFC99700);
+                            } else if (type == 'practical exam' ||
+                                type == 'final exam' ||
+                                type == 'final exam') {
+                              headerColor = const Color(0xFFE06A00);
+                            } else {
+                              headerColor = Colors.green.shade200;
+                            }
+                          }
+
+                          return Container(
+                            color: headerColor,
                             padding: const EdgeInsets.symmetric(
                               vertical: 8.0,
                               horizontal: 8.0,
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Flexible(
-                                  child: Text(
-                                    labelFor(component),
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: isDarkMode ? null : Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                SizedBox(
-                                  width: 28,
-                                  height: 28,
-                                  child: IconButton(
-                                    padding: EdgeInsets.zero,
-                                    iconSize: 18,
-                                    tooltip: 'Clear column',
-                                    color: isDarkMode
-                                        ? Colors.white70
-                                        : Colors.white.withOpacity(0.8),
-                                    icon: const Icon(Icons.delete_outline),
-                                    onPressed: () async {
-                                      final appState = context.read<AppState>();
-                                      final messenger = ScaffoldMessenger.of(
-                                        context,
-                                      );
+                                InkWell(
+                                  onTap: () {
+                                    showDialog<void>(
+                                      context: context,
+                                      builder: (dialogCtx) {
+                                        return AlertDialog(
+                                          title: const Text(
+                                            'Component details',
+                                          ),
+                                          content: info == null
+                                              ? const Text(
+                                                  'No configuration found for this component.',
+                                                )
+                                              : Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Name: ${info['name'] ?? labelFor(component)}',
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      'Type: ${info['type'] ?? 'unknown'}',
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      'Weight: ${info['weight']?.toString() ?? 'n/a'}',
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      'Completion Criteria: ${info['completion_criteria'] ?? 'n/a'}',
+                                                    ),
+                                                  ],
+                                                ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(dialogCtx).pop(),
+                                              child: const Text('Close'),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                  onLongPress: () async {
+                                    // Show quick actions for this column: Clear or Delete
+                                    final appState = context.read<AppState>();
+                                    final action = await showDialog<String?>(
+                                      context: context,
+                                      builder: (dctx) {
+                                        return AlertDialog(
+                                          title: Text(
+                                            'Column "${labelFor(component)}"',
+                                          ),
+                                          content: const Text(
+                                            'Choose action for this column',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(dctx).pop(),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => Navigator.of(
+                                                dctx,
+                                              ).pop('clear'),
+                                              child: const Text('Clear column'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => Navigator.of(
+                                                dctx,
+                                              ).pop('delete'),
+                                              child: const Text(
+                                                'Delete column',
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+
+                                    if (action == null) return;
+                                    final messenger = ScaffoldMessenger.of(
+                                      context,
+                                    );
+                                    if (action == 'clear') {
                                       final confirm = await showConfirmDialog(
                                         context,
                                         title: 'Clear Column',
@@ -253,7 +361,6 @@ class _GradeTableState extends State<GradeTable> {
                                         cancelText: 'Cancel',
                                       );
                                       if (!confirm) return;
-
                                       try {
                                         appState.clearColumn(
                                           widget.classIndex,
@@ -269,13 +376,159 @@ class _GradeTableState extends State<GradeTable> {
                                           SnackBar(content: Text('Error: $e')),
                                         );
                                       }
+                                    } else if (action == 'delete') {
+                                      final confirm = await showConfirmDialog(
+                                        context,
+                                        title: 'Delete Column',
+                                        message:
+                                            'Delete column "${labelFor(component)}" and remove it from this class? This will remove the column for all students and cannot be undone.',
+                                        confirmText: 'Delete',
+                                        cancelText: 'Cancel',
+                                      );
+                                      if (!confirm) return;
+                                      try {
+                                        appState.removeComponent(
+                                          widget.classIndex,
+                                          componentIndex,
+                                        );
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Column deleted'),
+                                          ),
+                                        );
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(content: Text('Error: $e')),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: SizedBox(
+                                    width: 120,
+                                    child: Text(
+                                      labelFor(component),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                SizedBox(
+                                  width: 28,
+                                  height: 28,
+                                  child: PopupMenuButton<String>(
+                                    padding: EdgeInsets.zero,
+                                    color: isDarkMode ? null : Colors.white,
+                                    tooltip: 'Column options',
+                                    iconSize: 18,
+                                    itemBuilder: (ctx) => [
+                                      const PopupMenuItem(
+                                        value: 'clear',
+                                        child: Text('Clear column'),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'delete',
+                                        child: Text('Delete column'),
+                                      ),
+                                    ],
+                                    onSelected: (val) async {
+                                      final appState = context.read<AppState>();
+                                      final messenger = ScaffoldMessenger.of(
+                                        context,
+                                      );
+                                      if (val == 'clear') {
+                                        final confirm = await showConfirmDialog(
+                                          context,
+                                          title: 'Clear Column',
+                                          message:
+                                              'Clear all values for "${labelFor(component)}" in this class? This cannot be undone.',
+                                          confirmText: 'Clear',
+                                          cancelText: 'Cancel',
+                                        );
+                                        if (!confirm) return;
+                                        try {
+                                          appState.clearColumn(
+                                            widget.classIndex,
+                                            componentIndex,
+                                          );
+                                          messenger.showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Column cleared'),
+                                            ),
+                                          );
+                                        } catch (e) {
+                                          messenger.showSnackBar(
+                                            SnackBar(
+                                              content: Text('Error: $e'),
+                                            ),
+                                          );
+                                        }
+                                      } else if (val == 'delete') {
+                                        final confirm = await showConfirmDialog(
+                                          context,
+                                          title: 'Delete Column',
+                                          message:
+                                              'Delete column "${labelFor(component)}" and remove it from this class? This will remove the column for all students and cannot be undone.',
+                                          confirmText: 'Delete',
+                                          cancelText: 'Cancel',
+                                        );
+                                        if (!confirm) return;
+                                        try {
+                                          appState.removeComponent(
+                                            widget.classIndex,
+                                            componentIndex,
+                                          );
+                                          messenger.showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Column deleted'),
+                                            ),
+                                          );
+                                        } catch (e) {
+                                          messenger.showSnackBar(
+                                            SnackBar(
+                                              content: Text('Error: $e'),
+                                            ),
+                                          );
+                                        }
+                                      }
                                     },
+                                    icon: Icon(
+                                      Icons.more_vert,
+                                      color: isDarkMode
+                                          ? Colors.white70
+                                          : Colors.white.withOpacity(0.8),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           );
                         }),
+                        // Total header
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 8.0,
+                            horizontal: 8.0,
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Total',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isDarkMode ? null : Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     ...List.generate(widget.subjectClassGrade.students.length, (
@@ -369,11 +622,43 @@ class _GradeTableState extends State<GradeTable> {
                               final hasNumeric = grade.grade != null;
                               final hasRaw =
                                   grade.raw != null && grade.raw!.isNotEmpty;
-                              final cellColor = (hasNumeric || hasRaw)
-                                  ? Colors.transparent
-                                  : (isDarkMode
-                                        ? const Color(0xFF5C2A2A)
-                                        : const Color(0xFFFFFBD7));
+
+                              // Determine component type from loaded config (if any)
+                              final normalizedName = componentName
+                                  .trim()
+                                  .toLowerCase();
+                              final compType =
+                                  compInfoMap.containsKey(normalizedName)
+                                  ? (compInfoMap[normalizedName]?['type']
+                                        as String?)
+                                  : null;
+
+                              Color? cellColor;
+
+                              // on-going: if empty -> yellow
+                              if (compType == 'on-going' &&
+                                  !hasNumeric &&
+                                  !hasRaw) {
+                                cellColor = isDarkMode
+                                    ? const Color(0xFF5C2A2A)
+                                    : const Color(0xFFFFFBD7);
+                              }
+
+                              // practical/final exam: if user edited this cell -> red highlight
+                              final isEdited = appState.isCellEdited(
+                                widget.classIndex,
+                                studentIndex,
+                                componentIndex,
+                              );
+                              if ((compType == 'practical exam' ||
+                                      compType == 'final exam') &&
+                                  isEdited &&
+                                  (hasNumeric || hasRaw)) {
+                                cellColor = Colors.red.withOpacity(0.12);
+                              }
+
+                              // Default when not matched/colored
+                              cellColor ??= Colors.transparent;
 
                               final displayText = _formatGradeDisplay(grade);
 
@@ -438,6 +723,69 @@ class _GradeTableState extends State<GradeTable> {
                                         );
                                       }
                                     },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+
+                          // Total cell (read-only) computed from weights
+                          Builder(
+                            builder: (ctx) {
+                              double total = 0.0;
+                              for (
+                                int ci = 0;
+                                ci < widget.subjectClassGrade.components.length;
+                                ci++
+                              ) {
+                                final compName =
+                                    widget.subjectClassGrade.components[ci];
+                                final normalized = compName
+                                    .trim()
+                                    .toLowerCase();
+                                final gradeIndex = student.grades.indexWhere(
+                                  (g) => g.component == compName,
+                                );
+                                double? value;
+                                if (gradeIndex >= 0) {
+                                  final g = student.grades[gradeIndex];
+                                  if (g.grade != null) {
+                                    value = g.grade!;
+                                  } else if (g.raw != null &&
+                                      g.raw!.isNotEmpty) {
+                                    value = double.tryParse(
+                                      g.raw!.replaceAll(',', '.'),
+                                    );
+                                  }
+                                }
+                                final weightVal =
+                                    compInfoMap[normalized]?['weight'];
+                                final weight = weightVal is num
+                                    ? weightVal.toDouble()
+                                    : 0.0;
+                                total += (value ?? 0.0) * weight;
+                              }
+
+                              if (total > 10.0) total = 10.0;
+
+                              final totalText = total.isFinite
+                                  ? total.toStringAsFixed(1)
+                                  : '0.0';
+
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                  horizontal: 12.0,
+                                ),
+                                alignment: Alignment.center,
+                                child: SizedBox(
+                                  width: 80,
+                                  child: Text(
+                                    totalText,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               );

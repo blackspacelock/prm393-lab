@@ -18,18 +18,39 @@ import '../utils/score_utils.dart';
 /// and provides methods for loading, saving, and editing grades.
 class AppState extends ChangeNotifier {
   FgDocument? _document;
+  List<dynamic>? _subjectConfigs;
+  String? _subjectConfigPath;
   int _activeClassIndex = 0;
   String? _filePath;
   int? _focusedClassIndex;
   int? _focusedStudentIndex;
+  // Persisted column selections for exporting: map classIndex -> list of component indices
+  Map<int, List<int>> _savedExportColumns = {};
 
   FgDocument? get document => _document;
+  List<dynamic>? get subjectConfigs => _subjectConfigs;
+  String? get subjectConfigPath => _subjectConfigPath;
   int get activeClassIndex => _activeClassIndex;
   String? get filePath => _filePath;
   int? get focusedClassIndex => _focusedClassIndex;
   int? get focusedStudentIndex => _focusedStudentIndex;
 
   bool get isDirty => _document?.isDirty ?? false;
+
+  /// Returns a copy of saved export column selections. If a class is not
+  /// present, that means "all columns" should be exported for that class.
+  Map<int, List<int>> get savedExportColumns =>
+      _savedExportColumns.map((k, v) => MapEntry(k, List<int>.from(v)));
+
+  /// Save the user's selection of columns to export. Overwrites previous
+  /// selection map.
+  void saveExportColumnSelection(Map<int, List<int>> sels) {
+    _savedExportColumns = {};
+    sels.forEach((k, v) {
+      _savedExportColumns[k] = List<int>.from(v);
+    });
+    notifyListeners();
+  }
 
   SubjectClassGrade? get activeSubjectClassGrade {
     if (_document == null ||
@@ -108,6 +129,30 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Load a `subjectconfig.json` content from bytes and store it in state.
+  Future<void> loadSubjectConfigFromBytes(
+    List<int> bytes, {
+    String? filePath,
+  }) async {
+    try {
+      final jsonString = utf8.decode(bytes);
+      final parsed = jsonDecode(jsonString);
+
+      if (parsed is List) {
+        _subjectConfigs = parsed;
+      } else {
+        _subjectConfigs = [parsed];
+      }
+
+      // Remember the path of the loaded subject config if provided.
+      _subjectConfigPath = filePath;
+
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> saveFile() async {
     if (_document == null || _filePath == null) {
       throw Exception('No document loaded or file path not set');
@@ -154,6 +199,9 @@ class AppState extends ChangeNotifier {
 
   int get unsavableEditCount => _document?.unsavableEdits.length ?? 0;
 
+  // Tracks cells edited during this session so UI can highlight them.
+  final Set<(int, int, int)> _editedCells = {};
+
   Future<void> saveFileAs(String newPath) async {
     if (_document == null) {
       throw Exception('No document loaded');
@@ -187,6 +235,98 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Returns true if the given cell was edited by the user during this session.
+  bool isCellEdited(int classIndex, int studentIndex, int componentIndex) {
+    return _editedCells.contains((classIndex, studentIndex, componentIndex));
+  }
+
+  /// Exports selected classes with only the selected component columns.
+  ///
+  /// [selectedColsByClass] maps original class index -> list of component indices
+  /// to include for that class.
+  Future<void> exportSelectedClassesAndColumnsAs(
+    String newPath,
+    List<int> classIndices,
+    Map<int, List<int>> selectedColsByClass,
+  ) async {
+    if (_document == null) throw Exception('No document loaded');
+
+    final uniqueIndices = classIndices.toSet().toList()..sort();
+    final selectedClasses = <SubjectClassGrade>[];
+
+    for (final classIndex in uniqueIndices) {
+      if (classIndex < 0 ||
+          classIndex >= _document!.data.subjectClassGrades.length)
+        continue;
+
+      final scg = _document!.data.subjectClassGrades[classIndex];
+      final selectedCols = selectedColsByClass[classIndex] ?? [];
+
+      final newComponents = <String>[];
+      final newStudents = <Student>[];
+
+      for (final ci in selectedCols) {
+        if (ci >= 0 && ci < scg.components.length)
+          newComponents.add(scg.components[ci]);
+      }
+
+      for (final s in scg.students) {
+        final newGrades = <GradeComponent>[];
+        for (final ci in selectedCols) {
+          if (ci >= 0 && ci < s.grades.length) {
+            final g = s.grades[ci];
+            newGrades.add(
+              GradeComponent(
+                component: g.component,
+                grade: g.grade,
+                raw: g.raw,
+              ),
+            );
+          } else {
+            // Missing component index -> add empty placeholder
+            newGrades.add(GradeComponent(component: ''));
+          }
+        }
+
+        newStudents.add(
+          Student(
+            roll: s.roll,
+            name: s.name,
+            grades: newGrades,
+            comment: s.comment,
+          ),
+        );
+      }
+
+      selectedClasses.add(
+        SubjectClassGrade(
+          subject: scg.subject,
+          classCode: scg.classCode,
+          components: newComponents,
+          students: newStudents,
+        ),
+      );
+    }
+
+    final teacherGrade = TeacherGrade(
+      versio: _document!.data.versio,
+      semester: _document!.data.semester,
+      logi: _document!.data.logi,
+      password: _document!.data.password,
+      subjectClassGrades: selectedClasses,
+    );
+
+    final exportDoc = FgDocument(
+      buffer: Uint8List(0),
+      data: teacherGrade,
+      gradeOffsets: {},
+      unsavableEdits: {},
+      isDirty: _document!.isDirty,
+    );
+
+    await _writeDocumentToPath(exportDoc, newPath);
   }
 
   Future<void> _writeDocumentToPath(FgDocument document, String path) async {
@@ -311,6 +451,9 @@ class AppState extends ChangeNotifier {
       _document!.unsavableEdits.remove(key);
     }
 
+    // Track that this cell was edited by the user so UI can show warnings
+    _editedCells.add(key);
+
     student.grades[componentIndex] = student.grades[componentIndex].copyWith(
       grade: value,
       raw: raw,
@@ -381,6 +524,112 @@ class AppState extends ChangeNotifier {
         _document!.unsavableEdits.remove(key);
       }
     }
+
+    _document!.isDirty = true;
+    notifyListeners();
+  }
+
+  /// Add a new grading component (column) to the specified class.
+  ///
+  /// This appends the component name to the class' component list and adds a
+  /// blank `GradeComponent` for every student in that class.
+  void addComponent(int classIndex, String componentName) {
+    if (_document == null) throw Exception('No document loaded');
+    if (classIndex < 0 ||
+        classIndex >= _document!.data.subjectClassGrades.length) {
+      throw Exception('Invalid class index');
+    }
+
+    final scg = _document!.data.subjectClassGrades[classIndex];
+
+    // Append component name
+    scg.components.add(componentName);
+
+    // Add empty GradeComponent for each student
+    for (int si = 0; si < scg.students.length; si++) {
+      scg.students[si].grades.add(GradeComponent(component: componentName));
+    }
+
+    _document!.isDirty = true;
+    notifyListeners();
+  }
+
+  /// Remove a grading component (column) from the specified class.
+  ///
+  /// This removes the component name and the corresponding grade entry for
+  /// every student. It also updates internal maps/sets that reference
+  /// (classIndex, studentIndex, componentIndex) keys so offsets and edit
+  /// markers remain consistent.
+  void removeComponent(int classIndex, int componentIndex) {
+    if (_document == null) throw Exception('No document loaded');
+    if (classIndex < 0 ||
+        classIndex >= _document!.data.subjectClassGrades.length) {
+      throw Exception('Invalid class index');
+    }
+
+    final scg = _document!.data.subjectClassGrades[classIndex];
+    if (componentIndex < 0 || componentIndex >= scg.components.length) {
+      throw Exception('Invalid component index');
+    }
+
+    // Remove component name
+    scg.components.removeAt(componentIndex);
+
+    // Remove grade entries for each student (if present)
+    for (int si = 0; si < scg.students.length; si++) {
+      final grades = scg.students[si].grades;
+      if (componentIndex < grades.length) {
+        grades.removeAt(componentIndex);
+      }
+    }
+
+    // Rebuild gradeOffsets with adjusted component indices for this class
+    final newOffsets = <(int, int, int), int>{};
+    _document!.gradeOffsets.forEach((key, off) {
+      final (ci, si, comp) = key;
+      if (ci != classIndex) {
+        newOffsets[key] = off;
+      } else {
+        if (comp == componentIndex) {
+          // removed entry -> skip
+          return;
+        }
+        final newComp = comp > componentIndex ? comp - 1 : comp;
+        newOffsets[(ci, si, newComp)] = off;
+      }
+    });
+    _document!.gradeOffsets.clear();
+    _document!.gradeOffsets.addAll(newOffsets);
+
+    // Update unsavableEdits set
+    final newUnsavable = <(int, int, int)>{};
+    for (final k in _document!.unsavableEdits) {
+      final (ci, si, comp) = k;
+      if (ci != classIndex) {
+        newUnsavable.add(k);
+      } else {
+        if (comp == componentIndex) continue;
+        final newComp = comp > componentIndex ? comp - 1 : comp;
+        newUnsavable.add((ci, si, newComp));
+      }
+    }
+    _document!.unsavableEdits.clear();
+    _document!.unsavableEdits.addAll(newUnsavable);
+
+    // Update edited cells tracking
+    final newEdited = <(int, int, int)>{};
+    for (final k in _editedCells) {
+      final (ci, si, comp) = k;
+      if (ci != classIndex) {
+        newEdited.add(k);
+      } else {
+        if (comp == componentIndex) continue;
+        final newComp = comp > componentIndex ? comp - 1 : comp;
+        newEdited.add((ci, si, newComp));
+      }
+    }
+    _editedCells.clear();
+    _editedCells.addAll(newEdited);
 
     _document!.isDirty = true;
     notifyListeners();

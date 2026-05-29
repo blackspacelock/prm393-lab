@@ -49,7 +49,7 @@ Future<void> showStudentDetailDialog(
       double computeTotal() {
         double total = 0.0;
         if (classConfig != null) {
-          final assessments = classConfig!['assessment'] as List<dynamic>;
+          final assessments = classConfig['assessment'] as List<dynamic>;
           for (int i = 0; i < student.grades.length; i++) {
             final g = student.grades[i];
             final compName = g.component;
@@ -112,7 +112,7 @@ Future<void> showStudentDetailDialog(
                   String? criteria;
                   if (classConfig != null) {
                     final assessments =
-                        classConfig!['assessment'] as List<dynamic>;
+                        classConfig['assessment'] as List<dynamic>;
                     for (final a in assessments) {
                       if (a is Map &&
                           (a['name'] as String).toLowerCase() ==

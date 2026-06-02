@@ -88,16 +88,18 @@ class _HomeScreenState extends State<HomeScreen> {
           bytes,
           filePath: path,
         );
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('Config loaded')));
+        }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error loading config: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -106,24 +108,27 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _saveFile() async {
     final appState = context.read<AppState>();
     if (appState.filePath == null) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('No file loaded')));
+      }
       return;
     }
     setState(() => _isLoading = true);
     try {
       await appState.saveFile();
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('File saved')));
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error saving file: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -132,17 +137,19 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _saveFileAs() async {
     final appState = context.read<AppState>();
     if (appState.document == null) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('No document loaded')));
+      }
       return;
     }
     if (kIsWeb) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Save As is not supported on web')),
         );
+      }
       return;
     }
     final savePath = await (_isExcelPath(appState.filePath)
@@ -152,15 +159,17 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isLoading = true);
     try {
       await appState.saveFileAs(savePath);
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('File saved')));
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error saving file: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -169,18 +178,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _exportToFg() async {
     final appState = context.read<AppState>();
     if (appState.document == null) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('No document loaded')));
+      }
       return;
     }
 
     if (kIsWeb) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Export to FG not supported on web')),
         );
+      }
       return;
     }
 
@@ -190,15 +201,17 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isLoading = true);
     try {
       await appState.saveFileAs(savePath);
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Exported to .fg')));
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -208,10 +221,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final appState = context.read<AppState>();
     final doc = appState.document;
     if (doc == null) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('No document loaded')));
+      }
       return;
     }
 
@@ -237,15 +251,17 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedClassIndices,
         selected,
       );
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Export successful')));
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      }
     }
   }
 
@@ -262,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final appState = context.read<AppState>();
             final components =
                 appState.activeSubjectClassGrade?.components ?? [];
-            String _norm(String s) =>
+            String norm(String s) =>
                 s.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
             return AlertDialog(
@@ -292,8 +308,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       return;
                     }
 
-                    final newNorm = _norm(v);
-                    final exists = components.any((e) => _norm(e) == newNorm);
+                    final newNorm = norm(v);
+                    final exists = components.any((e) => norm(e) == newNorm);
                     if (exists) {
                       setState(
                         () =>
@@ -342,7 +358,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ? 220.0
         : 250.0;
     final placeholderColor =
-        theme.textTheme.bodyMedium?.color?.withOpacity(0.75) ?? Colors.white70;
+        theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.75) ??
+        Colors.white70;
 
     final appState = context.watch<AppState>();
     final openedPath = appState.filePath;
@@ -596,21 +613,23 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Consumer<AppState>(
                           builder: (context, appState, _) {
                             final doc = appState.document;
-                            if (doc == null)
+                            if (doc == null) {
                               return Center(
                                 child: Text(
                                   'Select a class',
                                   style: TextStyle(color: placeholderColor),
                                 ),
                               );
+                            }
                             final active = appState.activeSubjectClassGrade;
-                            if (active == null)
+                            if (active == null) {
                               return Center(
                                 child: Text(
                                   'No class selected',
                                   style: TextStyle(color: placeholderColor),
                                 ),
                               );
+                            }
                             return GradeTable(
                               subjectClassGrade: active,
                               classIndex: appState.activeClassIndex,

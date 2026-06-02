@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/teacher_grade.dart';
@@ -141,7 +140,7 @@ class _GradeTableState extends State<GradeTable> {
         _maybeScrollToFocusedStudent(appState);
 
         // Helper to produce a normalized key for component matching.
-        String _norm(String s) =>
+        String norm(String s) =>
             s.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
         // Build a component -> full assessment info map from loaded subjectconfig (if any)
@@ -151,10 +150,10 @@ class _GradeTableState extends State<GradeTable> {
         List<Map<String, dynamic>>? subjectAssessmentList;
         if (subjectConfigs != null) {
           final code = widget.subjectClassGrade.subject;
-          final codeNorm = _norm(code);
+          final codeNorm = norm(code);
           final matched = subjectConfigs.firstWhere((c) {
             final cc = (c['code'] as String?) ?? '';
-            final cn = _norm(cc);
+            final cn = norm(cc);
             return cn == codeNorm ||
                 codeNorm.startsWith(cn) ||
                 cn.startsWith(codeNorm);
@@ -165,7 +164,7 @@ class _GradeTableState extends State<GradeTable> {
                 .toList();
             for (final a in subjectAssessmentList) {
               final rawName = (a['name'] as String?)?.trim() ?? '';
-              final key = _norm(rawName);
+              final key = norm(rawName);
               compInfoMap[key] = a;
             }
           }
@@ -243,7 +242,7 @@ class _GradeTableState extends State<GradeTable> {
                         ) {
                           final componentIndex = entry.key;
                           final component = entry.value;
-                          final normalized = _norm(labelFor(component));
+                          final normalized = norm(labelFor(component));
                           final info = compInfoMap[normalized];
 
                           // Determine header background color when component info exists
@@ -518,7 +517,7 @@ class _GradeTableState extends State<GradeTable> {
                                       Icons.more_vert,
                                       color: isDarkMode
                                           ? Colors.white70
-                                          : Colors.white.withOpacity(0.8),
+                                          : Colors.white.withValues(alpha: 0.8),
                                     ),
                                   ),
                                 ),
@@ -637,7 +636,7 @@ class _GradeTableState extends State<GradeTable> {
                                   grade.raw != null && grade.raw!.isNotEmpty;
 
                               // Determine component type from loaded config (if any)
-                              final normalizedName = _norm(componentName);
+                              final normalizedName = norm(componentName);
                               final compType =
                                   compInfoMap.containsKey(normalizedName)
                                   ? (compInfoMap[normalizedName]?['type']
@@ -665,7 +664,7 @@ class _GradeTableState extends State<GradeTable> {
                                       compType == 'final exam') &&
                                   isEdited &&
                                   (hasNumeric || hasRaw)) {
-                                cellColor = Colors.red.withOpacity(0.12);
+                                cellColor = Colors.red.withValues(alpha: 0.12);
                               }
 
                               // Default when not matched/colored
@@ -744,11 +743,11 @@ class _GradeTableState extends State<GradeTable> {
                           Builder(
                             builder: (ctx) {
                               double? valueForComponent(String componentName) {
-                                final componentNorm = _norm(componentName);
+                                final componentNorm = norm(componentName);
                                 final gradeIndex = student.grades.indexWhere((
                                   g,
                                 ) {
-                                  final gcomp = _norm(g.component);
+                                  final gcomp = norm(g.component);
                                   return gcomp == componentNorm ||
                                       g.component.trim() == componentName;
                                 });
@@ -796,11 +795,12 @@ class _GradeTableState extends State<GradeTable> {
                                 }
                                 return anorm.contains('final');
                               }
+
                               Map<String, dynamic>? finalAssessment;
                               Map<String, dynamic>? resitAssessment;
                               for (final a in assessments) {
                                 final aname = (a['name'] as String).trim();
-                                final anorm = _norm(aname);
+                                final anorm = norm(aname);
                                 if (!isFinalAssessmentByNorm(anorm)) continue;
                                 if (anorm.contains('resit')) {
                                   resitAssessment ??= a;
@@ -831,7 +831,7 @@ class _GradeTableState extends State<GradeTable> {
                               final selectedFinalNorm =
                                   selectedFinalName == null
                                   ? null
-                                  : _norm(selectedFinalName);
+                                  : norm(selectedFinalName);
                               final selectedFinalValue = useResitFinal
                                   ? resitValue
                                   : finalValue;
@@ -841,14 +841,14 @@ class _GradeTableState extends State<GradeTable> {
 
                               for (final a in assessments) {
                                 final aname = (a['name'] as String).trim();
-                                final anorm = _norm(aname);
+                                final anorm = norm(aname);
 
                                 final isOriginalFinal =
-                                  isFinalAssessmentByNorm(anorm) &&
-                                  !anorm.contains('resit');
+                                    isFinalAssessmentByNorm(anorm) &&
+                                    !anorm.contains('resit');
                                 final isResitFinal =
-                                  isFinalAssessmentByNorm(anorm) &&
-                                  anorm.contains('resit');
+                                    isFinalAssessmentByNorm(anorm) &&
+                                    anorm.contains('resit');
                                 if (isOriginalFinal || isResitFinal) {
                                   if (selectedFinalNorm == null ||
                                       anorm != selectedFinalNorm) {
@@ -895,14 +895,14 @@ class _GradeTableState extends State<GradeTable> {
                                   for (final a in assessments) {
                                     final compName = (a['name'] as String)
                                         .trim();
-                                    final anorm = _norm(compName);
+                                    final anorm = norm(compName);
 
                                     final isOriginalFinal =
-                                      isFinalAssessmentByNorm(anorm) &&
-                                      !anorm.contains('resit');
+                                        isFinalAssessmentByNorm(anorm) &&
+                                        !anorm.contains('resit');
                                     final isResitFinal =
-                                      isFinalAssessmentByNorm(anorm) &&
-                                      anorm.contains('resit');
+                                        isFinalAssessmentByNorm(anorm) &&
+                                        anorm.contains('resit');
 
                                     if (isOriginalFinal || isResitFinal) {
                                       if (selectedFinalNorm == null ||
@@ -994,7 +994,7 @@ class _GradeTableState extends State<GradeTable> {
                                                     ],
                                                   ),
                                                 );
-                                              }).toList(),
+                                              }),
                                               const Divider(),
                                               Row(
                                                 children: [

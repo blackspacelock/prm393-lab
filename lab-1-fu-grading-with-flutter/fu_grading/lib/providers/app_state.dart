@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 
@@ -258,8 +257,9 @@ class AppState extends ChangeNotifier {
 
     for (final classIndex in uniqueIndices) {
       if (classIndex < 0 ||
-          classIndex >= _document!.data.subjectClassGrades.length)
+          classIndex >= _document!.data.subjectClassGrades.length) {
         continue;
+      }
 
       final scg = _document!.data.subjectClassGrades[classIndex];
       final selectedCols = selectedColsByClass[classIndex] ?? [];
@@ -268,8 +268,9 @@ class AppState extends ChangeNotifier {
       final newStudents = <Student>[];
 
       for (final ci in selectedCols) {
-        if (ci >= 0 && ci < scg.components.length)
+        if (ci >= 0 && ci < scg.components.length) {
           newComponents.add(scg.components[ci]);
+        }
       }
 
       for (final s in scg.students) {
@@ -543,11 +544,11 @@ class AppState extends ChangeNotifier {
     final scg = _document!.data.subjectClassGrades[classIndex];
 
     // Prevent adding duplicate component names (normalize for robust comparison)
-    String _norm(String s) =>
+    String norm(String s) =>
         s.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    final newNorm = _norm(componentName);
+    final newNorm = norm(componentName);
     for (final existing in scg.components) {
-      if (_norm(existing) == newNorm) {
+      if (norm(existing) == newNorm) {
         throw Exception('Component name already exists');
       }
     }

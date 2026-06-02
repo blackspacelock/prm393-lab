@@ -174,7 +174,7 @@ class _CopyColumnsDialogState extends State<CopyColumnsDialog> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
-                value: _selectedSource,
+                initialValue: _selectedSource,
                 isExpanded: true,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
@@ -209,7 +209,7 @@ class _CopyColumnsDialogState extends State<CopyColumnsDialog> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
-                value: _destinationColumn,
+                initialValue: _destinationColumn,
                 isExpanded: true,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(

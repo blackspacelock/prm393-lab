@@ -1,0 +1,73 @@
+// Data layer — maps the full OpenAlex /works JSON object to a typed model.
+import '../../domain/entities/publication.dart';
+import 'author_model.dart';
+
+class PublicationModel {
+  final String id;
+  final String title;
+  final int? publicationYear;
+  final int citedByCount;
+  final String? doi;
+  final String? journalName;
+  final List<AuthorModel> authors;
+  final Map<String, dynamic>? abstractInvertedIndex;
+  final List<String> concepts;
+
+  const PublicationModel({
+    required this.id,
+    required this.title,
+    this.publicationYear,
+    required this.citedByCount,
+    this.doi,
+    this.journalName,
+    required this.authors,
+    this.abstractInvertedIndex,
+    required this.concepts,
+  });
+
+  factory PublicationModel.fromJson(Map<String, dynamic> json) {
+    // Journal name lives inside primary_location → source
+    String? journalName;
+    final primaryLocation = json['primary_location'] as Map<String, dynamic>?;
+    if (primaryLocation != null) {
+      final source = primaryLocation['source'] as Map<String, dynamic>?;
+      journalName = source?['display_name'] as String?;
+    }
+
+    final authorships = (json['authorships'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(AuthorModel.fromJson)
+        .toList();
+
+    final concepts = (json['concepts'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map((c) => c['display_name'] as String? ?? '')
+        .where((c) => c.isNotEmpty)
+        .toList();
+
+    return PublicationModel(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? 'Untitled',
+      publicationYear: json['publication_year'] as int?,
+      citedByCount: json['cited_by_count'] as int? ?? 0,
+      doi: json['doi'] as String?,
+      journalName: journalName,
+      authors: authorships,
+      abstractInvertedIndex:
+          json['abstract_inverted_index'] as Map<String, dynamic>?,
+      concepts: concepts,
+    );
+  }
+
+  Publication toEntity() => Publication(
+        id: id,
+        title: title,
+        publicationYear: publicationYear,
+        citedByCount: citedByCount,
+        doi: doi,
+        journalName: journalName,
+        authors: authors.map((a) => a.toEntity()).toList(),
+        abstractInvertedIndex: abstractInvertedIndex,
+        concepts: concepts,
+      );
+}

@@ -1,0 +1,10 @@
+# Flutter generated plugin registrant files (auto-created by flutter pub get / flutter run)
+**/generated_plugin_registrant.cc
+**/generated_plugin_registrant.h
+**/generated_plugins.cmake
+
+# Android / iOS / macOS plugin registrant (Flutter tooling)
+**/GeneratedPluginRegistrant.java
+**/GeneratedPluginRegistrant.swift
+**/GeneratedPluginRegistrant.m
+**/GeneratedPluginRegistrant.h

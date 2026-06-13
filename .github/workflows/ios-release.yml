@@ -2,7 +2,7 @@ name: Build iOS IPA
 
 on:
   push:
-    branches: ["main"] # Tự động chạy khi bạn push code lên nhánh main
+    branches: ["main"]
 
 jobs:
   build:
@@ -11,7 +11,6 @@ jobs:
     defaults:
       run:
         working-directory: lab-2-journal-trend-analysis/journal_trend_analysis
-
     steps:
       - uses: actions/checkout@v3
 
@@ -30,10 +29,10 @@ jobs:
         run: flutter pub get
 
       - name: Build IPA
-        run: flutter build ipa --no-codesign # Build file ipa thô, không cần chứng chỉ Apple Developer trả phí
+        run: flutter build ios --no-codesign
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-app
-          path: "**/build/ios/ipa/*.ipa"
+          path: "**/build/ios/iphoneos/Runner.app"

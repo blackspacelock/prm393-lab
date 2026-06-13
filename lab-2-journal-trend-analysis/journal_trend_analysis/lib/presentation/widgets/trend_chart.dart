@@ -9,6 +9,11 @@ class TrendChart extends StatelessWidget {
 
   const TrendChart({super.key, required this.data});
 
+  bool _shouldShowYearLabel(int year, int firstYear, int lastYear) {
+    if (year == firstYear || year == lastYear) return true;
+    return (year - firstYear) % 5 == 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
@@ -20,20 +25,32 @@ class TrendChart extends StatelessWidget {
         .reduce((a, b) => a > b ? a : b)
         .toDouble();
 
-    return BarChart(
-      BarChartData(
-        alignment: BarChartAlignment.spaceAround,
+    final firstYear = data.first.year;
+    final lastYear = data.last.year;
+    final horizontalInterval = maxY > 0 ? (maxY / 4).ceilToDouble() : 1.0;
+
+    return LineChart(
+      LineChartData(
+        minX: 0,
+        maxX: (data.length - 1).toDouble(),
+        minY: 0,
         maxY: maxY * 1.25,
-        barTouchData: BarTouchData(
+        lineTouchData: LineTouchData(
           enabled: true,
-          touchTooltipData: BarTouchTooltipData(
+          touchTooltipData: LineTouchTooltipData(
             getTooltipColor: (_) => AppColors.onSurface,
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              final d = data[groupIndex];
-              return BarTooltipItem(
-                '${d.year}\n${d.publicationCount} papers',
-                const TextStyle(color: Colors.white, fontSize: 12),
-              );
+            getTooltipItems: (touchedSpots) {
+              return touchedSpots.map((spot) {
+                final d = data[spot.x.toInt()];
+                return LineTooltipItem(
+                  '${d.year}\n${d.publicationCount} papers',
+                  TextStyle(
+                    color: AppColors.onPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                );
+              }).toList();
             },
           ),
         ),
@@ -43,15 +60,27 @@ class TrendChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 28,
+              interval: 1,
               getTitlesWidget: (value, meta) {
                 final idx = value.toInt();
-                if (idx < 0 || idx >= data.length) return const SizedBox();
+                if (idx < 0 || idx >= data.length) {
+                  return const SizedBox.shrink();
+                }
+
+                final year = data[idx].year;
+                if (!_shouldShowYearLabel(year, firstYear, lastYear)) {
+                  return const SizedBox.shrink();
+                }
+
                 return Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    data[idx].year.toString(),
-                    style: AppTextStyles.labelSmall
-                        .copyWith(color: AppColors.onSurfaceVariant),
+                    year.toString(),
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
                   ),
                 );
               },
@@ -61,11 +90,16 @@ class TrendChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 32,
-              getTitlesWidget: (value, meta) => Text(
-                value.toInt().toString(),
-                style: AppTextStyles.labelSmall
-                    .copyWith(color: AppColors.onSurfaceVariant),
-              ),
+              interval: horizontalInterval,
+              getTitlesWidget: (value, meta) {
+                if (value < 0) return const SizedBox.shrink();
+                return Text(
+                  value.toInt().toString(),
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                );
+              },
             ),
           ),
           topTitles:
@@ -76,28 +110,40 @@ class TrendChart extends StatelessWidget {
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          horizontalInterval: maxY > 0 ? (maxY / 5).ceilToDouble() : 1,
+          horizontalInterval: horizontalInterval,
           getDrawingHorizontalLine: (_) => const FlLine(
             color: AppColors.surfaceContainerHigh,
             strokeWidth: 1,
           ),
         ),
         borderData: FlBorderData(show: false),
-        barGroups: List.generate(
-          data.length,
-          (i) => BarChartGroupData(
-            x: i,
-            barRods: [
-              BarChartRodData(
-                toY: data[i].publicationCount.toDouble(),
-                color: AppColors.primaryContainer,
-                width: 14,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(4)),
+        lineBarsData: [
+          LineChartBarData(
+            spots: List.generate(
+              data.length,
+              (i) => FlSpot(
+                i.toDouble(),
+                data[i].publicationCount.toDouble(),
               ),
-            ],
+            ),
+            isCurved: true,
+            color: AppColors.primaryContainer,
+            barWidth: 2.5,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: data.length <= 24,
+              getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
+                radius: 2.5,
+                color: AppColors.primaryContainer,
+                strokeWidth: 0,
+              ),
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              color: AppColors.primaryContainer.withValues(alpha: 0.12),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

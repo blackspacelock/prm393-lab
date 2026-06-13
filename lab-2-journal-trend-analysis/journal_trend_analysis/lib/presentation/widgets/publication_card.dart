@@ -13,69 +13,57 @@ class PublicationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.base,
-          vertical: 14,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimensions.base,
+              vertical: AppDimensions.md,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  publication.title,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: AppColors.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (publication.journalName != null) ...[
+                  const SizedBox(height: AppDimensions.xs),
                   Text(
-                    publication.title,
-                    style: AppTextStyles.titleLarge
-                        .copyWith(color: AppColors.onSurface),
-                    maxLines: 2,
+                    publication.journalName!,
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: AppColors.onSurfaceVariant),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (publication.journalName != null) ...[
-                    const SizedBox(height: AppDimensions.sm),
-                    Text(
-                      publication.journalName!,
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: AppColors.onSurfaceVariant),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                ],
+                const SizedBox(height: AppDimensions.sm),
+                Wrap(
+                  spacing: AppDimensions.xs,
+                  runSpacing: AppDimensions.xs,
+                  children: [
+                    _MetaChip(
+                      label: Formatter.formatYear(publication.publicationYear),
+                    ),
+                    _MetaChip(
+                      label:
+                          '${Formatter.formatCitationCount(publication.citedByCount)} cited',
                     ),
                   ],
-                  const SizedBox(height: AppDimensions.sm),
-                  Row(
-                    children: [
-                      _MetaChip(
-                          label: Formatter.formatYear(
-                              publication.publicationYear)),
-                      const SizedBox(width: AppDimensions.xs),
-                      _MetaChip(
-                          label:
-                              '${Formatter.formatCitationCount(publication.citedByCount)} cited'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppDimensions.sm),
-            Column(
-              children: [
-                const Icon(
-                  Icons.star_outline,
-                  size: 20,
-                  color: AppColors.onSurfaceVariant,
-                ),
-                const SizedBox(height: AppDimensions.xs),
-                Text(
-                  Formatter.formatCitationCount(publication.citedByCount),
-                  style: AppTextStyles.labelMedium
-                      .copyWith(color: AppColors.onSurfaceVariant),
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -89,17 +77,18 @@ class _MetaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.sm, vertical: 2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.sm,
+        vertical: 2,
+      ),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(AppDimensions.shapeXs),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 11,
+        style: AppTextStyles.labelSmall.copyWith(
           color: AppColors.onSurfaceVariant,
-          fontWeight: FontWeight.w400,
         ),
       ),
     );

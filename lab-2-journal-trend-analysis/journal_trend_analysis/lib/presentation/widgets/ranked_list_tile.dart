@@ -23,21 +23,22 @@ class RankedListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = maxCount > 0 ? (count / maxCount).clamp(0.0, 1.0) : 0.0;
+    final paperLabel = count == 1 ? 'paper' : 'papers';
 
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimensions.base,
-        vertical: 10,
+        vertical: AppDimensions.sm,
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           leading ?? _RankBadge(rank: rank),
           const SizedBox(width: AppDimensions.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   title,
@@ -48,36 +49,47 @@ class RankedListTile extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: AppDimensions.xs),
+                const SizedBox(height: 2),
                 Text(
                   subtitle,
                   style: AppTextStyles.bodySmall
                       .copyWith(color: AppColors.onSurfaceVariant),
-                ),
-                const SizedBox(height: AppDimensions.sm),
-                SizedBox(
-                  width: 80,
-                  height: 6,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: AppColors.surfaceContainerHigh,
-                      color: AppColors.primaryContainer,
-                      minHeight: 6,
-                    ),
-                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           const SizedBox(width: AppDimensions.sm),
-          Text(
-            count.toString(),
-            style: AppTextStyles.labelMedium
-                .copyWith(color: AppColors.primaryContainer),
-          ),
+          _CountBadge(label: '$count $paperLabel'),
         ],
+      ),
+    );
+  }
+}
+
+class _CountBadge extends StatelessWidget {
+  final String label;
+
+  const _CountBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.sm,
+        vertical: AppDimensions.xs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(AppDimensions.shapeXs),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColors.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
@@ -97,11 +109,14 @@ class _RankBadge extends StatelessWidget {
     };
 
     return CircleAvatar(
-      radius: 18,
+      radius: 16,
       backgroundColor: bg,
       child: Text(
         rank.toString(),
-        style: AppTextStyles.titleMedium.copyWith(color: fg),
+        style: AppTextStyles.labelLarge.copyWith(
+          color: fg,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

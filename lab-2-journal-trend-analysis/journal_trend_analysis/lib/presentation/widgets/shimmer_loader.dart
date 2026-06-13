@@ -13,6 +13,8 @@ class ShimmerLoader extends StatelessWidget {
     return Semantics(
       label: 'Loading...',
       child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         itemCount: itemCount,
         separatorBuilder: (_, _) => const Divider(
           height: 1,

@@ -1,0 +1,38 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    defaults:
+      run:
+        working-directory: lab-2-journal-trend-analysis/journal_trend_analysis
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build IPA
+        run: flutter build ios --no-codesign
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app
+          path: "**/build/ios/iphoneos/Runner.app"

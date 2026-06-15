@@ -4,7 +4,6 @@ import '../../domain/entities/publication.dart';
 import '../../presentation/screens/dashboard_screen.dart';
 import '../../presentation/screens/publication_detail_screen.dart';
 import '../../presentation/screens/search_screen.dart';
-import '../../presentation/screens/top_papers_screen.dart';
 import '../../presentation/screens/trend_analysis_screen.dart';
 import '../theme/app_colors.dart';
 
@@ -15,21 +14,14 @@ final appRouter = GoRouter(
       builder: (context, state, child) =>
           _ScaffoldWithNav(location: state.uri.path, child: child),
       routes: [
-        GoRoute(
-          path: '/search',
-          builder: (_, _) => const SearchScreen(),
-        ),
+        GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
         GoRoute(
           path: '/trends',
-          builder: (_, _) => const TrendAnalysisScreen(),
+          builder: (_, __) => const TrendAnalysisScreen(),
         ),
         GoRoute(
           path: '/dashboard',
-          builder: (_, _) => const DashboardScreen(),
-        ),
-        GoRoute(
-          path: '/top-papers',
-          builder: (_, _) => const TopPapersScreen(),
+          builder: (_, __) => const DashboardScreen(),
         ),
       ],
     ),
@@ -52,7 +44,6 @@ class _ScaffoldWithNav extends StatelessWidget {
   int get _selectedIndex {
     if (location.startsWith('/trends')) return 1;
     if (location.startsWith('/dashboard')) return 2;
-    if (location.startsWith('/top-papers')) return 3;
     return 0;
   }
 
@@ -73,8 +64,7 @@ class _ScaffoldWithNav extends StatelessWidget {
           onDestinationSelected: (i) => switch (i) {
             0 => context.go('/search'),
             1 => context.go('/trends'),
-            2 => context.go('/dashboard'),
-            _ => context.go('/top-papers'),
+            _ => context.go('/dashboard'),
           },
           destinations: const [
             NavigationDestination(
@@ -91,11 +81,6 @@ class _ScaffoldWithNav extends StatelessWidget {
               icon: Icon(Icons.dashboard_outlined),
               selectedIcon: Icon(Icons.dashboard),
               label: 'Dashboard',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.emoji_events_outlined),
-              selectedIcon: Icon(Icons.emoji_events),
-              label: 'Top Papers',
             ),
           ],
         ),

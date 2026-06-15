@@ -6,20 +6,22 @@ class DashboardSummary {
   final int totalPublications;
   final double avgCitations;
   final int? mostActiveYear;
-  final int? topGrowthYear;
   final Publication? mostInfluentialPaper;
   final String? topJournalName;
+  final int? topJournalPublications;
   final String? topAuthorName;
+  final int? topAuthorPublications;
   final List<YearTrendData> sparklineData;
 
   const DashboardSummary({
     required this.totalPublications,
     required this.avgCitations,
     this.mostActiveYear,
-    this.topGrowthYear,
     this.mostInfluentialPaper,
     this.topJournalName,
+    this.topJournalPublications,
     this.topAuthorName,
+    this.topAuthorPublications,
     required this.sparklineData,
   });
 }
@@ -66,42 +68,30 @@ class GetDashboardSummary {
       }
     }
 
-    final totalCitations =
-        publications.fold<int>(0, (s, p) => s + p.citedByCount);
+    final totalCitations = publications.fold<int>(
+      0,
+      (s, p) => s + p.citedByCount,
+    );
+
+    final topJournalEntry = journalCounts.isEmpty
+        ? null
+        : journalCounts.entries.reduce((a, b) => a.value > b.value ? a : b);
+    final topAuthorEntry = authorCounts.isEmpty
+        ? null
+        : authorCounts.entries.reduce((a, b) => a.value > b.value ? a : b);
 
     return DashboardSummary(
       totalPublications: publications.length,
       avgCitations: totalCitations / publications.length,
       mostActiveYear: mostActiveYear,
-      topGrowthYear: _topGrowthYear(trendData),
-      mostInfluentialPaper:
-          sortedByCitations.isNotEmpty ? sortedByCitations.first : null,
-      topJournalName: journalCounts.isEmpty
-          ? null
-          : journalCounts.entries
-              .reduce((a, b) => a.value > b.value ? a : b)
-              .key,
-      topAuthorName: authorCounts.isEmpty
-          ? null
-          : authorCounts.entries
-              .reduce((a, b) => a.value > b.value ? a : b)
-              .key,
+      mostInfluentialPaper: sortedByCitations.isNotEmpty
+          ? sortedByCitations.first
+          : null,
+      topJournalName: topJournalEntry?.key,
+      topJournalPublications: topJournalEntry?.value,
+      topAuthorName: topAuthorEntry?.key,
+      topAuthorPublications: topAuthorEntry?.value,
       sparklineData: trendData,
     );
-  }
-
-  // Returns the year with the largest year-over-year increase in publication count.
-  int? _topGrowthYear(List<YearTrendData> data) {
-    if (data.length < 2) return null;
-    int maxGrowth = 0;
-    int? bestYear;
-    for (int i = 1; i < data.length; i++) {
-      final growth = data[i].publicationCount - data[i - 1].publicationCount;
-      if (growth > maxGrowth) {
-        maxGrowth = growth;
-        bestYear = data[i].year;
-      }
-    }
-    return bestYear;
   }
 }

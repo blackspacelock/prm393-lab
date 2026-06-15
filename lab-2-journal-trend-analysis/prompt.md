@@ -1,0 +1,1 @@
+1. Search hiện tại hình như bị giới hạn 50 result, trả về tất cả result theo paging, mỗi trang hiện từ 10 đến tối đa 50 result (do người dùng chọn) cho papers, top journals, top authors

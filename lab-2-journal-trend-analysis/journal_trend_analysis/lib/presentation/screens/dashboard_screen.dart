@@ -10,7 +10,6 @@ import '../providers/providers.dart';
 import '../widgets/author_chip.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
-import '../widgets/metric_card.dart';
 import '../widgets/shimmer_loader.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -18,7 +17,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pubAsync = ref.watch(publicationsProvider);
+    final pubAsync = ref.watch(paginatedPublicationsProvider);
     final summary = ref.watch(dashboardSummaryProvider);
     final query = ref.watch(searchQueryProvider);
 
@@ -31,11 +30,7 @@ class DashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(publicationsProvider),
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {},
+            onPressed: () => ref.invalidate(paginatedPublicationsProvider),
           ),
         ],
       ),
@@ -43,7 +38,7 @@ class DashboardScreen extends ConsumerWidget {
         loading: () => const ShimmerLoader(),
         error: (e, _) => ErrorState(
           message: e.toString(),
-          onRetry: () => ref.invalidate(publicationsProvider),
+          onRetry: () => ref.invalidate(paginatedPublicationsProvider),
         ),
         data: (_) {
           if (summary.totalPublications == 0) {
@@ -57,9 +52,9 @@ class DashboardScreen extends ConsumerWidget {
           String growthLabel = '';
           if (summary.sparklineData.length >= 2) {
             final last = summary.sparklineData.last.publicationCount;
-            final prev =
-                summary.sparklineData[summary.sparklineData.length - 2]
-                    .publicationCount;
+            final prev = summary
+                .sparklineData[summary.sparklineData.length - 2]
+                .publicationCount;
             if (prev > 0) {
               final pct = ((last - prev) / prev * 100).round();
               growthLabel = pct >= 0 ? '+$pct% YoY' : '$pct% YoY';
@@ -77,8 +72,7 @@ class DashboardScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppDimensions.base),
                   decoration: BoxDecoration(
                     color: AppColors.primaryContainer,
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.shapeMd),
+                    borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,8 +83,9 @@ class DashboardScreen extends ConsumerWidget {
                           children: [
                             Text(
                               query,
-                              style: AppTextStyles.headlineLarge
-                                  .copyWith(color: AppColors.onPrimary),
+                              style: AppTextStyles.headlineLarge.copyWith(
+                                color: AppColors.onPrimary,
+                              ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -99,8 +94,9 @@ class DashboardScreen extends ConsumerWidget {
                               Text(
                                 growthLabel,
                                 style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.onPrimary
-                                      .withValues(alpha: 0.8),
+                                  color: AppColors.onPrimary.withValues(
+                                    alpha: 0.8,
+                                  ),
                                 ),
                               ),
                             ],
@@ -113,8 +109,7 @@ class DashboardScreen extends ConsumerWidget {
                           height: 80,
                           child: _Sparkline(
                             data: summary.sparklineData
-                                .map((e) =>
-                                    e.publicationCount.toDouble())
+                                .map((e) => e.publicationCount.toDouble())
                                 .toList(),
                             lineColor: AppColors.onPrimary,
                           ),
@@ -124,38 +119,34 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppDimensions.base),
 
-                // KPI 2×2 grid
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 1.3,
+                // KPI row — 3 compact boxes in one row
+                Row(
                   children: [
-                    MetricCard(
-                      title: 'Total Publications',
-                      value: summary.totalPublications.toString(),
-                      icon: Icons.article,
-                      iconColor: AppColors.primaryContainer,
+                    Expanded(
+                      child: _CompactMetric(
+                        label: 'Total Publications',
+                        value: summary.totalPublications.toString(),
+                        icon: Icons.article,
+                        iconColor: AppColors.primaryContainer,
+                      ),
                     ),
-                    MetricCard(
-                      title: 'Avg. Citations',
-                      value: Formatter.formatDouble(summary.avgCitations),
-                      icon: Icons.format_quote,
-                      iconColor: AppColors.metricOrange,
+                    const SizedBox(width: AppDimensions.sm),
+                    Expanded(
+                      child: _CompactMetric(
+                        label: 'Avg. Citations',
+                        value: Formatter.formatDouble(summary.avgCitations),
+                        icon: Icons.format_quote,
+                        iconColor: AppColors.metricOrange,
+                      ),
                     ),
-                    MetricCard(
-                      title: 'Most Active Year',
-                      value: summary.mostActiveYear?.toString() ?? 'N/A',
-                      icon: Icons.calendar_today,
-                      iconColor: AppColors.metricGreen,
-                    ),
-                    MetricCard(
-                      title: 'Top Growth Year',
-                      value: summary.topGrowthYear?.toString() ?? 'N/A',
-                      icon: Icons.trending_up,
-                      iconColor: AppColors.metricPurple,
+                    const SizedBox(width: AppDimensions.sm),
+                    Expanded(
+                      child: _CompactMetric(
+                        label: 'Most Active Year',
+                        value: summary.mostActiveYear?.toString() ?? 'N/A',
+                        icon: Icons.calendar_today,
+                        iconColor: AppColors.metricGreen,
+                      ),
                     ),
                   ],
                 ),
@@ -165,8 +156,9 @@ class DashboardScreen extends ConsumerWidget {
                 if (summary.mostInfluentialPaper != null) ...[
                   Text(
                     'Most Influential Paper',
-                    style: AppTextStyles.titleLarge
-                        .copyWith(color: AppColors.onSurface),
+                    style: AppTextStyles.titleLarge.copyWith(
+                      color: AppColors.onSurface,
+                    ),
                   ),
                   const SizedBox(height: AppDimensions.sm),
                   Stack(
@@ -181,8 +173,9 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceContainerLowest,
-                          borderRadius:
-                              BorderRadius.circular(AppDimensions.shapeMd),
+                          borderRadius: BorderRadius.circular(
+                            AppDimensions.shapeMd,
+                          ),
                           border: Border.all(
                             color: AppColors.outlineVariant,
                             width: 1,
@@ -201,11 +194,10 @@ class DashboardScreen extends ConsumerWidget {
                                 const SizedBox(width: AppDimensions.sm),
                                 Expanded(
                                   child: Text(
-                                    summary
-                                        .mostInfluentialPaper!.title,
-                                    style: AppTextStyles.titleLarge
-                                        .copyWith(
-                                            color: AppColors.onSurface),
+                                    summary.mostInfluentialPaper!.title,
+                                    style: AppTextStyles.titleLarge.copyWith(
+                                      color: AppColors.onSurface,
+                                    ),
                                     maxLines: 3,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -221,7 +213,8 @@ class DashboardScreen extends ConsumerWidget {
                               decoration: BoxDecoration(
                                 color: AppColors.citationChipBg,
                                 borderRadius: BorderRadius.circular(
-                                    AppDimensions.shapeXs),
+                                  AppDimensions.shapeXs,
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -234,10 +227,9 @@ class DashboardScreen extends ConsumerWidget {
                                   const SizedBox(width: AppDimensions.xs),
                                   Text(
                                     '${Formatter.formatCitationCount(summary.mostInfluentialPaper!.citedByCount)} citations',
-                                    style: AppTextStyles.labelMedium
-                                        .copyWith(
-                                            color: AppColors
-                                                .citationChipText),
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      color: AppColors.citationChipText,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -252,12 +244,13 @@ class DashboardScreen extends ConsumerWidget {
                         bottom: 0,
                         child: Container(
                           width: 4,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: AppColors.primaryContainer,
-                            borderRadius: const BorderRadius.only(
+                            borderRadius: BorderRadius.only(
                               topLeft: Radius.circular(AppDimensions.shapeMd),
-                              bottomLeft:
-                                  Radius.circular(AppDimensions.shapeMd),
+                              bottomLeft: Radius.circular(
+                                AppDimensions.shapeMd,
+                              ),
                             ),
                           ),
                         ),
@@ -267,7 +260,7 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(height: AppDimensions.base),
                 ],
 
-                // Top Journal + Top Author side-by-side
+                // Top Journal + Top Author side-by-side with publication counts
                 if (summary.topJournalName != null ||
                     summary.topAuthorName != null) ...[
                   Row(
@@ -275,20 +268,19 @@ class DashboardScreen extends ConsumerWidget {
                       if (summary.topJournalName != null)
                         Expanded(
                           child: Container(
-                            padding:
-                                const EdgeInsets.all(AppDimensions.md),
+                            padding: const EdgeInsets.all(AppDimensions.md),
                             decoration: BoxDecoration(
                               color: AppColors.surfaceContainerLowest,
                               borderRadius: BorderRadius.circular(
-                                  AppDimensions.shapeMd),
+                                AppDimensions.shapeMd,
+                              ),
                               border: Border.all(
                                 color: AppColors.outlineVariant,
                                 width: 1,
                               ),
                             ),
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Icon(
                                   Icons.library_books,
@@ -299,9 +291,17 @@ class DashboardScreen extends ConsumerWidget {
                                 Text(
                                   summary.topJournalName!,
                                   style: AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.onSurface),
+                                    color: AppColors.onSurface,
+                                  ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: AppDimensions.xs),
+                                Text(
+                                  '${summary.topJournalPublications ?? 0} publications',
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: AppColors.onSurfaceVariant,
+                                  ),
                                 ),
                               ],
                             ),
@@ -313,30 +313,36 @@ class DashboardScreen extends ConsumerWidget {
                       if (summary.topAuthorName != null)
                         Expanded(
                           child: Container(
-                            padding:
-                                const EdgeInsets.all(AppDimensions.md),
+                            padding: const EdgeInsets.all(AppDimensions.md),
                             decoration: BoxDecoration(
                               color: AppColors.surfaceContainerLowest,
                               borderRadius: BorderRadius.circular(
-                                  AppDimensions.shapeMd),
+                                AppDimensions.shapeMd,
+                              ),
                               border: Border.all(
                                 color: AppColors.outlineVariant,
                                 width: 1,
                               ),
                             ),
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                AuthorChip(
-                                    displayName: summary.topAuthorName!),
+                                AuthorChip(displayName: summary.topAuthorName!),
                                 const SizedBox(height: AppDimensions.sm),
                                 Text(
                                   summary.topAuthorName!,
                                   style: AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.onSurface),
+                                    color: AppColors.onSurface,
+                                  ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: AppDimensions.xs),
+                                Text(
+                                  '${summary.topAuthorPublications ?? 0} publications',
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: AppColors.onSurfaceVariant,
+                                  ),
                                 ),
                               ],
                             ),
@@ -352,8 +358,9 @@ class DashboardScreen extends ConsumerWidget {
                   Container(
                     decoration: BoxDecoration(
                       color: AppColors.surfaceContainerLowest,
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.shapeMd),
+                      borderRadius: BorderRadius.circular(
+                        AppDimensions.shapeMd,
+                      ),
                       border: Border.all(
                         color: AppColors.outlineVariant,
                         width: 1,
@@ -372,16 +379,15 @@ class DashboardScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 'Publication Trend',
-                                style: AppTextStyles.titleLarge
-                                    .copyWith(color: AppColors.onSurface),
+                                style: AppTextStyles.titleLarge.copyWith(
+                                  color: AppColors.onSurface,
+                                ),
                               ),
                               const Spacer(),
                               TextButton(
-                                onPressed: () =>
-                                    context.go('/trends'),
+                                onPressed: () => context.go('/trends'),
                                 style: TextButton.styleFrom(
-                                  foregroundColor:
-                                      AppColors.primaryContainer,
+                                  foregroundColor: AppColors.primaryContainer,
                                   padding: EdgeInsets.zero,
                                 ),
                                 child: const Text('View full →'),
@@ -400,8 +406,7 @@ class DashboardScreen extends ConsumerWidget {
                             ),
                             child: _Sparkline(
                               data: summary.sparklineData
-                                  .map((e) =>
-                                      e.publicationCount.toDouble())
+                                  .map((e) => e.publicationCount.toDouble())
                                   .toList(),
                               lineColor: AppColors.primaryContainer,
                               areaColor: AppColors.citationChipBg,
@@ -421,16 +426,64 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
+class _CompactMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color iconColor;
+
+  const _CompactMetric({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.sm,
+        vertical: AppDimensions.md,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 20, color: iconColor),
+          const SizedBox(height: AppDimensions.xs),
+          Text(
+            value,
+            style: AppTextStyles.titleMedium.copyWith(
+              color: AppColors.onSurface,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Sparkline extends StatelessWidget {
   final List<double> data;
   final Color? lineColor;
   final Color? areaColor;
 
-  const _Sparkline({
-    required this.data,
-    this.lineColor,
-    this.areaColor,
-  });
+  const _Sparkline({required this.data, this.lineColor, this.areaColor});
 
   @override
   Widget build(BuildContext context) {
@@ -451,7 +504,9 @@ class _Sparkline extends StatelessWidget {
         lineBarsData: [
           LineChartBarData(
             spots: List.generate(
-                data.length, (i) => FlSpot(i.toDouble(), data[i])),
+              data.length,
+              (i) => FlSpot(i.toDouble(), data[i]),
+            ),
             isCurved: true,
             color: color,
             barWidth: 2,

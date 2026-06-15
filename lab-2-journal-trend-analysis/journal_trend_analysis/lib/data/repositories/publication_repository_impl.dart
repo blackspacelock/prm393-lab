@@ -1,4 +1,5 @@
 // Data layer — concrete repository; converts data models to domain entities.
+import '../../domain/entities/paginated_result.dart';
 import '../../domain/entities/publication.dart';
 import '../../domain/repositories/publication_repository.dart';
 import '../datasources/publication_remote_datasource.dart';
@@ -9,9 +10,22 @@ class PublicationRepositoryImpl implements PublicationRepository {
   PublicationRepositoryImpl(this._remoteDataSource);
 
   @override
-  Future<List<Publication>> searchPublications(String query) async {
-    final models = await _remoteDataSource.searchPublications(query);
-    return models.map((m) => m.toEntity()).toList();
+  Future<PaginatedResult<Publication>> searchPublications(
+    String query, {
+    int page = 1,
+    int perPage = 25,
+  }) async {
+    final response = await _remoteDataSource.searchPublications(
+      query,
+      page: page,
+      perPage: perPage,
+    );
+    return PaginatedResult<Publication>(
+      items: response.results.map((m) => m.toEntity()).toList(),
+      totalCount: response.totalCount,
+      page: page,
+      perPage: perPage,
+    );
   }
 
   @override

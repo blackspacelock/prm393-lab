@@ -3,9 +3,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/api/openalex_api_client.dart';
 import '../../data/datasources/publication_remote_datasource.dart';
+import '../../data/datasources/topic_remote_datasource.dart';
 import '../../data/repositories/publication_repository_impl.dart';
 import '../../domain/entities/paginated_result.dart';
 import '../../domain/entities/publication.dart';
+import '../../domain/entities/topic_hierarchy.dart';
 import '../../domain/repositories/publication_repository.dart';
 import '../../domain/usecases/get_dashboard_summary.dart';
 import '../../domain/usecases/get_top_authors.dart';
@@ -21,6 +23,10 @@ final apiClientProvider = Provider<OpenAlexApiClient>(
 
 final remoteDataSourceProvider = Provider<PublicationRemoteDataSource>(
   (ref) => PublicationRemoteDataSourceImpl(ref.read(apiClientProvider)),
+);
+
+final topicDataSourceProvider = Provider<TopicRemoteDataSource>(
+  (ref) => TopicRemoteDataSourceImpl(ref.read(apiClientProvider)),
 );
 
 final publicationRepositoryProvider = Provider<PublicationRepository>(
@@ -49,31 +55,83 @@ final getDashboardSummaryUseCaseProvider = Provider<GetDashboardSummary>(
   (ref) => GetDashboardSummary(ref.read(getTrendDataUseCaseProvider)),
 );
 
-// ── Pagination State ──────────────────────────────────────────────────────────
+// ── Search State ──────────────────────────────────────────────────────────────
 
-/// The current search query. Updating this triggers a new API call.
+/// The current search query (free text).
 final searchQueryProvider = StateProvider<String>((_) => '');
 
-/// Current page number (1-indexed).
+/// If user selected a topic hierarchy item, this is set instead of free-text search.
+final selectedTopicFilterProvider = StateProvider<TopicHierarchyItem?>(
+  (_) => null,
+);
+
+/// Current page for infinite scroll (internal, incremented by "Read more").
 final searchPageProvider = StateProvider<int>((_) => 1);
 
-/// Results per page (user selectable: 10, 25, 50).
-final searchPerPageProvider = StateProvider<int>((_) => 25);
+/// Results per page — fixed at 50 for "read more" loading.
+final searchPerPageProvider = StateProvider<int>((_) => 50);
 
-// ── Paginated Publications ────────────────────────────────────────────────────
+// ── Topic Autocomplete ────────────────────────────────────────────────────────
 
-/// Paginated publications for the current query, page, and perPage.
+/// Autocomplete results for the current search text input.
+final topicAutocompleteProvider =
+    FutureProvider.family<List<TopicHierarchyItem>, String>((ref, query) async {
+      if (query.trim().length < 2) return [];
+      return ref.read(topicDataSourceProvider).autocomplete(query);
+    });
+
+/// Cascading filter: domains
+final domainsProvider = FutureProvider<List<TopicHierarchyItem>>((ref) async {
+  return ref.read(topicDataSourceProvider).getDomains();
+});
+
+/// Cascading filter: fields for a given domain
+final fieldsProvider = FutureProvider.family<List<TopicHierarchyItem>, String?>(
+  (ref, domainId) {
+    return ref.read(topicDataSourceProvider).getFields(domainId: domainId);
+  },
+);
+
+/// Cascading filter: subfields for a given field
+final subfieldsProvider =
+    FutureProvider.family<List<TopicHierarchyItem>, String?>((ref, fieldId) {
+      return ref.read(topicDataSourceProvider).getSubfields(fieldId: fieldId);
+    });
+
+/// Cascading filter: topics for a given subfield
+final topicsProvider = FutureProvider.family<List<TopicHierarchyItem>, String?>(
+  (ref, subfieldId) {
+    return ref.read(topicDataSourceProvider).getTopics(subfieldId: subfieldId);
+  },
+);
+
+// ── Paginated Publications (internal, for fetching) ───────────────────────────
+
+/// Fetches the current page result. Used internally for loading data.
 final paginatedPublicationsProvider =
     FutureProvider<PaginatedResult<Publication>>((ref) async {
+      final topicFilter = ref.watch(selectedTopicFilterProvider);
       final query = ref.watch(searchQueryProvider);
       final page = ref.watch(searchPageProvider);
       final perPage = ref.watch(searchPerPageProvider);
+
+      if (topicFilter != null) {
+        return ref
+            .read(publicationRepositoryProvider)
+            .searchByTopicFilter(
+              topicFilter.filterKey,
+              topicFilter.id,
+              page: page,
+              perPage: perPage,
+            );
+      }
+
       if (query.isEmpty) {
         return const PaginatedResult(
           items: [],
           totalCount: 0,
           page: 1,
-          perPage: 25,
+          perPage: 50,
         );
       }
       return ref.read(searchPublicationsUseCaseProvider)(
@@ -112,7 +170,7 @@ final topJournalsProvider = Provider<List<JournalWithCount>>((ref) {
   return ref.read(getTopJournalsUseCaseProvider)(pubs);
 });
 
-// ── Top Papers sort ───────────────────────────────────────────────────────────
+// ── Sort ──────────────────────────────────────────────────────────────────────
 
 enum PaperSortOption { citationCount, year, relevance, title }
 
@@ -134,7 +192,6 @@ final sortedPublicationsProvider = Provider<List<Publication>>((ref) {
         (a, b) => (b.publicationYear ?? 0).compareTo(a.publicationYear ?? 0),
       );
     case PaperSortOption.relevance:
-      // Keep original order (relevance_score from API).
       break;
     case PaperSortOption.title:
       pubs.sort((a, b) => a.title.compareTo(b.title));

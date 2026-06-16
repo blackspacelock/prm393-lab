@@ -1,1 +1,1 @@
-1. Search hiện tại hình như bị giới hạn 50 result, trả về tất cả result theo paging, mỗi trang hiện từ 10 đến tối đa 50 result (do người dùng chọn) cho papers, top journals, top authors
+1. The Journal name in when the screen size small is being cut off, fix it to display full journal name

@@ -1,13 +1,17 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/formatter.dart';
 import '../../domain/entities/publication.dart';
+import '../providers/providers.dart';
 import '../widgets/author_chip.dart';
 
-class PublicationDetailScreen extends StatelessWidget {
+class PublicationDetailScreen extends ConsumerWidget {
   final Publication publication;
 
   const PublicationDetailScreen({super.key, required this.publication});
@@ -15,23 +19,29 @@ class PublicationDetailScreen extends StatelessWidget {
   Future<void> _openDoi(BuildContext context) async {
     final doi = publication.doi;
     if (doi == null) return;
-
     final raw = doi.startsWith('http') ? doi : 'https://doi.org/$doi';
     final uri = Uri.parse(raw);
-
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open DOI link')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not open DOI link')));
     }
   }
 
+  void _searchText(BuildContext context, WidgetRef ref, String text) {
+    ref.read(selectedTopicFilterProvider.notifier).state = null;
+    ref.read(searchPageProvider.notifier).state = 1;
+    ref.read(searchQueryProvider.notifier).state = text;
+    context.go('/search');
+  }
+
   @override
-  Widget build(BuildContext context) {
-    final abstract =
-        Formatter.reconstructAbstract(publication.abstractInvertedIndex);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final abstract = Formatter.reconstructAbstract(
+      publication.abstractInvertedIndex,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -40,14 +50,8 @@ class PublicationDetailScreen extends StatelessWidget {
         title: const Text('Publication Details'),
         backgroundColor: AppColors.surfaceContainerLowest,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.bookmark_border),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.bookmark_border), onPressed: () {}),
         ],
       ),
       bottomNavigationBar: publication.doi != null
@@ -61,8 +65,7 @@ class PublicationDetailScreen extends StatelessWidget {
               decoration: const BoxDecoration(
                 color: AppColors.surfaceContainerLowest,
                 border: Border(
-                  top: BorderSide(
-                      color: AppColors.outlineVariant, width: 0.5),
+                  top: BorderSide(color: AppColors.outlineVariant, width: 0.5),
                 ),
               ),
               child: Column(
@@ -85,8 +88,9 @@ class PublicationDetailScreen extends StatelessWidget {
                   const SizedBox(height: AppDimensions.xs),
                   Text(
                     publication.doi!,
-                    style: AppTextStyles.labelSmall
-                        .copyWith(color: AppColors.onSurfaceVariant),
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -108,10 +112,9 @@ class PublicationDetailScreen extends StatelessWidget {
             // Hero title
             Text(
               publication.title,
-              style: AppTextStyles.headlineMedium
-                  .copyWith(color: AppColors.onSurface),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.headlineMedium.copyWith(
+                color: AppColors.onSurface,
+              ),
             ),
             const SizedBox(height: AppDimensions.md),
 
@@ -122,11 +125,10 @@ class PublicationDetailScreen extends StatelessWidget {
               children: [
                 if (publication.publicationYear != null)
                   _InfoChip(
-                    label:
-                        Formatter.formatYear(publication.publicationYear),
+                    label: Formatter.formatYear(publication.publicationYear),
                   ),
                 if (publication.journalName != null)
-                  _InfoChip(label: publication.journalName!),
+                  _JournalChip(label: publication.journalName!),
                 if (publication.doi != null)
                   _DoiChip(
                     doi: publication.doi!,
@@ -142,8 +144,7 @@ class PublicationDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.all(AppDimensions.base),
               decoration: BoxDecoration(
                 color: AppColors.citationChipBg,
-                borderRadius:
-                    BorderRadius.circular(AppDimensions.shapeMd),
+                borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
               ),
               child: Row(
                 children: [
@@ -154,8 +155,7 @@ class PublicationDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: AppDimensions.md),
                   Text(
-                    Formatter.formatCitationCount(
-                        publication.citedByCount),
+                    Formatter.formatCitationCount(publication.citedByCount),
                     style: AppTextStyles.headlineMedium.copyWith(
                       fontSize: 24,
                       fontWeight: FontWeight.w500,
@@ -165,37 +165,38 @@ class PublicationDetailScreen extends StatelessWidget {
                   const SizedBox(width: AppDimensions.sm),
                   Text(
                     'citations',
-                    style: AppTextStyles.bodyMedium
-                        .copyWith(color: AppColors.onSurfaceVariant),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: AppDimensions.base),
 
-            // Authors section
+            // Citation over years LINE chart
+            if (publication.countsByYear.isNotEmpty)
+              _CitationLineChart(countsByYear: publication.countsByYear),
+
+            // Authors section — clickable with hover
             if (publication.authors.isNotEmpty) ...[
               Text(
                 'Authors',
-                style: AppTextStyles.titleLarge
-                    .copyWith(color: AppColors.onSurface),
+                style: AppTextStyles.titleLarge.copyWith(
+                  color: AppColors.onSurface,
+                ),
               ),
               const SizedBox(height: AppDimensions.sm),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (int i = 0;
-                        i < publication.authors.length;
-                        i++) ...[
-                      if (i > 0)
-                        const SizedBox(width: AppDimensions.sm),
-                      AuthorChip(
-                          displayName:
-                              publication.authors[i].displayName),
-                    ],
-                  ],
-                ),
+              Wrap(
+                spacing: AppDimensions.sm,
+                runSpacing: AppDimensions.sm,
+                children: publication.authors.map((author) {
+                  return _HoverChip(
+                    label: author.displayName,
+                    onTap: () => _searchText(context, ref, author.displayName),
+                    leading: AuthorChip(displayName: author.displayName),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: AppDimensions.base),
             ],
@@ -204,58 +205,44 @@ class PublicationDetailScreen extends StatelessWidget {
             if (abstract.isNotEmpty) ...[
               Text(
                 'Abstract',
-                style: AppTextStyles.titleLarge
-                    .copyWith(color: AppColors.onSurface),
+                style: AppTextStyles.titleLarge.copyWith(
+                  color: AppColors.onSurface,
+                ),
               ),
               const SizedBox(height: AppDimensions.sm),
               _ExpandableAbstract(text: abstract),
               const SizedBox(height: AppDimensions.base),
             ],
 
-            // Research topics
+            // Research topics — clickable with hover
             if (publication.concepts.isNotEmpty) ...[
               Text(
                 'Research Topics',
-                style: AppTextStyles.titleLarge
-                    .copyWith(color: AppColors.onSurface),
+                style: AppTextStyles.titleLarge.copyWith(
+                  color: AppColors.onSurface,
+                ),
               ),
               const SizedBox(height: AppDimensions.sm),
               Wrap(
                 spacing: AppDimensions.sm,
                 runSpacing: AppDimensions.sm,
-                children: publication.concepts
-                    .take(10)
-                    .map(
-                      (c) => Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.md,
-                          vertical: AppDimensions.xs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(
-                              AppDimensions.shapeSm),
-                        ),
-                        child: Text(
-                          c,
-                          style: AppTextStyles.labelLarge
-                              .copyWith(color: AppColors.onSurface),
-                        ),
-                      ),
-                    )
-                    .toList(),
+                children: publication.concepts.take(10).map((c) {
+                  return _HoverChip(
+                    label: c,
+                    onTap: () => _searchText(context, ref, c),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: AppDimensions.base),
             ],
 
-            // Stats row
+            // Stats row — journal name full display
             Row(
               children: [
                 Expanded(
                   child: _StatMiniCard(
                     label: 'Year',
-                    value: Formatter.formatYear(
-                        publication.publicationYear),
+                    value: Formatter.formatYear(publication.publicationYear),
                   ),
                 ),
                 const SizedBox(width: AppDimensions.sm),
@@ -270,11 +257,88 @@ class PublicationDetailScreen extends StatelessWidget {
                   child: _StatMiniCard(
                     label: 'Journal',
                     value: publication.journalName ?? 'N/A',
+                    fullText: true,
                   ),
                 ),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Reusable Widgets ──────────────────────────────────────────────────────────
+
+/// A chip with hover/press effect that searches on tap.
+class _HoverChip extends StatefulWidget {
+  final String label;
+  final VoidCallback onTap;
+  final Widget? leading;
+
+  const _HoverChip({required this.label, required this.onTap, this.leading});
+
+  @override
+  State<_HoverChip> createState() => _HoverChipState();
+}
+
+class _HoverChipState extends State<_HoverChip> {
+  bool _hovering = false;
+  bool _pressing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = _hovering || _pressing;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _pressing = true),
+        onTapUp: (_) => setState(() => _pressing = false),
+        onTapCancel: () => setState(() => _pressing = false),
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.md,
+            vertical: AppDimensions.xs,
+          ),
+          decoration: BoxDecoration(
+            color: isActive
+                ? AppColors.primaryContainer.withValues(alpha: 0.2)
+                : AppColors.secondaryContainer,
+            borderRadius: BorderRadius.circular(AppDimensions.shapeSm),
+            border: Border.all(
+              color: isActive ? AppColors.primaryContainer : Colors.transparent,
+              width: 1,
+            ),
+          ),
+          child: widget.leading != null
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    widget.leading!,
+                    const SizedBox(width: 4),
+                    Text(
+                      widget.label,
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: isActive
+                            ? AppColors.primaryContainer
+                            : AppColors.onSecondaryContainer,
+                      ),
+                    ),
+                  ],
+                )
+              : Text(
+                  widget.label,
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: isActive
+                        ? AppColors.primaryContainer
+                        : AppColors.onSecondaryContainer,
+                  ),
+                ),
         ),
       ),
     );
@@ -298,8 +362,49 @@ class _InfoChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.bodySmall
-            .copyWith(color: AppColors.onSurfaceVariant),
+        style: AppTextStyles.bodySmall.copyWith(
+          color: AppColors.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+class _JournalChip extends StatelessWidget {
+  final String label;
+  const _JournalChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.sm,
+        vertical: AppDimensions.xs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.citationChipBg,
+        borderRadius: BorderRadius.circular(AppDimensions.shapeXs),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.library_books,
+            size: 12,
+            color: AppColors.primaryContainer,
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              style: AppTextStyles.bodySmall.copyWith(
+                fontWeight: FontWeight.w700,
+                fontStyle: FontStyle.italic,
+                color: AppColors.primaryContainer,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -328,8 +433,9 @@ class _DoiChip extends StatelessWidget {
           children: [
             Text(
               'DOI',
-              style: AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.primaryContainer),
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.primaryContainer,
+              ),
             ),
             const SizedBox(width: AppDimensions.xs),
             const Icon(
@@ -347,7 +453,13 @@ class _DoiChip extends StatelessWidget {
 class _StatMiniCard extends StatelessWidget {
   final String label;
   final String value;
-  const _StatMiniCard({required this.label, required this.value});
+  final bool fullText;
+
+  const _StatMiniCard({
+    required this.label,
+    required this.value,
+    this.fullText = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -362,16 +474,18 @@ class _StatMiniCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTextStyles.labelSmall
-                .copyWith(color: AppColors.onSurfaceVariant),
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: AppDimensions.xs),
           Text(
             value,
-            style: AppTextStyles.titleMedium
-                .copyWith(color: AppColors.onSurface),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.titleMedium.copyWith(
+              color: AppColors.onSurface,
+            ),
+            maxLines: fullText ? null : 1,
+            overflow: fullText ? null : TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -399,11 +513,11 @@ class _ExpandableAbstractState extends State<_ExpandableAbstract> {
           children: [
             Text(
               widget.text,
-              style: AppTextStyles.bodyLarge
-                  .copyWith(color: AppColors.onSurface),
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.onSurface,
+              ),
               maxLines: _expanded ? null : 4,
-              overflow:
-                  _expanded ? TextOverflow.visible : TextOverflow.clip,
+              overflow: _expanded ? TextOverflow.visible : TextOverflow.clip,
             ),
             if (!_expanded)
               Positioned(
@@ -431,11 +545,269 @@ class _ExpandableAbstractState extends State<_ExpandableAbstract> {
           onTap: () => setState(() => _expanded = !_expanded),
           child: Text(
             _expanded ? 'Show less' : 'Show more',
-            style: AppTextStyles.labelLarge
-                .copyWith(color: AppColors.primaryContainer),
+            style: AppTextStyles.labelLarge.copyWith(
+              color: AppColors.primaryContainer,
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Citation LINE chart with total/mean boxes and year filter.
+class _CitationLineChart extends StatefulWidget {
+  final List<YearlyCitation> countsByYear;
+  const _CitationLineChart({required this.countsByYear});
+
+  @override
+  State<_CitationLineChart> createState() => _CitationLineChartState();
+}
+
+class _CitationLineChartState extends State<_CitationLineChart> {
+  int? _fromYear;
+  int? _toYear;
+
+  List<YearlyCitation> get _filteredData {
+    var data = widget.countsByYear;
+    if (_fromYear != null) {
+      data = data.where((e) => e.year >= _fromYear!).toList();
+    }
+    if (_toYear != null) {
+      data = data.where((e) => e.year <= _toYear!).toList();
+    }
+    return data;
+  }
+
+  int get _total => _filteredData.fold(0, (s, e) => s + e.citedByCount);
+  double get _mean => _filteredData.isEmpty ? 0 : _total / _filteredData.length;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = _filteredData;
+    if (widget.countsByYear.isEmpty) return const SizedBox.shrink();
+
+    final allYears = widget.countsByYear.map((e) => e.year).toList();
+    final minYear = allYears.reduce((a, b) => a < b ? a : b);
+    final maxYear = allYears.reduce((a, b) => a > b ? a : b);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Citations by Year',
+          style: AppTextStyles.titleLarge.copyWith(color: AppColors.onSurface),
+        ),
+        const SizedBox(height: AppDimensions.sm),
+
+        // Total + Mean
+        Row(
+          children: [
+            Expanded(
+              child: _MiniBox(
+                label: 'Total',
+                value: Formatter.formatCitationCount(_total),
+              ),
+            ),
+            const SizedBox(width: AppDimensions.sm),
+            Expanded(
+              child: _MiniBox(
+                label: 'Mean/Year',
+                value: _mean.toStringAsFixed(1),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppDimensions.sm),
+
+        // Year filter
+        Row(
+          children: [
+            Text('From: ', style: AppTextStyles.labelSmall),
+            DropdownButton<int?>(
+              value: _fromYear,
+              hint: Text('$minYear', style: AppTextStyles.labelSmall),
+              isDense: true,
+              underline: const SizedBox.shrink(),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('All')),
+                ...allYears.map(
+                  (y) => DropdownMenuItem(value: y, child: Text('$y')),
+                ),
+              ],
+              onChanged: (val) => setState(() {
+                _fromYear = val;
+                if (_toYear != null && val != null && _toYear! < val)
+                  _toYear = val;
+              }),
+            ),
+            const SizedBox(width: AppDimensions.base),
+            Text('To: ', style: AppTextStyles.labelSmall),
+            DropdownButton<int?>(
+              value: _toYear,
+              hint: Text('$maxYear', style: AppTextStyles.labelSmall),
+              isDense: true,
+              underline: const SizedBox.shrink(),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('All')),
+                ...allYears
+                    .where((y) => _fromYear == null || y >= _fromYear!)
+                    .map((y) => DropdownMenuItem(value: y, child: Text('$y'))),
+              ],
+              onChanged: (val) => setState(() => _toYear = val),
+            ),
+            const Spacer(),
+            if (_fromYear != null || _toYear != null)
+              GestureDetector(
+                onTap: () => setState(() {
+                  _fromYear = null;
+                  _toYear = null;
+                }),
+                child: Text(
+                  'Reset',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.primaryContainer,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppDimensions.sm),
+
+        // Line chart
+        if (data.isNotEmpty)
+          SizedBox(
+            height: 160,
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: null,
+                  getDrawingHorizontalLine: (value) =>
+                      FlLine(color: AppColors.outlineVariant, strokeWidth: 0.5),
+                ),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 22,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= data.length) {
+                          return const SizedBox.shrink();
+                        }
+                        if (data.length > 10 && idx % 2 != 0) {
+                          return const SizedBox.shrink();
+                        }
+                        return Text(
+                          "'${data[idx].year % 100}",
+                          style: AppTextStyles.labelSmall.copyWith(
+                            fontSize: 9,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (spots) {
+                      return spots.map((spot) {
+                        final idx = spot.x.toInt();
+                        final year = idx < data.length ? data[idx].year : 0;
+                        return LineTooltipItem(
+                          '$year: ${spot.y.toInt()} citations',
+                          AppTextStyles.labelSmall.copyWith(
+                            color: Colors.white,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: List.generate(
+                      data.length,
+                      (i) =>
+                          FlSpot(i.toDouble(), data[i].citedByCount.toDouble()),
+                    ),
+                    isCurved: true,
+                    color: AppColors.primaryContainer,
+                    barWidth: 2.5,
+                    dotData: FlDotData(
+                      show: data.length <= 15,
+                      getDotPainter: (spot, percent, bar, index) =>
+                          FlDotCirclePainter(
+                            radius: 3,
+                            color: AppColors.primaryContainer,
+                            strokeWidth: 0,
+                          ),
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: AppColors.primaryContainer.withValues(alpha: 0.1),
+                    ),
+                  ),
+                ],
+                minY: 0,
+              ),
+            ),
+          )
+        else
+          const Padding(
+            padding: EdgeInsets.all(AppDimensions.base),
+            child: Text('No data for selected range'),
+          ),
+        const SizedBox(height: AppDimensions.base),
+      ],
+    );
+  }
+}
+
+class _MiniBox extends StatelessWidget {
+  final String label;
+  final String value;
+  const _MiniBox({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.md),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(AppDimensions.shapeSm),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: AppTextStyles.titleMedium.copyWith(
+              color: AppColors.onSurface,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

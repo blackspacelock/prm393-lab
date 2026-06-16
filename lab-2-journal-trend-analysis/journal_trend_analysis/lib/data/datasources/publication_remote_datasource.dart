@@ -12,11 +12,22 @@ class PaginatedApiResponse {
 }
 
 abstract class PublicationRemoteDataSource {
+  /// Free-text search.
   Future<PaginatedApiResponse> searchPublications(
     String query, {
     int page = 1,
     int perPage = 25,
   });
+
+  /// Filter-based search using topic hierarchy ID.
+  /// [filterKey] e.g. "topics.domain.id", [filterId] e.g. "https://openalex.org/domains/3"
+  Future<PaginatedApiResponse> searchByTopicFilter(
+    String filterKey,
+    String filterId, {
+    int page = 1,
+    int perPage = 25,
+  });
+
   Future<List<PublicationModel>> getTopPapers({String? topic});
 }
 
@@ -39,6 +50,37 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
           'per_page': perPage,
           'page': page,
           'sort': 'relevance_score:desc',
+        },
+      );
+
+      final data = response.data;
+      final meta = data?['meta'] as Map<String, dynamic>? ?? {};
+      final totalCount = meta['count'] as int? ?? 0;
+      final results = _parseResults(data);
+
+      return PaginatedApiResponse(results: results, totalCount: totalCount);
+    } on DioException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      throw Exception('Parse error: $e');
+    }
+  }
+
+  @override
+  Future<PaginatedApiResponse> searchByTopicFilter(
+    String filterKey,
+    String filterId, {
+    int page = 1,
+    int perPage = 25,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/works',
+        queryParameters: {
+          'filter': '$filterKey:$filterId',
+          'per_page': perPage,
+          'page': page,
+          'sort': 'cited_by_count:desc',
         },
       );
 

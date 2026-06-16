@@ -12,6 +12,7 @@ class PublicationModel {
   final List<AuthorModel> authors;
   final Map<String, dynamic>? abstractInvertedIndex;
   final List<String> concepts;
+  final List<YearlyCitation> countsByYear;
 
   const PublicationModel({
     required this.id,
@@ -23,6 +24,7 @@ class PublicationModel {
     required this.authors,
     this.abstractInvertedIndex,
     required this.concepts,
+    this.countsByYear = const [],
   });
 
   factory PublicationModel.fromJson(Map<String, dynamic> json) {
@@ -45,6 +47,20 @@ class PublicationModel {
         .where((c) => c.isNotEmpty)
         .toList();
 
+    // Parse counts_by_year
+    final countsByYearRaw = json['counts_by_year'] as List<dynamic>? ?? [];
+    final countsByYear =
+        countsByYearRaw
+            .whereType<Map<String, dynamic>>()
+            .map(
+              (e) => YearlyCitation(
+                year: e['year'] as int? ?? 0,
+                citedByCount: e['cited_by_count'] as int? ?? 0,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => a.year.compareTo(b.year));
+
     return PublicationModel(
       id: json['id'] as String? ?? '',
       title: json['title'] as String? ?? 'Untitled',
@@ -56,18 +72,20 @@ class PublicationModel {
       abstractInvertedIndex:
           json['abstract_inverted_index'] as Map<String, dynamic>?,
       concepts: concepts,
+      countsByYear: countsByYear,
     );
   }
 
   Publication toEntity() => Publication(
-        id: id,
-        title: title,
-        publicationYear: publicationYear,
-        citedByCount: citedByCount,
-        doi: doi,
-        journalName: journalName,
-        authors: authors.map((a) => a.toEntity()).toList(),
-        abstractInvertedIndex: abstractInvertedIndex,
-        concepts: concepts,
-      );
+    id: id,
+    title: title,
+    publicationYear: publicationYear,
+    citedByCount: citedByCount,
+    doi: doi,
+    journalName: journalName,
+    authors: authors.map((a) => a.toEntity()).toList(),
+    abstractInvertedIndex: abstractInvertedIndex,
+    concepts: concepts,
+    countsByYear: countsByYear,
+  );
 }

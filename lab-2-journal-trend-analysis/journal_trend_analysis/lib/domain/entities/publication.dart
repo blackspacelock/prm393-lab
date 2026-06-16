@@ -2,6 +2,14 @@
 import 'package:equatable/equatable.dart';
 import 'author.dart';
 
+/// Yearly citation count for a publication.
+class YearlyCitation {
+  final int year;
+  final int citedByCount;
+
+  const YearlyCitation({required this.year, required this.citedByCount});
+}
+
 class Publication extends Equatable {
   final String id;
   final String title;
@@ -14,6 +22,9 @@ class Publication extends Equatable {
   final Map<String, dynamic>? abstractInvertedIndex;
   final List<String> concepts;
 
+  /// Citation counts per year (from OpenAlex counts_by_year).
+  final List<YearlyCitation> countsByYear;
+
   const Publication({
     required this.id,
     required this.title,
@@ -24,6 +35,7 @@ class Publication extends Equatable {
     required this.authors,
     this.abstractInvertedIndex,
     required this.concepts,
+    this.countsByYear = const [],
   });
 
   @override

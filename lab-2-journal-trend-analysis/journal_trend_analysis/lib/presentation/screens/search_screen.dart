@@ -7,6 +7,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/formatter.dart';
+import '../../domain/entities/paginated_result.dart';
+import '../../domain/entities/publication.dart';
 import '../../domain/entities/topic_hierarchy.dart';
 import '../providers/providers.dart';
 import '../widgets/empty_state.dart';
@@ -23,8 +25,6 @@ const _suggestions = [
   'Blockchain',
 ];
 
-const _perPageOptions = [10, 25, 50];
-
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -35,9 +35,18 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
+  final _scrollController = ScrollController();
   Timer? _debounce;
   bool _showAutocomplete = false;
   String _autocompleteQuery = '';
+
+  // Accumulated results for infinite scroll
+  List<Publication> _allResults = [];
+  int _totalCount = 0;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _currentPage = 1;
+  int _lastProcessedPage = 0;
 
   @override
   void initState() {
@@ -55,6 +64,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _debounce?.cancel();
     _controller.dispose();
     _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -76,19 +86,31 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void _submitFreeText(String query) {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
-    setState(() => _showAutocomplete = false);
+    setState(() {
+      _showAutocomplete = false;
+      _allResults = [];
+      _currentPage = 1;
+      _lastProcessedPage = 0;
+      _hasMore = true;
+      _totalCount = 0;
+    });
     _focusNode.unfocus();
-    // Clear topic filter, use free-text search
     ref.read(selectedTopicFilterProvider.notifier).state = null;
     ref.read(searchPageProvider.notifier).state = 1;
     ref.read(searchQueryProvider.notifier).state = trimmed;
   }
 
   void _selectTopicItem(TopicHierarchyItem item) {
-    setState(() => _showAutocomplete = false);
+    setState(() {
+      _showAutocomplete = false;
+      _allResults = [];
+      _currentPage = 1;
+      _lastProcessedPage = 0;
+      _hasMore = true;
+      _totalCount = 0;
+    });
     _focusNode.unfocus();
     _controller.text = item.displayName;
-    // Use topic filter
     ref.read(searchQueryProvider.notifier).state = item.displayName;
     ref.read(searchPageProvider.notifier).state = 1;
     ref.read(selectedTopicFilterProvider.notifier).state = item;
@@ -104,148 +126,53 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
-  void _showSortFilterSheet() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final currentSort = ref.watch(paperSortOptionProvider);
-            final currentPerPage = ref.watch(searchPerPageProvider);
-            return Padding(
-              padding: const EdgeInsets.all(AppDimensions.base),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 32,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.outlineVariant,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.base),
-                  Text(
-                    'Sort & Filter',
-                    style: AppTextStyles.titleLarge.copyWith(
-                      color: AppColors.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.base),
-                  Text(
-                    'Sort by',
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.sm),
-                  Wrap(
-                    spacing: AppDimensions.sm,
-                    runSpacing: AppDimensions.sm,
-                    children: PaperSortOption.values.map((opt) {
-                      final selected = currentSort == opt;
-                      return ChoiceChip(
-                        label: Text(_sortLabel(opt)),
-                        selected: selected,
-                        onSelected: (_) {
-                          ref.read(paperSortOptionProvider.notifier).state =
-                              opt;
-                        },
-                        backgroundColor: AppColors.surfaceContainerLowest,
-                        selectedColor: AppColors.secondaryContainer,
-                        labelStyle: AppTextStyles.labelMedium.copyWith(
-                          color: selected
-                              ? AppColors.onSecondaryContainer
-                              : AppColors.onSurface,
-                        ),
-                        side: BorderSide(
-                          color: selected
-                              ? AppColors.primaryContainer
-                              : AppColors.outlineVariant,
-                          width: 1,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppDimensions.shapeSm,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: AppDimensions.base),
-                  Text(
-                    'Results per page',
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.sm),
-                  Wrap(
-                    spacing: AppDimensions.sm,
-                    children: _perPageOptions.map((n) {
-                      final selected = currentPerPage == n;
-                      return ChoiceChip(
-                        label: Text('$n'),
-                        selected: selected,
-                        onSelected: (_) {
-                          ref.read(searchPerPageProvider.notifier).state = n;
-                          ref.read(searchPageProvider.notifier).state = 1;
-                        },
-                        backgroundColor: AppColors.surfaceContainerLowest,
-                        selectedColor: AppColors.secondaryContainer,
-                        labelStyle: AppTextStyles.labelMedium.copyWith(
-                          color: selected
-                              ? AppColors.onSecondaryContainer
-                              : AppColors.onSurface,
-                        ),
-                        side: BorderSide(
-                          color: selected
-                              ? AppColors.primaryContainer
-                              : AppColors.outlineVariant,
-                          width: 1,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppDimensions.shapeSm,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: AppDimensions.base),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
+  void _loadMore() {
+    if (_isLoadingMore || !_hasMore) return;
+    setState(() => _isLoadingMore = true);
+    _currentPage++;
+    ref.read(searchPageProvider.notifier).state = _currentPage;
   }
 
-  String _sortLabel(PaperSortOption opt) => switch (opt) {
-    PaperSortOption.citationCount => 'Citation count',
-    PaperSortOption.year => 'Year',
-    PaperSortOption.relevance => 'Relevance',
-    PaperSortOption.title => 'A–Z',
-  };
+  void _onDataLoaded(PaginatedResult<Publication> paginated) {
+    // Only process if this is a new page we haven't seen yet
+    if (paginated.page <= _lastProcessedPage && _currentPage != 1) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _totalCount = paginated.totalCount;
+        if (paginated.page == 1) {
+          _allResults = List.from(paginated.items);
+        } else {
+          _allResults = [..._allResults, ...paginated.items];
+        }
+        _lastProcessedPage = paginated.page;
+        _hasMore = paginated.hasNextPage;
+        _isLoadingMore = false;
+      });
+    });
+  }
+
+  void _searchTopic(String topic) {
+    _controller.text = topic;
+    _submitFreeText(topic);
+  }
 
   @override
   Widget build(BuildContext context) {
     final paginatedAsync = ref.watch(paginatedPublicationsProvider);
-    final sorted = ref.watch(sortedPublicationsProvider);
     final query = ref.watch(searchQueryProvider);
-    final currentPage = ref.watch(searchPageProvider);
     final topicFilter = ref.watch(selectedTopicFilterProvider);
+    final sortOption = ref.watch(paperSortOptionProvider);
+
+    // When data arrives, accumulate
+    paginatedAsync.whenData(_onDataLoaded);
+
+    // Sort the accumulated results
+    final sorted = _sortResults(List.from(_allResults), sortOption);
 
     ref.listen(paginatedPublicationsProvider, (_, next) {
       if (next.hasError) {
+        setState(() => _isLoadingMore = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${next.error}'),
@@ -266,18 +193,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         scrolledUnderElevation: 1,
         leading: const Icon(Icons.analytics, color: AppColors.onSurfaceVariant),
         actions: [
-          // Cascading topic browser button
           IconButton(
             icon: const Icon(Icons.account_tree_outlined),
             tooltip: 'Browse Topics',
             onPressed: _openCascadeFilter,
           ),
-          IconButton(
-            icon: const Icon(Icons.tune),
-            onPressed: _showSortFilterSheet,
+          Builder(
+            builder: (ctx) => IconButton(
+              icon: const Icon(Icons.tune),
+              tooltip: 'Sort & Filter',
+              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+            ),
           ),
         ],
       ),
+      endDrawer: _buildFilterDrawer(),
       body: Column(
         children: [
           // Search bar
@@ -302,6 +232,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         icon: const Icon(Icons.clear, size: 18),
                         onPressed: () {
                           _controller.clear();
+                          setState(() {
+                            _allResults = [];
+                            _totalCount = 0;
+                          });
                           ref.read(searchQueryProvider.notifier).state = '';
                           ref.read(selectedTopicFilterProvider.notifier).state =
                               null;
@@ -331,7 +265,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ),
           ),
 
-          // Autocomplete suggestions overlay
+          // Autocomplete
           if (_showAutocomplete) _buildAutocompleteSuggestions(),
 
           // Active topic filter chip
@@ -362,6 +296,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ref.read(selectedTopicFilterProvider.notifier).state = null;
                     ref.read(searchQueryProvider.notifier).state = '';
                     _controller.clear();
+                    setState(() {
+                      _allResults = [];
+                      _totalCount = 0;
+                    });
                   },
                   backgroundColor: AppColors.secondaryContainer,
                   side: BorderSide.none,
@@ -420,284 +358,114 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
           // Results
           if (!_showAutocomplete)
-            Expanded(
-              child: paginatedAsync.when(
-                loading: () => const ShimmerLoader(),
-                error: (e, _) => ErrorState(
-                  message: e.toString(),
-                  onRetry: () => ref.invalidate(paginatedPublicationsProvider),
-                ),
-                data: (paginated) {
-                  if (sorted.isEmpty) {
-                    return EmptyState(
-                      icon: Icons.find_in_page,
-                      message: query.isEmpty
-                          ? 'Search for publications above'
-                          : 'No results found for "$query"',
-                      actionLabel: query.isNotEmpty ? 'Clear' : null,
-                      onAction: query.isNotEmpty
-                          ? () {
-                              _controller.clear();
-                              ref.read(searchQueryProvider.notifier).state = '';
-                              ref
-                                      .read(
-                                        selectedTopicFilterProvider.notifier,
-                                      )
-                                      .state =
-                                  null;
-                            }
-                          : null,
-                    );
-                  }
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Results info
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: AppDimensions.base,
-                          right: AppDimensions.base,
-                          bottom: AppDimensions.xs,
-                        ),
-                        child: Text(
-                          "Results for '$query' · ${Formatter.formatCitationCount(paginated.totalCount)} total · Page $currentPage/${paginated.totalPages}",
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                      // Paper list
-                      Expanded(
-                        child: ListView.separated(
-                          itemCount: sorted.length,
-                          separatorBuilder: (_, __) => const Divider(
-                            height: 1,
-                            indent: AppDimensions.base,
-                            endIndent: AppDimensions.base,
-                            color: AppColors.outlineVariant,
-                          ),
-                          itemBuilder: (_, i) {
-                            final pub = sorted[i];
-                            final globalRank =
-                                (currentPage - 1) * paginated.perPage + i + 1;
-                            return InkWell(
-                              onTap: () => context.push(
-                                '/publication/${Uri.encodeComponent(pub.id)}',
-                                extra: pub,
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppDimensions.base,
-                                  vertical: AppDimensions.md,
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _RankBadge(rank: globalRank),
-                                    const SizedBox(width: AppDimensions.md),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            pub.title,
-                                            style: AppTextStyles.bodyMedium
-                                                .copyWith(
-                                                  fontWeight: FontWeight.w500,
-                                                  color: AppColors.onSurface,
-                                                ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          if (pub.journalName != null) ...[
-                                            const SizedBox(
-                                              height: AppDimensions.xs,
-                                            ),
-                                            Text(
-                                              pub.journalName!,
-                                              style: AppTextStyles.bodySmall
-                                                  .copyWith(
-                                                    color: AppColors
-                                                        .onSurfaceVariant,
-                                                  ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                          if (pub.authors.isNotEmpty) ...[
-                                            const SizedBox(
-                                              height: AppDimensions.xs,
-                                            ),
-                                            Text(
-                                              pub.authors.length > 1
-                                                  ? '${pub.authors.first.displayName} et al.'
-                                                  : pub
-                                                        .authors
-                                                        .first
-                                                        .displayName,
-                                              style: AppTextStyles.labelSmall
-                                                  .copyWith(
-                                                    color: AppColors
-                                                        .onSurfaceVariant,
-                                                  ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppDimensions.sm),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: AppDimensions.sm,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.citationChipBg,
-                                            borderRadius: BorderRadius.circular(
-                                              AppDimensions.shapeXs,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            Formatter.formatCitationCount(
-                                              pub.citedByCount,
-                                            ),
-                                            style: AppTextStyles.labelMedium
-                                                .copyWith(
-                                                  color: AppColors
-                                                      .citationChipText,
-                                                ),
-                                          ),
-                                        ),
-                                        if (pub.publicationYear != null) ...[
-                                          const SizedBox(
-                                            height: AppDimensions.xs,
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: AppDimensions.sm,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: AppColors
-                                                  .surfaceContainerHigh,
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    AppDimensions.shapeXs,
-                                                  ),
-                                            ),
-                                            child: Text(
-                                              pub.publicationYear.toString(),
-                                              style: AppTextStyles.labelSmall
-                                                  .copyWith(
-                                                    color: AppColors
-                                                        .onSurfaceVariant,
-                                                  ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      // Pagination controls
-                      if (paginated.totalPages > 1)
-                        Container(
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              top: BorderSide(
-                                color: AppColors.outlineVariant,
-                                width: 0.5,
-                              ),
-                            ),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimensions.base,
-                            vertical: AppDimensions.sm,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.first_page),
-                                onPressed: currentPage > 1
-                                    ? () =>
-                                          ref
-                                                  .read(
-                                                    searchPageProvider.notifier,
-                                                  )
-                                                  .state =
-                                              1
-                                    : null,
-                                iconSize: 20,
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.chevron_left),
-                                onPressed: currentPage > 1
-                                    ? () =>
-                                          ref
-                                                  .read(
-                                                    searchPageProvider.notifier,
-                                                  )
-                                                  .state =
-                                              currentPage - 1
-                                    : null,
-                                iconSize: 20,
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              const SizedBox(width: AppDimensions.sm),
-                              Text(
-                                '$currentPage / ${paginated.totalPages}',
-                                style: AppTextStyles.labelMedium.copyWith(
-                                  color: AppColors.onSurface,
-                                ),
-                              ),
-                              const SizedBox(width: AppDimensions.sm),
-                              IconButton(
-                                icon: const Icon(Icons.chevron_right),
-                                onPressed: paginated.hasNextPage
-                                    ? () =>
-                                          ref
-                                                  .read(
-                                                    searchPageProvider.notifier,
-                                                  )
-                                                  .state =
-                                              currentPage + 1
-                                    : null,
-                                iconSize: 20,
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.last_page),
-                                onPressed: currentPage < paginated.totalPages
-                                    ? () =>
-                                          ref
-                                              .read(searchPageProvider.notifier)
-                                              .state = paginated
-                                              .totalPages
-                                    : null,
-                                iconSize: 20,
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ),
+            Expanded(child: _buildResults(paginatedAsync, sorted, query)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildResults(
+    AsyncValue<PaginatedResult<Publication>> paginatedAsync,
+    List<Publication> sorted,
+    String query,
+  ) {
+    // Initial loading
+    if (paginatedAsync.isLoading && _allResults.isEmpty) {
+      return const ShimmerLoader();
+    }
+    if (paginatedAsync.hasError && _allResults.isEmpty) {
+      return ErrorState(
+        message: paginatedAsync.error.toString(),
+        onRetry: () => ref.invalidate(paginatedPublicationsProvider),
+      );
+    }
+    if (sorted.isEmpty && !paginatedAsync.isLoading) {
+      return EmptyState(
+        icon: Icons.find_in_page,
+        message: query.isEmpty
+            ? 'Search for publications above'
+            : 'No results found for "$query"',
+        actionLabel: query.isNotEmpty ? 'Clear' : null,
+        onAction: query.isNotEmpty
+            ? () {
+                _controller.clear();
+                ref.read(searchQueryProvider.notifier).state = '';
+                ref.read(selectedTopicFilterProvider.notifier).state = null;
+                setState(() {
+                  _allResults = [];
+                  _totalCount = 0;
+                });
+              }
+            : null,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Results info
+        Padding(
+          padding: const EdgeInsets.only(
+            left: AppDimensions.base,
+            right: AppDimensions.base,
+            bottom: AppDimensions.xs,
+          ),
+          child: Text(
+            "Showing ${sorted.length} of ${Formatter.formatCitationCount(_totalCount)} results",
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+        ),
+        // Paper list
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            itemCount: sorted.length + (_hasMore ? 1 : 0),
+            itemBuilder: (_, i) {
+              if (i == sorted.length) {
+                // "Read more" button
+                return _buildReadMoreButton();
+              }
+              final pub = sorted[i];
+              return _PaperCard(
+                publication: pub,
+                rank: i + 1,
+                onTopicTap: _searchTopic,
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReadMoreButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.base,
+        vertical: AppDimensions.base,
+      ),
+      child: Center(
+        child: _isLoadingMore
+            ? const Padding(
+                padding: EdgeInsets.all(AppDimensions.base),
+                child: CircularProgressIndicator(),
+              )
+            : OutlinedButton.icon(
+                onPressed: _loadMore,
+                icon: const Icon(Icons.expand_more),
+                label: const Text('Read more'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryContainer,
+                  side: const BorderSide(color: AppColors.primaryContainer),
+                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -800,6 +568,112 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
+  Widget _buildFilterDrawer() {
+    return Drawer(
+      child: SafeArea(
+        child: Consumer(
+          builder: (context, ref, _) {
+            final currentSort = ref.watch(paperSortOptionProvider);
+            return Padding(
+              padding: const EdgeInsets.all(AppDimensions.base),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Sort & Filter',
+                        style: AppTextStyles.headlineSmall.copyWith(
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppDimensions.base),
+                  Text(
+                    'Sort by',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.sm),
+                  ...PaperSortOption.values.map((opt) {
+                    return RadioListTile<PaperSortOption>(
+                      title: Text(
+                        _sortLabel(opt),
+                        style: AppTextStyles.bodyMedium,
+                      ),
+                      value: opt,
+                      groupValue: currentSort,
+                      activeColor: AppColors.primaryContainer,
+                      dense: true,
+                      onChanged: (val) {
+                        if (val != null) {
+                          ref.read(paperSortOptionProvider.notifier).state =
+                              val;
+                          // Re-sort existing accumulated results
+                          setState(() {});
+                        }
+                      },
+                    );
+                  }),
+                  const Divider(height: 32),
+                  Text(
+                    'Browse by Category',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.sm),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _openCascadeFilter();
+                    },
+                    icon: const Icon(Icons.account_tree_outlined, size: 18),
+                    label: const Text('Browse Topic Hierarchy'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primaryContainer,
+                      side: const BorderSide(color: AppColors.primaryContainer),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  List<Publication> _sortResults(List<Publication> pubs, PaperSortOption sort) {
+    switch (sort) {
+      case PaperSortOption.citationCount:
+        pubs.sort((a, b) => b.citedByCount.compareTo(a.citedByCount));
+      case PaperSortOption.year:
+        pubs.sort(
+          (a, b) => (b.publicationYear ?? 0).compareTo(a.publicationYear ?? 0),
+        );
+      case PaperSortOption.relevance:
+        break;
+      case PaperSortOption.title:
+        pubs.sort((a, b) => a.title.compareTo(b.title));
+    }
+    return pubs;
+  }
+
+  String _sortLabel(PaperSortOption opt) => switch (opt) {
+    PaperSortOption.citationCount => 'Most Cited',
+    PaperSortOption.year => 'Newest First',
+    PaperSortOption.relevance => 'Relevance',
+    PaperSortOption.title => 'A–Z (Title)',
+  };
+
   IconData _levelIcon(TopicLevel level) => switch (level) {
     TopicLevel.domain => Icons.public,
     TopicLevel.field => Icons.category,
@@ -813,6 +687,269 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     TopicLevel.subfield => AppColors.metricOrange,
     TopicLevel.topic => AppColors.metricGreen,
   };
+}
+
+// ── Paper Card Widget ─────────────────────────────────────────────────────────
+
+class _PaperCard extends StatelessWidget {
+  final Publication publication;
+  final int rank;
+  final ValueChanged<String> onTopicTap;
+
+  const _PaperCard({
+    required this.publication,
+    required this.rank,
+    required this.onTopicTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => context.push(
+        '/publication/${Uri.encodeComponent(publication.id)}',
+        extra: publication,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.base,
+          vertical: AppDimensions.md,
+        ),
+        decoration: const BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: AppColors.outlineVariant, width: 0.5),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Paper title
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _RankBadge(rank: rank),
+                const SizedBox(width: AppDimensions.md),
+                Expanded(
+                  child: Text(
+                    publication.title,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimensions.sm),
+
+            // Metadata section (indented under rank badge)
+            Padding(
+              padding: const EdgeInsets.only(left: 44),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Journal — full name, no truncation
+                  if (publication.journalName != null)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Journal: ',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            publication.journalName!,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontStyle: FontStyle.italic,
+                              color: AppColors.primaryContainer,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                  // Authors — clickable with hover
+                  if (publication.authors.isNotEmpty) ...[
+                    const SizedBox(height: AppDimensions.xs),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Authors: ',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                        Expanded(
+                          child: Wrap(
+                            spacing: AppDimensions.xs,
+                            runSpacing: AppDimensions.xs,
+                            children: publication.authors.map((a) {
+                              return _TopicChip(
+                                topic: a.displayName,
+                                onTap: () => onTopicTap(a.displayName),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  // Citations + Year row
+                  const SizedBox(height: AppDimensions.sm),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.sm,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.citationChipBg,
+                          borderRadius: BorderRadius.circular(
+                            AppDimensions.shapeXs,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Citations ',
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: AppColors.citationChipText,
+                              ),
+                            ),
+                            Text(
+                              Formatter.formatCitationCount(
+                                publication.citedByCount,
+                              ),
+                              style: AppTextStyles.labelMedium.copyWith(
+                                color: AppColors.citationChipText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (publication.publicationYear != null) ...[
+                        const SizedBox(width: AppDimensions.sm),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppDimensions.sm,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(
+                              AppDimensions.shapeXs,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Year ',
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: AppColors.onSurfaceVariant,
+                                ),
+                              ),
+                              Text(
+                                publication.publicationYear.toString(),
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: AppColors.onSurfaceVariant,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+
+                  // Research Topics — all, with hover effect
+                  if (publication.concepts.isNotEmpty) ...[
+                    const SizedBox(height: AppDimensions.sm),
+                    Wrap(
+                      spacing: AppDimensions.xs,
+                      runSpacing: AppDimensions.xs,
+                      children: publication.concepts.map((topic) {
+                        return _TopicChip(
+                          topic: topic,
+                          onTap: () => onTopicTap(topic),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A topic chip with hover/press visual feedback.
+class _TopicChip extends StatefulWidget {
+  final String topic;
+  final VoidCallback onTap;
+
+  const _TopicChip({required this.topic, required this.onTap});
+
+  @override
+  State<_TopicChip> createState() => _TopicChipState();
+}
+
+class _TopicChipState extends State<_TopicChip> {
+  bool _hovering = false;
+  bool _pressing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = _hovering || _pressing;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _pressing = true),
+        onTapUp: (_) => setState(() => _pressing = false),
+        onTapCancel: () => setState(() => _pressing = false),
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.sm,
+            vertical: 3,
+          ),
+          decoration: BoxDecoration(
+            color: isActive
+                ? AppColors.primaryContainer.withValues(alpha: 0.2)
+                : AppColors.secondaryContainer,
+            borderRadius: BorderRadius.circular(AppDimensions.shapeXs),
+            border: Border.all(
+              color: isActive ? AppColors.primaryContainer : Colors.transparent,
+              width: 1,
+            ),
+          ),
+          child: Text(
+            widget.topic,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: isActive
+                  ? AppColors.primaryContainer
+                  : AppColors.onSecondaryContainer,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _RankBadge extends StatelessWidget {

@@ -57,7 +57,7 @@ final getDashboardSummaryUseCaseProvider = Provider<GetDashboardSummary>(
 
 // ── Search State ──────────────────────────────────────────────────────────────
 
-/// The current search query (free text). Updating this triggers a new API call.
+/// The current search query (free text).
 final searchQueryProvider = StateProvider<String>((_) => '');
 
 /// If user selected a topic hierarchy item, this is set instead of free-text search.
@@ -65,11 +65,11 @@ final selectedTopicFilterProvider = StateProvider<TopicHierarchyItem?>(
   (_) => null,
 );
 
-/// Current page number (1-indexed).
+/// Current page for infinite scroll (internal, incremented by "Read more").
 final searchPageProvider = StateProvider<int>((_) => 1);
 
-/// Results per page (user selectable: 10, 25, 50).
-final searchPerPageProvider = StateProvider<int>((_) => 25);
+/// Results per page — fixed at 50 for "read more" loading.
+final searchPerPageProvider = StateProvider<int>((_) => 50);
 
 // ── Topic Autocomplete ────────────────────────────────────────────────────────
 
@@ -105,9 +105,9 @@ final topicsProvider = FutureProvider.family<List<TopicHierarchyItem>, String?>(
   },
 );
 
-// ── Paginated Publications ────────────────────────────────────────────────────
+// ── Paginated Publications (internal, for fetching) ───────────────────────────
 
-/// Paginated publications — uses topic filter if selected, otherwise free-text.
+/// Fetches the current page result. Used internally for loading data.
 final paginatedPublicationsProvider =
     FutureProvider<PaginatedResult<Publication>>((ref) async {
       final topicFilter = ref.watch(selectedTopicFilterProvider);
@@ -115,7 +115,6 @@ final paginatedPublicationsProvider =
       final page = ref.watch(searchPageProvider);
       final perPage = ref.watch(searchPerPageProvider);
 
-      // If a topic hierarchy item is selected, filter by its ID
       if (topicFilter != null) {
         return ref
             .read(publicationRepositoryProvider)
@@ -127,13 +126,12 @@ final paginatedPublicationsProvider =
             );
       }
 
-      // Otherwise, free-text search
       if (query.isEmpty) {
         return const PaginatedResult(
           items: [],
           totalCount: 0,
           page: 1,
-          perPage: 25,
+          perPage: 50,
         );
       }
       return ref.read(searchPublicationsUseCaseProvider)(
@@ -172,7 +170,7 @@ final topJournalsProvider = Provider<List<JournalWithCount>>((ref) {
   return ref.read(getTopJournalsUseCaseProvider)(pubs);
 });
 
-// ── Top Papers sort ───────────────────────────────────────────────────────────
+// ── Sort ──────────────────────────────────────────────────────────────────────
 
 enum PaperSortOption { citationCount, year, relevance, title }
 
@@ -194,7 +192,6 @@ final sortedPublicationsProvider = Provider<List<Publication>>((ref) {
         (a, b) => (b.publicationYear ?? 0).compareTo(a.publicationYear ?? 0),
       );
     case PaperSortOption.relevance:
-      // Keep original order (relevance_score from API).
       break;
     case PaperSortOption.title:
       pubs.sort((a, b) => a.title.compareTo(b.title));

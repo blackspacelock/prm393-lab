@@ -29,11 +29,10 @@ class EmptyState extends StatelessWidget {
             const SizedBox(height: AppDimensions.base),
             Text(
               message,
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.onSurfaceVariant),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppDimensions.base),

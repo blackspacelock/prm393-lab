@@ -87,8 +87,6 @@ class _RankedListTileState extends State<RankedListTile> {
                             ? AppColors.primaryContainer
                             : AppColors.onSurface,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -96,8 +94,6 @@ class _RankedListTileState extends State<RankedListTile> {
                       style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.onSurfaceVariant,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

@@ -80,8 +80,6 @@ class DashboardScreen extends ConsumerWidget {
                               style: AppTextStyles.headlineLarge.copyWith(
                                 color: AppColors.onPrimary,
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                             ),
                             if (growthLabel.isNotEmpty) ...[
                               const SizedBox(height: AppDimensions.xs),
@@ -114,35 +112,38 @@ class DashboardScreen extends ConsumerWidget {
                 const SizedBox(height: AppDimensions.base),
 
                 // KPI row — 3 compact boxes in one row
-                Row(
-                  children: [
-                    Expanded(
-                      child: _CompactMetric(
-                        label: 'Total Publications',
-                        value: summary.totalPublications.toString(),
-                        icon: Icons.article,
-                        iconColor: AppColors.primaryContainer,
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _CompactMetric(
+                          label: 'Total Publications',
+                          value: summary.totalPublications.toString(),
+                          icon: Icons.article,
+                          iconColor: AppColors.primaryContainer,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: AppDimensions.sm),
-                    Expanded(
-                      child: _CompactMetric(
-                        label: 'Avg. Citations',
-                        value: Formatter.formatDouble(summary.avgCitations),
-                        icon: Icons.format_quote,
-                        iconColor: AppColors.metricOrange,
+                      const SizedBox(width: AppDimensions.sm),
+                      Expanded(
+                        child: _CompactMetric(
+                          label: 'Avg. Citations',
+                          value: Formatter.formatDouble(summary.avgCitations),
+                          icon: Icons.format_quote,
+                          iconColor: AppColors.metricOrange,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: AppDimensions.sm),
-                    Expanded(
-                      child: _CompactMetric(
-                        label: 'Most Active Year',
-                        value: summary.mostActiveYear?.toString() ?? 'N/A',
-                        icon: Icons.calendar_today,
-                        iconColor: AppColors.metricGreen,
+                      const SizedBox(width: AppDimensions.sm),
+                      Expanded(
+                        child: _CompactMetric(
+                          label: 'Most Active Year',
+                          value: summary.mostActiveYear?.toString() ?? 'N/A',
+                          icon: Icons.calendar_today,
+                          iconColor: AppColors.metricGreen,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: AppDimensions.base),
 
@@ -197,8 +198,6 @@ class DashboardScreen extends ConsumerWidget {
                                       style: AppTextStyles.titleLarge.copyWith(
                                         color: AppColors.onSurface,
                                       ),
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -308,8 +307,6 @@ class DashboardScreen extends ConsumerWidget {
                                   style: AppTextStyles.bodyMedium.copyWith(
                                     color: AppColors.onSurface,
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -372,8 +369,6 @@ class DashboardScreen extends ConsumerWidget {
                                   style: AppTextStyles.bodyMedium.copyWith(
                                     color: AppColors.onSurface,
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -443,8 +438,6 @@ class _CompactMetric extends StatelessWidget {
               color: AppColors.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

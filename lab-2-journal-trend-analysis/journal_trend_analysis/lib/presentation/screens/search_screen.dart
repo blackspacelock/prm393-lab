@@ -1032,7 +1032,7 @@ class _PaperCard extends StatelessWidget {
                   child: Text(
                     publication.title,
                     style: AppTextStyles.titleMedium.copyWith(
-                      fontSize: 29,
+                      fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: AppColors.onSurface,
                     ),
@@ -1049,7 +1049,9 @@ class _PaperCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Citations + Year row
-                  Row(
+                  Wrap(
+                    spacing: AppDimensions.sm,
+                    runSpacing: AppDimensions.xs,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -1083,8 +1085,7 @@ class _PaperCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (publication.publicationYear != null) ...[
-                        const SizedBox(width: AppDimensions.sm),
+                      if (publication.publicationYear != null)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppDimensions.md,
@@ -1115,7 +1116,6 @@ class _PaperCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                      ],
                     ],
                   ),
 

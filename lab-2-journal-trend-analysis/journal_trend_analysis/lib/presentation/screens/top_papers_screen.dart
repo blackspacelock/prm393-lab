@@ -208,8 +208,6 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
                                       fontWeight: FontWeight.w500,
                                       color: AppColors.onSurface,
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   if (pub.journalName != null) ...[
                                     const SizedBox(height: AppDimensions.xs),
@@ -218,8 +216,6 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
                                       style: AppTextStyles.bodySmall.copyWith(
                                         color: AppColors.onSurfaceVariant,
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                   if (authorLabel != null) ...[

@@ -34,17 +34,14 @@ class PublicationCard extends StatelessWidget {
                     color: AppColors.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 if (publication.journalName != null) ...[
                   const SizedBox(height: AppDimensions.xs),
                   Text(
                     publication.journalName!,
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.onSurfaceVariant),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
                   ),
                 ],
                 const SizedBox(height: AppDimensions.sm),

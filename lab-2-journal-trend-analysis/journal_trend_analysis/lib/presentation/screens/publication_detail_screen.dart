@@ -49,10 +49,6 @@ class PublicationDetailScreen extends ConsumerWidget {
         leading: BackButton(color: AppColors.primaryContainer),
         title: const Text('Publication Details'),
         backgroundColor: AppColors.surfaceContainerLowest,
-        actions: [
-          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.bookmark_border), onPressed: () {}),
-        ],
       ),
       bottomNavigationBar: publication.doi != null
           ? Container(
@@ -113,6 +109,7 @@ class PublicationDetailScreen extends ConsumerWidget {
             Text(
               publication.title,
               style: AppTextStyles.headlineMedium.copyWith(
+                fontSize: 60,
                 color: AppColors.onSurface,
               ),
             ),
@@ -237,30 +234,33 @@ class PublicationDetailScreen extends ConsumerWidget {
             ],
 
             // Stats row — journal name full display
-            Row(
-              children: [
-                Expanded(
-                  child: _StatMiniCard(
-                    label: 'Year',
-                    value: Formatter.formatYear(publication.publicationYear),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _StatMiniCard(
+                      label: 'Year',
+                      value: Formatter.formatYear(publication.publicationYear),
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppDimensions.sm),
-                Expanded(
-                  child: _StatMiniCard(
-                    label: 'Authors',
-                    value: publication.authors.length.toString(),
+                  const SizedBox(width: AppDimensions.sm),
+                  Expanded(
+                    child: _StatMiniCard(
+                      label: 'Authors',
+                      value: publication.authors.length.toString(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppDimensions.sm),
-                Expanded(
-                  child: _StatMiniCard(
-                    label: 'Journal',
-                    value: publication.journalName ?? 'N/A',
-                    fullText: true,
+                  const SizedBox(width: AppDimensions.sm),
+                  Expanded(
+                    child: _StatMiniCard(
+                      label: 'Journal',
+                      value: publication.journalName ?? 'N/A',
+                      fullText: true,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

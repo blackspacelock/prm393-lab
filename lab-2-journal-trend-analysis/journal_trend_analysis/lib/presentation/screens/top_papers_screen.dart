@@ -51,10 +51,7 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
         title: const Text('Most Influential Papers'),
         backgroundColor: AppColors.surfaceContainerLowest,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.filter_list), onPressed: () {}),
         ],
       ),
       floatingActionButton: _showFab
@@ -101,8 +98,9 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Ranked by citation count · $query',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.onSurfaceVariant),
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ),
@@ -129,16 +127,14 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
                     children: PaperSortOption.values.map((opt) {
                       final selected = sortOption == opt;
                       return Padding(
-                        padding:
-                            const EdgeInsets.only(right: AppDimensions.sm),
+                        padding: const EdgeInsets.only(right: AppDimensions.sm),
                         child: ChoiceChip(
                           label: Text(_label(opt)),
                           selected: selected,
-                          onSelected: (_) => ref
-                              .read(paperSortOptionProvider.notifier)
-                              .state = opt,
-                          backgroundColor:
-                              AppColors.surfaceContainerLowest,
+                          onSelected: (_) =>
+                              ref.read(paperSortOptionProvider.notifier).state =
+                                  opt,
+                          backgroundColor: AppColors.surfaceContainerLowest,
                           selectedColor: AppColors.secondaryContainer,
                           labelStyle: AppTextStyles.labelMedium.copyWith(
                             color: selected
@@ -153,7 +149,8 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(
-                                AppDimensions.shapeSm),
+                              AppDimensions.shapeSm,
+                            ),
                           ),
                           visualDensity: VisualDensity.compact,
                         ),
@@ -182,8 +179,8 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
                         : null;
                     final authorLabel = firstAuthor != null
                         ? (pub.authors.length > 1
-                            ? '$firstAuthor et al.'
-                            : firstAuthor)
+                              ? '$firstAuthor et al.'
+                              : firstAuthor)
                         : null;
 
                     return InkWell(
@@ -203,13 +200,11 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
                             const SizedBox(width: AppDimensions.md),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     pub.title,
-                                    style: AppTextStyles.bodyMedium
-                                        .copyWith(
+                                    style: AppTextStyles.bodyMedium.copyWith(
                                       fontWeight: FontWeight.w500,
                                       color: AppColors.onSurface,
                                     ),
@@ -217,27 +212,23 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   if (pub.journalName != null) ...[
-                                    const SizedBox(
-                                        height: AppDimensions.xs),
+                                    const SizedBox(height: AppDimensions.xs),
                                     Text(
                                       pub.journalName!,
-                                      style: AppTextStyles.bodySmall
-                                          .copyWith(
-                                              color: AppColors
-                                                  .onSurfaceVariant),
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.onSurfaceVariant,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                   if (authorLabel != null) ...[
-                                    const SizedBox(
-                                        height: AppDimensions.xs),
+                                    const SizedBox(height: AppDimensions.xs),
                                     Text(
                                       authorLabel,
-                                      style: AppTextStyles.labelSmall
-                                          .copyWith(
-                                              color: AppColors
-                                                  .onSurfaceVariant),
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: AppColors.onSurfaceVariant,
+                                      ),
                                     ),
                                   ],
                                 ],
@@ -255,20 +246,20 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
                                   decoration: BoxDecoration(
                                     color: AppColors.citationChipBg,
                                     borderRadius: BorderRadius.circular(
-                                        AppDimensions.shapeXs),
+                                      AppDimensions.shapeXs,
+                                    ),
                                   ),
                                   child: Text(
                                     Formatter.formatCitationCount(
-                                        pub.citedByCount),
-                                    style: AppTextStyles.labelMedium
-                                        .copyWith(
-                                            color: AppColors
-                                                .citationChipText),
+                                      pub.citedByCount,
+                                    ),
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      color: AppColors.citationChipText,
+                                    ),
                                   ),
                                 ),
                                 if (pub.publicationYear != null) ...[
-                                  const SizedBox(
-                                      height: AppDimensions.xs),
+                                  const SizedBox(height: AppDimensions.xs),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: AppDimensions.sm,
@@ -276,16 +267,15 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: AppColors.surfaceContainerHigh,
-                                      borderRadius:
-                                          BorderRadius.circular(
-                                              AppDimensions.shapeXs),
+                                      borderRadius: BorderRadius.circular(
+                                        AppDimensions.shapeXs,
+                                      ),
                                     ),
                                     child: Text(
                                       pub.publicationYear.toString(),
-                                      style: AppTextStyles.labelSmall
-                                          .copyWith(
-                                              color: AppColors
-                                                  .onSurfaceVariant),
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: AppColors.onSurfaceVariant,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -306,11 +296,10 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
   }
 
   String _label(PaperSortOption opt) => switch (opt) {
-        PaperSortOption.citationCount => 'Citation count',
-        PaperSortOption.year => 'Year',
-        PaperSortOption.relevance => 'Relevance',
-        PaperSortOption.title => 'A–Z',
-      };
+    PaperSortOption.citationCount => 'Citation count',
+    PaperSortOption.year => 'Year',
+    PaperSortOption.title => 'A–Z',
+  };
 }
 
 class _RankBadge extends StatelessWidget {

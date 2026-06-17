@@ -59,7 +59,7 @@ class TrendChart extends StatelessWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 28,
+              reservedSize: 32,
               interval: 1,
               getTitlesWidget: (value, meta) {
                 final idx = value.toInt();
@@ -72,15 +72,17 @@ class TrendChart extends StatelessWidget {
                   return const SizedBox.shrink();
                 }
 
-                return Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    year.toString(),
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                return Transform.rotate(
+                  angle: -0.5,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      year.toString(),
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.clip,
                   ),
                 );
               },
@@ -102,10 +104,12 @@ class TrendChart extends StatelessWidget {
               },
             ),
           ),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
         ),
         gridData: FlGridData(
           show: true,
@@ -121,10 +125,7 @@ class TrendChart extends StatelessWidget {
           LineChartBarData(
             spots: List.generate(
               data.length,
-              (i) => FlSpot(
-                i.toDouble(),
-                data[i].publicationCount.toDouble(),
-              ),
+              (i) => FlSpot(i.toDouble(), data[i].publicationCount.toDouble()),
             ),
             isCurved: true,
             color: AppColors.primaryContainer,

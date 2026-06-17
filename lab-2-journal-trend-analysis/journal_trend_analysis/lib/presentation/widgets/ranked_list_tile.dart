@@ -73,7 +73,7 @@ class _RankedListTileState extends State<RankedListTile> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               widget.leading ?? _RankBadge(rank: widget.rank),
-              const SizedBox(width: AppDimensions.md),
+              const SizedBox(width: AppDimensions.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,7 +98,7 @@ class _RankedListTileState extends State<RankedListTile> {
                   ],
                 ),
               ),
-              const SizedBox(width: AppDimensions.sm),
+              const SizedBox(width: AppDimensions.xs),
               _CountBadge(label: '${widget.count} $paperLabel'),
             ],
           ),

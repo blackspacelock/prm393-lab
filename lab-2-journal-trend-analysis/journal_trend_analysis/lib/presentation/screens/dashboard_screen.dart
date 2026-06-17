@@ -27,12 +27,6 @@ class DashboardScreen extends ConsumerWidget {
         leading: const Icon(Icons.analytics, color: AppColors.onSurfaceVariant),
         title: const Text('Research Dashboard'),
         backgroundColor: AppColors.surfaceContainerLowest,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(paginatedPublicationsProvider),
-          ),
-        ],
       ),
       body: pubAsync.when(
         loading: () => const ShimmerLoader(),
@@ -161,261 +155,241 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: AppDimensions.sm),
-                  Stack(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(
-                          AppDimensions.base + 4,
-                          AppDimensions.base,
-                          AppDimensions.base,
-                          AppDimensions.base,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(
-                            AppDimensions.shapeMd,
+                  _HoverableCard(
+                    onTap: () => context.push(
+                      '/publication/${Uri.encodeComponent(summary.mostInfluentialPaper!.id)}',
+                      extra: summary.mostInfluentialPaper,
+                    ),
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(
+                            AppDimensions.base + 4,
+                            AppDimensions.base,
+                            AppDimensions.base,
+                            AppDimensions.base,
                           ),
-                          border: Border.all(
-                            color: AppColors.outlineVariant,
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.emoji_events,
-                                  size: 20,
-                                  color: AppColors.primaryContainer,
-                                ),
-                                const SizedBox(width: AppDimensions.sm),
-                                Expanded(
-                                  child: Text(
-                                    summary.mostInfluentialPaper!.title,
-                                    style: AppTextStyles.titleLarge.copyWith(
-                                      color: AppColors.onSurface,
-                                    ),
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceContainerLowest,
+                            borderRadius: BorderRadius.circular(
+                              AppDimensions.shapeMd,
                             ),
-                            const SizedBox(height: AppDimensions.sm),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppDimensions.sm,
-                                vertical: AppDimensions.xs,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.citationChipBg,
-                                borderRadius: BorderRadius.circular(
-                                  AppDimensions.shapeXs,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
+                            border: Border.all(
+                              color: AppColors.outlineVariant,
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
                                   const Icon(
                                     Icons.emoji_events,
-                                    size: 12,
-                                    color: AppColors.citationChipText,
+                                    size: 20,
+                                    color: AppColors.primaryContainer,
                                   ),
-                                  const SizedBox(width: AppDimensions.xs),
-                                  Text(
-                                    '${Formatter.formatCitationCount(summary.mostInfluentialPaper!.citedByCount)} citations',
-                                    style: AppTextStyles.labelMedium.copyWith(
-                                      color: AppColors.citationChipText,
+                                  const SizedBox(width: AppDimensions.sm),
+                                  Expanded(
+                                    child: Text(
+                                      summary.mostInfluentialPaper!.title,
+                                      style: AppTextStyles.titleLarge.copyWith(
+                                        color: AppColors.onSurface,
+                                      ),
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Left accent bar
-                      Positioned(
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 4,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primaryContainer,
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(AppDimensions.shapeMd),
-                              bottomLeft: Radius.circular(
-                                AppDimensions.shapeMd,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppDimensions.base),
-                ],
-
-                // Top Journal + Top Author side-by-side with publication counts
-                if (summary.topJournalName != null ||
-                    summary.topAuthorName != null) ...[
-                  Row(
-                    children: [
-                      if (summary.topJournalName != null)
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(AppDimensions.md),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerLowest,
-                              borderRadius: BorderRadius.circular(
-                                AppDimensions.shapeMd,
-                              ),
-                              border: Border.all(
-                                color: AppColors.outlineVariant,
-                                width: 1,
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(
-                                  Icons.library_books,
-                                  size: 20,
-                                  color: AppColors.primaryContainer,
+                              const SizedBox(height: AppDimensions.sm),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppDimensions.sm,
+                                  vertical: AppDimensions.xs,
                                 ),
-                                const SizedBox(height: AppDimensions.sm),
-                                Text(
-                                  summary.topJournalName!,
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.onSurface,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: AppDimensions.xs),
-                                Text(
-                                  '${summary.topJournalPublications ?? 0} publications',
-                                  style: AppTextStyles.labelSmall.copyWith(
-                                    color: AppColors.onSurfaceVariant,
+                                decoration: BoxDecoration(
+                                  color: AppColors.citationChipBg,
+                                  borderRadius: BorderRadius.circular(
+                                    AppDimensions.shapeXs,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      if (summary.topJournalName != null &&
-                          summary.topAuthorName != null)
-                        const SizedBox(width: AppDimensions.sm),
-                      if (summary.topAuthorName != null)
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(AppDimensions.md),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerLowest,
-                              borderRadius: BorderRadius.circular(
-                                AppDimensions.shapeMd,
-                              ),
-                              border: Border.all(
-                                color: AppColors.outlineVariant,
-                                width: 1,
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                AuthorChip(displayName: summary.topAuthorName!),
-                                const SizedBox(height: AppDimensions.sm),
-                                Text(
-                                  summary.topAuthorName!,
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.onSurface,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.emoji_events,
+                                      size: 12,
+                                      color: AppColors.citationChipText,
+                                    ),
+                                    const SizedBox(width: AppDimensions.xs),
+                                    Text(
+                                      '${Formatter.formatCitationCount(summary.mostInfluentialPaper!.citedByCount)} citations',
+                                      style: AppTextStyles.labelMedium.copyWith(
+                                        color: AppColors.citationChipText,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: AppDimensions.xs),
-                                Text(
-                                  '${summary.topAuthorPublications ?? 0} publications',
-                                  style: AppTextStyles.labelSmall.copyWith(
-                                    color: AppColors.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: AppDimensions.base),
-                ],
-
-                // Publication trend mini-chart
-                if (summary.sparklineData.isNotEmpty) ...[
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(
-                        AppDimensions.shapeMd,
-                      ),
-                      border: Border.all(
-                        color: AppColors.outlineVariant,
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppDimensions.base,
-                            AppDimensions.base,
-                            AppDimensions.sm,
-                            0,
-                          ),
-                          child: Row(
-                            children: [
-                              Text(
-                                'Publication Trend',
-                                style: AppTextStyles.titleLarge.copyWith(
-                                  color: AppColors.onSurface,
-                                ),
-                              ),
-                              const Spacer(),
-                              TextButton(
-                                onPressed: () => context.go('/trends'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.primaryContainer,
-                                  padding: EdgeInsets.zero,
-                                ),
-                                child: const Text('View full →'),
                               ),
                             ],
                           ),
                         ),
-                        SizedBox(
-                          height: 80,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppDimensions.sm,
-                              0,
-                              AppDimensions.sm,
-                              AppDimensions.base,
-                            ),
-                            child: _Sparkline(
-                              data: summary.sparklineData
-                                  .map((e) => e.publicationCount.toDouble())
-                                  .toList(),
-                              lineColor: AppColors.primaryContainer,
-                              areaColor: AppColors.citationChipBg,
+                        // Left accent bar
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 4,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primaryContainer,
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(AppDimensions.shapeMd),
+                                bottomLeft: Radius.circular(
+                                  AppDimensions.shapeMd,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: AppDimensions.base),
+                ],
+
+                // Top Journal — separate row with title
+                if (summary.topJournalName != null) ...[
+                  Text(
+                    'Most Publications Journal',
+                    style: AppTextStyles.titleLarge.copyWith(
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.sm),
+                  _HoverableCard(
+                    onTap: () {
+                      ref.read(selectedTopicFilterProvider.notifier).state =
+                          null;
+                      ref.read(searchPageProvider.notifier).state = 1;
+                      ref.read(searchQueryProvider.notifier).state =
+                          summary.topJournalName!;
+                      context.go('/search');
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppDimensions.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(
+                          AppDimensions.shapeMd,
+                        ),
+                        border: Border.all(
+                          color: AppColors.outlineVariant,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.library_books,
+                                size: 20,
+                                color: AppColors.primaryContainer,
+                              ),
+                              const SizedBox(width: AppDimensions.sm),
+                              Expanded(
+                                child: Text(
+                                  summary.topJournalName!,
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.onSurface,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppDimensions.xs),
+                          Text(
+                            '${summary.topJournalPublications ?? 0} publications',
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.base),
+                ],
+
+                // Top Author — separate row with title
+                if (summary.topAuthorName != null) ...[
+                  Text(
+                    'Most Publications Author',
+                    style: AppTextStyles.titleLarge.copyWith(
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.sm),
+                  _HoverableCard(
+                    onTap: () {
+                      ref.read(selectedTopicFilterProvider.notifier).state =
+                          null;
+                      ref.read(searchPageProvider.notifier).state = 1;
+                      ref.read(searchQueryProvider.notifier).state =
+                          summary.topAuthorName!;
+                      context.go('/search');
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppDimensions.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(
+                          AppDimensions.shapeMd,
+                        ),
+                        border: Border.all(
+                          color: AppColors.outlineVariant,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              AuthorChip(displayName: summary.topAuthorName!),
+                              const SizedBox(width: AppDimensions.sm),
+                              Expanded(
+                                child: Text(
+                                  summary.topAuthorName!,
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.onSurface,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppDimensions.xs),
+                          Text(
+                            '${summary.topAuthorPublications ?? 0} publications',
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.base),
                 ],
               ],
             ),
@@ -517,6 +491,61 @@ class _Sparkline extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HoverableCard extends StatefulWidget {
+  final VoidCallback onTap;
+  final Widget child;
+
+  const _HoverableCard({required this.onTap, required this.child});
+
+  @override
+  State<_HoverableCard> createState() => _HoverableCardState();
+}
+
+class _HoverableCardState extends State<_HoverableCard> {
+  bool _hovering = false;
+  bool _pressing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = _hovering || _pressing;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _pressing = true),
+        onTapUp: (_) => setState(() => _pressing = false),
+        onTapCancel: () => setState(() => _pressing = false),
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
+            border: Border.all(
+              color: isActive ? AppColors.primaryContainer : Colors.transparent,
+              width: 2,
+            ),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: AppColors.primaryContainer.withValues(alpha: 0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: AnimatedScale(
+            scale: _pressing ? 0.98 : 1.0,
+            duration: const Duration(milliseconds: 100),
+            child: widget.child,
+          ),
+        ),
       ),
     );
   }

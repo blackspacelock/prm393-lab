@@ -30,12 +30,17 @@ class TopicRemoteDataSourceImpl implements TopicRemoteDataSource {
     if (query.trim().isEmpty) return [];
 
     try {
-      // Search across all hierarchy levels in parallel
+      // Domains and fields use regular search (few items, no autocomplete endpoint).
+      // Subfields and topics use the autocomplete endpoint for better partial matching.
       final results = await Future.wait([
         _searchLevel('/domains', query, TopicLevel.domain),
         _searchLevel('/fields', query, TopicLevel.field),
-        _searchLevel('/subfields', query, TopicLevel.subfield),
-        _searchLevel('/topics', query, TopicLevel.topic),
+        _autocompleteLevel(
+          '/autocomplete/subfields',
+          query,
+          TopicLevel.subfield,
+        ),
+        _autocompleteLevel('/autocomplete/topics', query, TopicLevel.topic),
       ]);
 
       // Merge and return (domains first, then fields, subfields, topics)
@@ -60,6 +65,30 @@ class TopicRemoteDataSourceImpl implements TopicRemoteDataSource {
         },
       );
       return _parseItems(response.data, level);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<TopicHierarchyItem>> _autocompleteLevel(
+    String endpoint,
+    String query,
+    TopicLevel level,
+  ) async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        endpoint,
+        queryParameters: {'q': query},
+      );
+      final results = response.data?['results'] as List<dynamic>? ?? [];
+      return results.whereType<Map<String, dynamic>>().take(5).map((json) {
+        return TopicHierarchyItem(
+          id: json['id'] as String? ?? '',
+          displayName: json['display_name'] as String? ?? '',
+          level: level,
+          worksCount: json['works_count'] as int?,
+        );
+      }).toList();
     } catch (_) {
       return [];
     }

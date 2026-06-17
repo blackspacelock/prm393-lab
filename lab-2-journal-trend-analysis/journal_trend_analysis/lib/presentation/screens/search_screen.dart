@@ -14,16 +14,6 @@ import '../providers/providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
 import '../widgets/shimmer_loader.dart';
-import '../widgets/topic_cascade_dialog.dart';
-
-const _suggestions = [
-  'AI',
-  'Software Engineering',
-  'Data Science',
-  'Cybersecurity',
-  'IoT',
-  'Blockchain',
-];
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -36,6 +26,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   final _scrollController = ScrollController();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   Timer? _debounce;
   bool _showAutocomplete = false;
   String _autocompleteQuery = '';
@@ -54,7 +45,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _controller.addListener(_onTextChanged);
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus) {
-        setState(() => _showAutocomplete = false);
+        // Delay hiding autocomplete to allow tap events on suggestions to fire first
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted && !_focusNode.hasFocus) {
+            setState(() => _showAutocomplete = false);
+          }
+        });
       }
     });
   }
@@ -101,6 +97,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _selectTopicItem(TopicHierarchyItem item) {
+    _debounce?.cancel();
     setState(() {
       _showAutocomplete = false;
       _allResults = [];
@@ -111,19 +108,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     });
     _focusNode.unfocus();
     _controller.text = item.displayName;
-    ref.read(searchQueryProvider.notifier).state = item.displayName;
-    ref.read(searchPageProvider.notifier).state = 1;
+    _debounce?.cancel(); // Cancel any debounce triggered by text change
+    // Set topic filter first, then query — provider prioritizes topicFilter
     ref.read(selectedTopicFilterProvider.notifier).state = item;
-  }
-
-  void _openCascadeFilter() async {
-    final result = await showDialog<TopicHierarchyItem>(
-      context: context,
-      builder: (_) => const TopicCascadeDialog(),
-    );
-    if (result != null) {
-      _selectTopicItem(result);
-    }
+    ref.read(searchPageProvider.notifier).state = 1;
+    ref.read(searchQueryProvider.notifier).state = item.displayName;
   }
 
   void _loadMore() {
@@ -157,12 +146,32 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _submitFreeText(topic);
   }
 
+  void _searchJournal(String journalName) {
+    _controller.text = journalName;
+    _submitFreeText(journalName);
+  }
+
+  void _searchAuthor(String authorName) {
+    _controller.text = authorName;
+    _submitFreeText(authorName);
+  }
+
   @override
   Widget build(BuildContext context) {
     final paginatedAsync = ref.watch(paginatedPublicationsProvider);
     final query = ref.watch(searchQueryProvider);
     final topicFilter = ref.watch(selectedTopicFilterProvider);
     final sortOption = ref.watch(paperSortOptionProvider);
+
+    // Sync controller text with query provider (e.g. when navigated from dashboard)
+    if (_controller.text != query && !_focusNode.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _controller.text != query && !_focusNode.hasFocus) {
+          _controller.text = query;
+          _debounce?.cancel();
+        }
+      });
+    }
 
     // When data arrives, accumulate
     paginatedAsync.whenData(_onDataLoaded);
@@ -186,27 +195,31 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     });
 
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         title: const Text('Journal Trend Analyzer'),
         backgroundColor: AppColors.surfaceContainerLowest,
         elevation: 0,
         scrolledUnderElevation: 1,
-        leading: const Icon(Icons.analytics, color: AppColors.onSurfaceVariant),
+        leading: IconButton(
+          icon: const Icon(Icons.menu, color: AppColors.onSurfaceVariant),
+          tooltip: 'Topic Hierarchy',
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.account_tree_outlined),
-            tooltip: 'Browse Topics',
-            onPressed: _openCascadeFilter,
-          ),
           Builder(
-            builder: (ctx) => IconButton(
-              icon: const Icon(Icons.tune),
-              tooltip: 'Sort & Filter',
+            builder: (ctx) => TextButton.icon(
+              icon: const Icon(Icons.tune, size: 20),
+              label: const Text('Filter'),
               onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.onSurfaceVariant,
+              ),
             ),
           ),
         ],
       ),
+      drawer: _buildTopicHierarchyDrawer(),
       endDrawer: _buildFilterDrawer(),
       body: Column(
         children: [
@@ -307,54 +320,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
             ),
 
-          // Quick suggestion chips
-          if (!_showAutocomplete) ...[
-            const SizedBox(height: AppDimensions.sm),
-            SizedBox(
-              height: 38,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimensions.base,
-                ),
-                itemCount: _suggestions.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: AppDimensions.sm),
-                itemBuilder: (_, i) {
-                  final selected =
-                      query == _suggestions[i] && topicFilter == null;
-                  return FilterChip(
-                    label: Text(_suggestions[i]),
-                    selected: selected,
-                    onSelected: (_) {
-                      _controller.text = _suggestions[i];
-                      _submitFreeText(_suggestions[i]);
-                    },
-                    backgroundColor: AppColors.surfaceContainerHighest,
-                    selectedColor: AppColors.secondaryContainer,
-                    labelStyle: AppTextStyles.labelLarge.copyWith(
-                      color: selected
-                          ? AppColors.onSecondaryContainer
-                          : AppColors.onSurfaceVariant,
-                    ),
-                    side: BorderSide(
-                      color: selected
-                          ? AppColors.primaryContainer
-                          : AppColors.outlineVariant,
-                      width: 1,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppDimensions.shapeSm,
-                      ),
-                    ),
-                    visualDensity: VisualDensity.compact,
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: AppDimensions.sm),
-          ],
+          if (!_showAutocomplete) const SizedBox(height: AppDimensions.sm),
 
           // Results
           if (!_showAutocomplete)
@@ -432,6 +398,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 publication: pub,
                 rank: i + 1,
                 onTopicTap: _searchTopic,
+                onJournalTap: _searchJournal,
+                onAuthorTap: _searchAuthor,
               );
             },
           ),
@@ -568,6 +536,57 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
+  Widget _buildTopicHierarchyDrawer() {
+    return Drawer(
+      child: SafeArea(
+        child: Consumer(
+          builder: (context, ref, _) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(AppDimensions.base),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.account_tree_outlined,
+                        size: 20,
+                        color: AppColors.primaryContainer,
+                      ),
+                      const SizedBox(width: AppDimensions.sm),
+                      Text(
+                        'Topic Hierarchy',
+                        style: AppTextStyles.headlineSmall.copyWith(
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // Topic hierarchy tree
+                Expanded(
+                  child: _TopicHierarchyTree(
+                    onSelect: (item) {
+                      Navigator.of(context).pop();
+                      _selectTopicItem(item);
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilterDrawer() {
     return Drawer(
       child: SafeArea(
@@ -582,7 +601,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   Row(
                     children: [
                       Text(
-                        'Sort & Filter',
+                        'Filter',
                         style: AppTextStyles.headlineSmall.copyWith(
                           color: AppColors.onSurface,
                         ),
@@ -622,26 +641,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       },
                     );
                   }),
-                  const Divider(height: 32),
-                  Text(
-                    'Browse by Category',
-                    style: AppTextStyles.titleMedium.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.sm),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _openCascadeFilter();
-                    },
-                    icon: const Icon(Icons.account_tree_outlined, size: 18),
-                    label: const Text('Browse Topic Hierarchy'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primaryContainer,
-                      side: const BorderSide(color: AppColors.primaryContainer),
-                    ),
-                  ),
                 ],
               ),
             );
@@ -659,8 +658,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         pubs.sort(
           (a, b) => (b.publicationYear ?? 0).compareTo(a.publicationYear ?? 0),
         );
-      case PaperSortOption.relevance:
-        break;
       case PaperSortOption.title:
         pubs.sort((a, b) => a.title.compareTo(b.title));
     }
@@ -670,7 +667,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   String _sortLabel(PaperSortOption opt) => switch (opt) {
     PaperSortOption.citationCount => 'Most Cited',
     PaperSortOption.year => 'Newest First',
-    PaperSortOption.relevance => 'Relevance',
     PaperSortOption.title => 'A–Z (Title)',
   };
 
@@ -679,6 +675,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     TopicLevel.field => Icons.category,
     TopicLevel.subfield => Icons.folder_outlined,
     TopicLevel.topic => Icons.topic_outlined,
+    TopicLevel.journal => Icons.library_books,
+    TopicLevel.author => Icons.person,
   };
 
   Color _levelColor(TopicLevel level) => switch (level) {
@@ -686,7 +684,305 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     TopicLevel.field => AppColors.primaryContainer,
     TopicLevel.subfield => AppColors.metricOrange,
     TopicLevel.topic => AppColors.metricGreen,
+    TopicLevel.journal => AppColors.primaryContainer,
+    TopicLevel.author => AppColors.metricPurple,
   };
+}
+
+// ── Topic Hierarchy Tree Widget ───────────────────────────────────────────────
+
+class _TopicHierarchyTree extends ConsumerStatefulWidget {
+  final ValueChanged<TopicHierarchyItem> onSelect;
+
+  const _TopicHierarchyTree({required this.onSelect});
+
+  @override
+  ConsumerState<_TopicHierarchyTree> createState() =>
+      _TopicHierarchyTreeState();
+}
+
+class _TopicHierarchyTreeState extends ConsumerState<_TopicHierarchyTree> {
+  String? _expandedDomainId;
+  String? _expandedFieldId;
+  String? _expandedSubfieldId;
+
+  @override
+  Widget build(BuildContext context) {
+    final domainsAsync = ref.watch(domainsProvider);
+
+    return domainsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimensions.base),
+          child: Text('Error: $e'),
+        ),
+      ),
+      data: (domains) {
+        if (domains.isEmpty) {
+          return const Center(child: Text('No topics available'));
+        }
+        return ListView.builder(
+          itemCount: domains.length,
+          itemBuilder: (_, i) => _buildDomainTile(domains[i]),
+        );
+      },
+    );
+  }
+
+  Widget _buildDomainTile(TopicHierarchyItem domain) {
+    final isExpanded = _expandedDomainId == domain.id;
+    return Column(
+      children: [
+        ListTile(
+          leading: const Icon(
+            Icons.public,
+            size: 20,
+            color: AppColors.metricPurple,
+          ),
+          title: Text(
+            domain.displayName,
+            style: AppTextStyles.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.onSurface,
+            ),
+          ),
+          subtitle: domain.worksCount != null
+              ? Text(
+                  '${_formatCount(domain.worksCount!)} works',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                )
+              : null,
+          trailing: IconButton(
+            icon: Icon(
+              isExpanded ? Icons.expand_less : Icons.expand_more,
+              size: 20,
+            ),
+            onPressed: () {
+              setState(() {
+                _expandedDomainId = isExpanded ? null : domain.id;
+                _expandedFieldId = null;
+                _expandedSubfieldId = null;
+              });
+            },
+          ),
+          dense: true,
+          onTap: () => widget.onSelect(domain),
+        ),
+        if (isExpanded) _buildFieldsList(domain.id),
+        const Divider(height: 1, indent: AppDimensions.base),
+      ],
+    );
+  }
+
+  Widget _buildFieldsList(String domainId) {
+    final fieldsAsync = ref.watch(fieldsProvider(domainId));
+
+    return fieldsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(AppDimensions.base),
+        child: Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.all(AppDimensions.sm),
+        child: Text('Error: $e', style: AppTextStyles.labelSmall),
+      ),
+      data: (fields) {
+        return Column(
+          children: fields.map((field) => _buildFieldTile(field)).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildFieldTile(TopicHierarchyItem field) {
+    final isExpanded = _expandedFieldId == field.id;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: AppDimensions.base),
+          child: ListTile(
+            leading: const Icon(
+              Icons.category,
+              size: 18,
+              color: AppColors.primaryContainer,
+            ),
+            title: Text(
+              field.displayName,
+              style: AppTextStyles.bodySmall.copyWith(
+                fontWeight: FontWeight.w500,
+                color: AppColors.onSurface,
+              ),
+            ),
+            subtitle: field.worksCount != null
+                ? Text(
+                    '${_formatCount(field.worksCount!)} works',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  )
+                : null,
+            trailing: IconButton(
+              icon: Icon(
+                isExpanded ? Icons.expand_less : Icons.expand_more,
+                size: 18,
+              ),
+              onPressed: () {
+                setState(() {
+                  _expandedFieldId = isExpanded ? null : field.id;
+                  _expandedSubfieldId = null;
+                });
+              },
+            ),
+            dense: true,
+            onTap: () => widget.onSelect(field),
+          ),
+        ),
+        if (isExpanded) _buildSubfieldsList(field.id),
+      ],
+    );
+  }
+
+  Widget _buildSubfieldsList(String fieldId) {
+    final subfieldsAsync = ref.watch(subfieldsProvider(fieldId));
+
+    return subfieldsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(AppDimensions.sm),
+        child: Center(
+          child: SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.all(AppDimensions.sm),
+        child: Text('Error: $e', style: AppTextStyles.labelSmall),
+      ),
+      data: (subfields) {
+        return Column(
+          children: subfields
+              .map((subfield) => _buildSubfieldTile(subfield))
+              .toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildSubfieldTile(TopicHierarchyItem subfield) {
+    final isExpanded = _expandedSubfieldId == subfield.id;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: AppDimensions.xl),
+          child: ListTile(
+            leading: const Icon(
+              Icons.folder_outlined,
+              size: 16,
+              color: AppColors.metricOrange,
+            ),
+            title: Text(
+              subfield.displayName,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.onSurface,
+              ),
+            ),
+            subtitle: subfield.worksCount != null
+                ? Text(
+                    '${_formatCount(subfield.worksCount!)} works',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  )
+                : null,
+            trailing: IconButton(
+              icon: Icon(
+                isExpanded ? Icons.expand_less : Icons.expand_more,
+                size: 16,
+              ),
+              onPressed: () {
+                setState(() {
+                  _expandedSubfieldId = isExpanded ? null : subfield.id;
+                });
+              },
+            ),
+            dense: true,
+            onTap: () => widget.onSelect(subfield),
+          ),
+        ),
+        if (isExpanded) _buildTopicsList(subfield.id),
+      ],
+    );
+  }
+
+  Widget _buildTopicsList(String subfieldId) {
+    final topicsAsync = ref.watch(topicsProvider(subfieldId));
+
+    return topicsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(AppDimensions.sm),
+        child: Center(
+          child: SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.all(AppDimensions.sm),
+        child: Text('Error: $e', style: AppTextStyles.labelSmall),
+      ),
+      data: (topics) {
+        return Column(
+          children: topics.map((topic) => _buildTopicTile(topic)).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildTopicTile(TopicHierarchyItem topic) {
+    return Padding(
+      padding: const EdgeInsets.only(left: AppDimensions.xxl),
+      child: ListTile(
+        leading: const Icon(
+          Icons.topic_outlined,
+          size: 14,
+          color: AppColors.metricGreen,
+        ),
+        title: Text(
+          topic.displayName,
+          style: AppTextStyles.labelMedium.copyWith(color: AppColors.onSurface),
+        ),
+        subtitle: topic.worksCount != null
+            ? Text(
+                '${_formatCount(topic.worksCount!)} works',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              )
+            : null,
+        dense: true,
+        onTap: () => widget.onSelect(topic),
+      ),
+    );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
+    return count.toString();
+  }
 }
 
 // ── Paper Card Widget ─────────────────────────────────────────────────────────
@@ -695,11 +991,15 @@ class _PaperCard extends StatelessWidget {
   final Publication publication;
   final int rank;
   final ValueChanged<String> onTopicTap;
+  final ValueChanged<String> onJournalTap;
+  final ValueChanged<String> onAuthorTap;
 
   const _PaperCard({
     required this.publication,
     required this.rank,
     required this.onTopicTap,
+    required this.onJournalTap,
+    required this.onAuthorTap,
   });
 
   @override
@@ -731,8 +1031,9 @@ class _PaperCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     publication.title,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w500,
+                    style: AppTextStyles.titleMedium.copyWith(
+                      fontSize: 42,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.onSurface,
                     ),
                   ),
@@ -747,29 +1048,86 @@ class _PaperCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Journal — full name, no truncation
-                  if (publication.journalName != null)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Journal: ',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.onSurfaceVariant,
+                  // Citations + Year row
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.md,
+                          vertical: AppDimensions.xs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.citationChipBg,
+                          borderRadius: BorderRadius.circular(
+                            AppDimensions.shapeXs,
                           ),
                         ),
-                        Expanded(
-                          child: Text(
-                            publication.journalName!,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              fontWeight: FontWeight.w700,
-                              fontStyle: FontStyle.italic,
-                              color: AppColors.primaryContainer,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Citations ',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.citationChipText,
+                              ),
                             ),
+                            Text(
+                              Formatter.formatCitationCount(
+                                publication.citedByCount,
+                              ),
+                              style: AppTextStyles.titleMedium.copyWith(
+                                color: AppColors.citationChipText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (publication.publicationYear != null) ...[
+                        const SizedBox(width: AppDimensions.sm),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppDimensions.md,
+                            vertical: AppDimensions.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(
+                              AppDimensions.shapeXs,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Year ',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.onSurfaceVariant,
+                                ),
+                              ),
+                              Text(
+                                publication.publicationYear.toString(),
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.onSurfaceVariant,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
+                    ],
+                  ),
+
+                  // Journal — clickable with hover effect
+                  if (publication.journalName != null) ...[
+                    const SizedBox(height: AppDimensions.sm),
+                    _TopicChip(
+                      topic: publication.journalName!,
+                      onTap: () => onJournalTap(publication.journalName!),
+                      isJournal: true,
                     ),
+                  ],
 
                   // Authors — clickable with hover
                   if (publication.authors.isNotEmpty) ...[
@@ -790,7 +1148,7 @@ class _PaperCard extends StatelessWidget {
                             children: publication.authors.map((a) {
                               return _TopicChip(
                                 topic: a.displayName,
-                                onTap: () => onTopicTap(a.displayName),
+                                onTap: () => onAuthorTap(a.displayName),
                               );
                             }).toList(),
                           ),
@@ -799,90 +1157,31 @@ class _PaperCard extends StatelessWidget {
                     ),
                   ],
 
-                  // Citations + Year row
-                  const SizedBox(height: AppDimensions.sm),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.sm,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.citationChipBg,
-                          borderRadius: BorderRadius.circular(
-                            AppDimensions.shapeXs,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Citations ',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: AppColors.citationChipText,
-                              ),
-                            ),
-                            Text(
-                              Formatter.formatCitationCount(
-                                publication.citedByCount,
-                              ),
-                              style: AppTextStyles.labelMedium.copyWith(
-                                color: AppColors.citationChipText,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (publication.publicationYear != null) ...[
-                        const SizedBox(width: AppDimensions.sm),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimensions.sm,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceContainerHigh,
-                            borderRadius: BorderRadius.circular(
-                              AppDimensions.shapeXs,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Year ',
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: AppColors.onSurfaceVariant,
-                                ),
-                              ),
-                              Text(
-                                publication.publicationYear.toString(),
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: AppColors.onSurfaceVariant,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-
                   // Research Topics — all, with hover effect
                   if (publication.concepts.isNotEmpty) ...[
                     const SizedBox(height: AppDimensions.sm),
-                    Wrap(
-                      spacing: AppDimensions.xs,
-                      runSpacing: AppDimensions.xs,
-                      children: publication.concepts.map((topic) {
-                        return _TopicChip(
-                          topic: topic,
-                          onTap: () => onTopicTap(topic),
-                        );
-                      }).toList(),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Topics: ',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                        Expanded(
+                          child: Wrap(
+                            spacing: AppDimensions.xs,
+                            runSpacing: AppDimensions.xs,
+                            children: publication.concepts.map((topic) {
+                              return _TopicChip(
+                                topic: topic,
+                                onTap: () => onTopicTap(topic),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ],
@@ -899,8 +1198,13 @@ class _PaperCard extends StatelessWidget {
 class _TopicChip extends StatefulWidget {
   final String topic;
   final VoidCallback onTap;
+  final bool isJournal;
 
-  const _TopicChip({required this.topic, required this.onTap});
+  const _TopicChip({
+    required this.topic,
+    required this.onTap,
+    this.isJournal = false,
+  });
 
   @override
   State<_TopicChip> createState() => _TopicChipState();
@@ -931,6 +1235,8 @@ class _TopicChipState extends State<_TopicChip> {
           decoration: BoxDecoration(
             color: isActive
                 ? AppColors.primaryContainer.withValues(alpha: 0.2)
+                : widget.isJournal
+                ? AppColors.citationChipBg
                 : AppColors.secondaryContainer,
             borderRadius: BorderRadius.circular(AppDimensions.shapeXs),
             border: Border.all(
@@ -938,13 +1244,42 @@ class _TopicChipState extends State<_TopicChip> {
               width: 1,
             ),
           ),
-          child: Text(
-            widget.topic,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: isActive
-                  ? AppColors.primaryContainer
-                  : AppColors.onSecondaryContainer,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.isJournal) ...[
+                Icon(
+                  Icons.library_books,
+                  size: 12,
+                  color: isActive
+                      ? AppColors.primaryContainer
+                      : AppColors.primaryContainer,
+                ),
+                const SizedBox(width: 4),
+              ],
+              Flexible(
+                child: Text(
+                  widget.topic,
+                  style:
+                      (widget.isJournal
+                              ? AppTextStyles.bodySmall
+                              : AppTextStyles.labelSmall)
+                          .copyWith(
+                            fontWeight: widget.isJournal
+                                ? FontWeight.w700
+                                : null,
+                            fontStyle: widget.isJournal
+                                ? FontStyle.italic
+                                : null,
+                            color: isActive
+                                ? AppColors.primaryContainer
+                                : widget.isJournal
+                                ? AppColors.primaryContainer
+                                : AppColors.onSecondaryContainer,
+                          ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -15,6 +16,13 @@ import '../widgets/trend_chart.dart';
 /// Provider for the selected year range filter on the Trends page.
 /// Stores (startYear, endYear) pair.
 final trendYearRangeProvider = StateProvider<(int, int)?>((_) => null);
+
+/// Ranking mode for Top Journals and Top Authors.
+enum TrendRankMode { papers, citations }
+
+final trendRankModeProvider = StateProvider<TrendRankMode>(
+  (_) => TrendRankMode.papers,
+);
 
 /// Filtered trend data based on selected year range.
 final filteredTrendDataProvider = Provider<List<YearTrendData>>((ref) {
@@ -179,11 +187,31 @@ class TrendAnalysisScreen extends ConsumerWidget {
             );
           }
 
-          final maxJ = topJournals.isNotEmpty
-              ? topJournals.first.publicationCount
+          final rankMode = ref.watch(trendRankModeProvider);
+
+          // Sort journals and authors based on rank mode
+          final sortedJournals = List.of(topJournals)
+            ..sort(
+              (a, b) => rankMode == TrendRankMode.citations
+                  ? b.totalCitations.compareTo(a.totalCitations)
+                  : b.publicationCount.compareTo(a.publicationCount),
+            );
+          final sortedAuthors = List.of(topAuthors)
+            ..sort(
+              (a, b) => rankMode == TrendRankMode.citations
+                  ? b.totalCitations.compareTo(a.totalCitations)
+                  : b.publicationCount.compareTo(a.publicationCount),
+            );
+
+          final maxJ = sortedJournals.isNotEmpty
+              ? (rankMode == TrendRankMode.citations
+                    ? sortedJournals.first.totalCitations
+                    : sortedJournals.first.publicationCount)
               : 1;
-          final maxA = topAuthors.isNotEmpty
-              ? topAuthors.first.publicationCount
+          final maxA = sortedAuthors.isNotEmpty
+              ? (rankMode == TrendRankMode.citations
+                    ? sortedAuthors.first.totalCitations
+                    : sortedAuthors.first.publicationCount)
               : 1;
 
           return Column(
@@ -313,6 +341,48 @@ class TrendAnalysisScreen extends ConsumerWidget {
                         ),
                       ),
 
+                      // Rank mode toggle
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppDimensions.base,
+                          0,
+                          AppDimensions.base,
+                          AppDimensions.sm,
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              'Rank by:',
+                              style: AppTextStyles.labelMedium.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(width: AppDimensions.sm),
+                            SegmentedButton<TrendRankMode>(
+                              segments: const [
+                                ButtonSegment(
+                                  value: TrendRankMode.papers,
+                                  label: Text('Papers'),
+                                ),
+                                ButtonSegment(
+                                  value: TrendRankMode.citations,
+                                  label: Text('Citations'),
+                                ),
+                              ],
+                              selected: {rankMode},
+                              onSelectionChanged: (val) {
+                                ref.read(trendRankModeProvider.notifier).state =
+                                    val.first;
+                              },
+                              style: ButtonStyle(
+                                visualDensity: VisualDensity.compact,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                       // Top Journals
                       Padding(
                         padding: const EdgeInsets.fromLTRB(
@@ -329,14 +399,27 @@ class TrendAnalysisScreen extends ConsumerWidget {
                         ),
                       ),
                       ...List.generate(
-                        topJournals.length,
+                        sortedJournals.length,
                         (i) => RankedListTile(
                           rank: i + 1,
-                          title: topJournals[i].name,
-                          subtitle:
-                              '${topJournals[i].totalCitations} total citations',
-                          count: topJournals[i].publicationCount,
+                          title: sortedJournals[i].name,
+                          subtitle: rankMode == TrendRankMode.citations
+                              ? '${sortedJournals[i].publicationCount} publications'
+                              : '${sortedJournals[i].totalCitations} total citations',
+                          count: rankMode == TrendRankMode.citations
+                              ? sortedJournals[i].totalCitations
+                              : sortedJournals[i].publicationCount,
                           maxCount: maxJ,
+                          onTap: () {
+                            ref
+                                    .read(selectedTopicFilterProvider.notifier)
+                                    .state =
+                                null;
+                            ref.read(searchPageProvider.notifier).state = 1;
+                            ref.read(searchQueryProvider.notifier).state =
+                                sortedJournals[i].name;
+                            context.go('/search');
+                          },
                         ),
                       ),
 
@@ -355,16 +438,28 @@ class TrendAnalysisScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      ...List.generate(topAuthors.length, (i) {
-                        final name = topAuthors[i].author.displayName;
+                      ...List.generate(sortedAuthors.length, (i) {
+                        final name = sortedAuthors[i].author.displayName;
                         return RankedListTile(
                           rank: i + 1,
                           title: name,
-                          subtitle:
-                              '${topAuthors[i].totalCitations} total citations',
-                          count: topAuthors[i].publicationCount,
+                          subtitle: rankMode == TrendRankMode.citations
+                              ? '${sortedAuthors[i].publicationCount} publications'
+                              : '${sortedAuthors[i].totalCitations} total citations',
+                          count: rankMode == TrendRankMode.citations
+                              ? sortedAuthors[i].totalCitations
+                              : sortedAuthors[i].publicationCount,
                           maxCount: maxA,
                           leading: AuthorChip(displayName: name),
+                          onTap: () {
+                            ref
+                                    .read(selectedTopicFilterProvider.notifier)
+                                    .state =
+                                null;
+                            ref.read(searchPageProvider.notifier).state = 1;
+                            ref.read(searchQueryProvider.notifier).state = name;
+                            context.go('/search');
+                          },
                         );
                       }),
                       const SizedBox(height: AppDimensions.xxl),

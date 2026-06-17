@@ -172,7 +172,7 @@ final topJournalsProvider = Provider<List<JournalWithCount>>((ref) {
 
 // ── Sort ──────────────────────────────────────────────────────────────────────
 
-enum PaperSortOption { citationCount, year, relevance, title }
+enum PaperSortOption { citationCount, year, title }
 
 final paperSortOptionProvider = StateProvider<PaperSortOption>(
   (_) => PaperSortOption.citationCount,
@@ -191,8 +191,6 @@ final sortedPublicationsProvider = Provider<List<Publication>>((ref) {
       pubs.sort(
         (a, b) => (b.publicationYear ?? 0).compareTo(a.publicationYear ?? 0),
       );
-    case PaperSortOption.relevance:
-      break;
     case PaperSortOption.title:
       pubs.sort((a, b) => a.title.compareTo(b.title));
   }

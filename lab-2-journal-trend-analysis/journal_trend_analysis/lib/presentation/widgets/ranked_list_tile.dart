@@ -3,13 +3,14 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
 
-class RankedListTile extends StatelessWidget {
+class RankedListTile extends StatefulWidget {
   final int rank;
   final String title;
   final String subtitle;
   final int count;
   final int maxCount;
   final Widget? leading;
+  final VoidCallback? onTap;
 
   const RankedListTile({
     super.key,
@@ -19,50 +20,93 @@ class RankedListTile extends StatelessWidget {
     required this.count,
     required this.maxCount,
     this.leading,
+    this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final paperLabel = count == 1 ? 'paper' : 'papers';
+  State<RankedListTile> createState() => _RankedListTileState();
+}
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.base,
-        vertical: AppDimensions.sm,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          leading ?? _RankBadge(rank: rank),
-          const SizedBox(width: AppDimensions.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.onSurface,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.onSurfaceVariant),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+class _RankedListTileState extends State<RankedListTile> {
+  bool _hovering = false;
+  bool _pressing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final paperLabel = widget.count == 1 ? 'paper' : 'papers';
+    final isActive = _hovering || _pressing;
+
+    return MouseRegion(
+      onEnter: widget.onTap != null
+          ? (_) => setState(() => _hovering = true)
+          : null,
+      onExit: widget.onTap != null
+          ? (_) => setState(() => _hovering = false)
+          : null,
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      child: GestureDetector(
+        onTapDown: widget.onTap != null
+            ? (_) => setState(() => _pressing = true)
+            : null,
+        onTapUp: widget.onTap != null
+            ? (_) => setState(() => _pressing = false)
+            : null,
+        onTapCancel: widget.onTap != null
+            ? () => setState(() => _pressing = false)
+            : null,
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.base,
+            vertical: AppDimensions.sm,
           ),
-          const SizedBox(width: AppDimensions.sm),
-          _CountBadge(label: '$count $paperLabel'),
-        ],
+          decoration: BoxDecoration(
+            color: isActive && widget.onTap != null
+                ? AppColors.primaryContainer.withValues(alpha: 0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppDimensions.shapeSm),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              widget.leading ?? _RankBadge(rank: widget.rank),
+              const SizedBox(width: AppDimensions.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: isActive && widget.onTap != null
+                            ? AppColors.primaryContainer
+                            : AppColors.onSurface,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.subtitle,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppDimensions.sm),
+              _CountBadge(label: '${widget.count} $paperLabel'),
+            ],
+          ),
+        ),
       ),
     );
   }

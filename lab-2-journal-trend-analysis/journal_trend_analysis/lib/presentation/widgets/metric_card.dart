@@ -30,11 +30,7 @@ class MetricCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: iconColor ?? AppColors.primaryContainer,
-          ),
+          Icon(icon, size: 20, color: iconColor ?? AppColors.primaryContainer),
           const SizedBox(height: AppDimensions.sm),
           Text(
             value,
@@ -43,16 +39,13 @@ class MetricCard extends StatelessWidget {
               fontWeight: FontWeight.w500,
               color: AppColors.onSurface,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: AppDimensions.xs),
           Text(
             title,
-            style: AppTextStyles.labelMedium
-                .copyWith(color: AppColors.onSurfaceVariant),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.labelMedium.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
         ],
       ),

@@ -87,8 +87,6 @@ class PublicationDetailScreen extends ConsumerWidget {
                     style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.onSurfaceVariant,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -109,7 +107,7 @@ class PublicationDetailScreen extends ConsumerWidget {
             Text(
               publication.title,
               style: AppTextStyles.headlineMedium.copyWith(
-                fontSize: 42,
+                fontSize: 29,
                 color: AppColors.onSurface,
               ),
             ),
@@ -256,7 +254,6 @@ class PublicationDetailScreen extends ConsumerWidget {
                     child: _StatMiniCard(
                       label: 'Journal',
                       value: publication.journalName ?? 'N/A',
-                      fullText: true,
                     ),
                   ),
                 ],
@@ -321,12 +318,14 @@ class _HoverChipState extends State<_HoverChip> {
                   children: [
                     widget.leading!,
                     const SizedBox(width: 4),
-                    Text(
-                      widget.label,
-                      style: AppTextStyles.labelLarge.copyWith(
-                        color: isActive
-                            ? AppColors.primaryContainer
-                            : AppColors.onSecondaryContainer,
+                    Flexible(
+                      child: Text(
+                        widget.label,
+                        style: AppTextStyles.labelLarge.copyWith(
+                          color: isActive
+                              ? AppColors.primaryContainer
+                              : AppColors.onSecondaryContainer,
+                        ),
                       ),
                     ),
                   ],
@@ -453,13 +452,8 @@ class _DoiChip extends StatelessWidget {
 class _StatMiniCard extends StatelessWidget {
   final String label;
   final String value;
-  final bool fullText;
 
-  const _StatMiniCard({
-    required this.label,
-    required this.value,
-    this.fullText = false,
-  });
+  const _StatMiniCard({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -484,8 +478,6 @@ class _StatMiniCard extends StatelessWidget {
             style: AppTextStyles.titleMedium.copyWith(
               color: AppColors.onSurface,
             ),
-            maxLines: fullText ? null : 1,
-            overflow: fullText ? null : TextOverflow.ellipsis,
           ),
         ],
       ),

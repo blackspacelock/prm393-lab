@@ -109,7 +109,7 @@ class PublicationDetailScreen extends ConsumerWidget {
             Text(
               publication.title,
               style: AppTextStyles.headlineMedium.copyWith(
-                fontSize: 60,
+                fontSize: 42,
                 color: AppColors.onSurface,
               ),
             ),

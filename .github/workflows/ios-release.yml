@@ -43,4 +43,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-app
-          path: "**/build/ios/iphoneos/app.ipa"
+          path: lab-2-journal-trend-analysis/journal_trend_analysis/build/ios/iphoneos/app.ipa

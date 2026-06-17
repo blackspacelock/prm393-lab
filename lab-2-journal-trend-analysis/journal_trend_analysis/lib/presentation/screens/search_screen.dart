@@ -1032,7 +1032,7 @@ class _PaperCard extends StatelessWidget {
                   child: Text(
                     publication.title,
                     style: AppTextStyles.titleMedium.copyWith(
-                      fontSize: 20,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppColors.onSurface,
                     ),

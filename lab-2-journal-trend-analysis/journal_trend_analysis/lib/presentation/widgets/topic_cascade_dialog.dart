@@ -243,7 +243,7 @@ class _TopicList extends ConsumerWidget {
         return ListView.separated(
           shrinkWrap: true,
           itemCount: items.length,
-          separatorBuilder: (_, __) => const Divider(
+          separatorBuilder: (_, _) => const Divider(
             height: 1,
             indent: AppDimensions.base,
             endIndent: AppDimensions.base,

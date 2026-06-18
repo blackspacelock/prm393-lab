@@ -154,6 +154,7 @@ class _AuthorNetworkBodyState extends ConsumerState<_AuthorNetworkBody>
             nodes: nodes,
             edges: edges,
             scaleMode: _scaleMode,
+            publications: pubs,
           ),
         ),
       ],
@@ -241,11 +242,13 @@ class _NetworkGraphView extends StatefulWidget {
   final List<_AuthorNode> nodes;
   final List<_CoAuthorEdge> edges;
   final _NetworkScaleMode scaleMode;
+  final List<Publication> publications;
 
   const _NetworkGraphView({
     required this.nodes,
     required this.edges,
     required this.scaleMode,
+    required this.publications,
   });
 
   @override
@@ -432,17 +435,16 @@ class _NetworkGraphViewState extends State<_NetworkGraphView> {
   // ── Node dragging via raw pointer events ──────────────────────────────────
 
   int? _draggedNodeIndex;
+  Offset? _pointerDownPos;
+  static const _dragThreshold = 8.0;
 
   Offset _toLocalCanvas(Offset globalPos) {
-    // Convert global pointer position to canvas-local coordinates
-    // accounting for the InteractiveViewer's transform
     final matrix = _transformController.value;
     final inverseMatrix = Matrix4.inverted(matrix);
 
     final renderBox = context.findRenderObject() as RenderBox;
     final localToWidget = renderBox.globalToLocal(globalPos);
 
-    // Apply inverse transform to get canvas coordinates
     final transformed = MatrixUtils.transformPoint(
       inverseMatrix,
       localToWidget,
@@ -452,6 +454,7 @@ class _NetworkGraphViewState extends State<_NetworkGraphView> {
 
   void _onPointerDown(PointerDownEvent event) {
     final canvasPos = _toLocalCanvas(event.position);
+    _pointerDownPos = canvasPos;
     for (int i = 0; i < _nodes.length; i++) {
       final node = _nodes[i];
       final radius = _getNodeRadius(node);
@@ -474,11 +477,22 @@ class _NetworkGraphViewState extends State<_NetworkGraphView> {
   }
 
   void _onPointerUp(PointerUpEvent event) {
-    if (_draggedNodeIndex != null) {
-      setState(() {
-        _draggedNodeIndex = null;
-      });
+    final canvasPos = _toLocalCanvas(event.position);
+    final wasDrag =
+        _draggedNodeIndex != null &&
+        _pointerDownPos != null &&
+        (canvasPos - _pointerDownPos!).distance > _dragThreshold;
+
+    if (_draggedNodeIndex != null && !wasDrag) {
+      // It was a tap on a node, not a drag
+      final node = _nodes[_draggedNodeIndex!];
+      _showAuthorPublications(context, node);
     }
+
+    setState(() {
+      _draggedNodeIndex = null;
+      _pointerDownPos = null;
+    });
   }
 
   double _computeCanvasSize() {
@@ -493,6 +507,14 @@ class _NetworkGraphViewState extends State<_NetworkGraphView> {
   }
 
   void _handleTap(Offset tapPosition) {
+    // If tap lands on a node, ignore — node taps handled by pointer events
+    for (final node in _nodes) {
+      final radius = _getNodeRadius(node);
+      if ((tapPosition - node.position).distance <= radius) {
+        return;
+      }
+    }
+
     // Check if tapped on an edge
     for (final edge in widget.edges) {
       final node1 = _nodes.where((n) => n.id == edge.authorId1).firstOrNull;
@@ -550,6 +572,40 @@ class _NetworkGraphViewState extends State<_NetworkGraphView> {
           author1: author1,
           author2: author2,
           publications: edge.sharedPublications,
+          scrollController: scrollController,
+        ),
+      ),
+    );
+  }
+
+  void _showAuthorPublications(BuildContext context, _AuthorNode author) {
+    // Find all publications this author participated in
+    final authorPubs = widget.publications.where((pub) {
+      return pub.authors.any((a) {
+        final key = a.id.isNotEmpty ? a.id : a.displayName;
+        return key == author.id;
+      });
+    }).toList();
+
+    if (authorPubs.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppDimensions.shapeMd),
+        ),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (_, scrollController) => _AuthorPublicationsSheet(
+          author: author,
+          publications: authorPubs,
           scrollController: scrollController,
         ),
       ),
@@ -812,6 +868,117 @@ class _SharedPublicationsSheet extends StatelessWidget {
           ),
           overflow: TextOverflow.ellipsis,
         ),
+      ),
+    );
+  }
+}
+
+// ── Author publications bottom sheet ──────────────────────────────────────────
+
+class _AuthorPublicationsSheet extends StatelessWidget {
+  final _AuthorNode author;
+  final List<Publication> publications;
+  final ScrollController scrollController;
+
+  const _AuthorPublicationsSheet({
+    required this.author,
+    required this.publications,
+    required this.scrollController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Handle bar
+        Container(
+          margin: const EdgeInsets.only(top: AppDimensions.sm),
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: AppColors.outlineVariant,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(AppDimensions.base),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.person, size: 20, color: AppColors.primary),
+                  const SizedBox(width: AppDimensions.sm),
+                  Expanded(
+                    child: Text(
+                      author.displayName,
+                      style: AppTextStyles.titleLarge.copyWith(
+                        color: AppColors.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppDimensions.sm),
+              Row(
+                children: [
+                  _statChip(
+                    Icons.article_outlined,
+                    '${author.paperCount} papers',
+                  ),
+                  const SizedBox(width: AppDimensions.sm),
+                  _statChip(
+                    Icons.format_quote,
+                    '${author.citationCount} citations',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        // Publication list
+        Expanded(
+          child: ListView.separated(
+            controller: scrollController,
+            padding: const EdgeInsets.all(AppDimensions.base),
+            itemCount: publications.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: AppDimensions.sm),
+            itemBuilder: (context, index) {
+              final pub = publications[index];
+              return _PublicationTile(publication: pub);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _statChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.sm,
+        vertical: AppDimensions.xs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.citationChipBg,
+        borderRadius: BorderRadius.circular(AppDimensions.shapeSm),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.citationChipText),
+          const SizedBox(width: AppDimensions.xs),
+          Text(
+            label,
+            style: AppTextStyles.labelMedium.copyWith(
+              color: AppColors.citationChipText,
+            ),
+          ),
+        ],
       ),
     );
   }

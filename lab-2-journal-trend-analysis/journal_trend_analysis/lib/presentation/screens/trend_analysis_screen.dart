@@ -311,12 +311,7 @@ class _TrendAnalysisScreenState extends ConsumerState<TrendAnalysisScreen> {
                           ),
                         ),
                       ] else
-                        Text(
-                          '${paginated.items.length} papers',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
+                        const SizedBox.shrink(),
                     ],
                   ),
                 ),

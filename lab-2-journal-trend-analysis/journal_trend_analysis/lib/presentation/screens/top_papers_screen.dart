@@ -292,6 +292,7 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
   }
 
   String _label(PaperSortOption opt) => switch (opt) {
+    PaperSortOption.relevance => 'Relevance',
     PaperSortOption.citationCount => 'Citation count',
     PaperSortOption.year => 'Year',
     PaperSortOption.title => 'A–Z',

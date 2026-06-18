@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/entities/publication.dart';
-import '../../presentation/screens/dashboard_screen.dart';
+import '../../presentation/screens/author_network_screen.dart';
+import '../../presentation/screens/heatmap_screen.dart';
 import '../../presentation/screens/publication_detail_screen.dart';
 import '../../presentation/screens/search_screen.dart';
 import '../../presentation/screens/trend_analysis_screen.dart';
@@ -19,9 +20,10 @@ final appRouter = GoRouter(
           path: '/trends',
           builder: (_, __) => const TrendAnalysisScreen(),
         ),
+        GoRoute(path: '/heatmap', builder: (_, __) => const HeatmapScreen()),
         GoRoute(
-          path: '/dashboard',
-          builder: (_, __) => const DashboardScreen(),
+          path: '/network',
+          builder: (_, __) => const AuthorNetworkScreen(),
         ),
       ],
     ),
@@ -43,7 +45,8 @@ class _ScaffoldWithNav extends StatelessWidget {
 
   int get _selectedIndex {
     if (location.startsWith('/trends')) return 1;
-    if (location.startsWith('/dashboard')) return 2;
+    if (location.startsWith('/heatmap')) return 2;
+    if (location.startsWith('/network')) return 3;
     return 0;
   }
 
@@ -64,7 +67,8 @@ class _ScaffoldWithNav extends StatelessWidget {
           onDestinationSelected: (i) => switch (i) {
             0 => context.go('/search'),
             1 => context.go('/trends'),
-            _ => context.go('/dashboard'),
+            2 => context.go('/heatmap'),
+            _ => context.go('/network'),
           },
           destinations: const [
             NavigationDestination(
@@ -78,9 +82,14 @@ class _ScaffoldWithNav extends StatelessWidget {
               label: 'Trends',
             ),
             NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard),
-              label: 'Dashboard',
+              icon: Icon(Icons.map_outlined),
+              selectedIcon: Icon(Icons.map),
+              label: 'Heatmap',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.hub_outlined),
+              selectedIcon: Icon(Icons.hub),
+              label: 'Network',
             ),
           ],
         ),

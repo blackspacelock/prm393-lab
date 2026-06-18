@@ -15,7 +15,7 @@ class AuthorWithCount {
 }
 
 class GetTopAuthors {
-  List<AuthorWithCount> call(List<Publication> publications, {int limit = 10}) {
+  List<AuthorWithCount> call(List<Publication> publications, {int? limit}) {
     final Map<String, AuthorWithCount> byId = {};
 
     for (final pub in publications) {
@@ -30,9 +30,8 @@ class GetTopAuthors {
       }
     }
 
-    return (byId.values.toList()
-          ..sort((a, b) => b.publicationCount.compareTo(a.publicationCount)))
-        .take(limit)
-        .toList();
+    final sorted = byId.values.toList()
+      ..sort((a, b) => b.publicationCount.compareTo(a.publicationCount));
+    return limit != null ? sorted.take(limit).toList() : sorted;
   }
 }

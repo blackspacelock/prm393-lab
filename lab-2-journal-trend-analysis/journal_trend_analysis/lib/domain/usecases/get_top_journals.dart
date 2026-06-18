@@ -14,7 +14,7 @@ class JournalWithCount {
 }
 
 class GetTopJournals {
-  List<JournalWithCount> call(List<Publication> publications, {int limit = 10}) {
+  List<JournalWithCount> call(List<Publication> publications, {int? limit}) {
     final Map<String, JournalWithCount> byName = {};
 
     for (final pub in publications) {
@@ -28,9 +28,8 @@ class GetTopJournals {
       );
     }
 
-    return (byName.values.toList()
-          ..sort((a, b) => b.publicationCount.compareTo(a.publicationCount)))
-        .take(limit)
-        .toList();
+    final sorted = byName.values.toList()
+      ..sort((a, b) => b.publicationCount.compareTo(a.publicationCount));
+    return limit != null ? sorted.take(limit).toList() : sorted;
   }
 }

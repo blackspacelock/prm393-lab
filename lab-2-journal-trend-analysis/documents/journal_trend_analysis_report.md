@@ -1,271 +1,423 @@
-# Journal Trend Analysis — Source Code Structure & Technical Report
+# Journal Trend Analysis - Source Code Structure & Technical Report
 
 **Project:** journal_trend_analysis  
 **Framework:** Flutter (Dart SDK ^3.12.0)  
 **Author:** PRM393 Lab  
-**Date:** June 2026
+**Last updated:** June 18, 2026
 
 ---
 
-## 1. Tổng quan ứng dụng
+## 1. Application Overview
 
-**Journal Trend Analyzer** là ứng dụng Flutter cross-platform phân tích xu hướng công bố nghiên cứu khoa học sử dụng OpenAlex API. Ứng dụng cho phép người dùng tìm kiếm, phân tích xu hướng theo năm, xem bảng điều khiển tổng quan (dashboard) và xếp hạng các bài báo có ảnh hưởng nhất.
+Journal Trend Analyzer is a Flutter cross-platform application for searching, ranking, and analyzing scientific publications from the OpenAlex REST API. The project follows a Clean Architecture style: UI code reads Riverpod providers, providers call use cases and repositories, and only the data layer communicates with OpenAlex through Dio.
 
-### Các tính năng chính:
+The current application focuses on four mounted user workflows:
 
-- Tìm kiếm bài báo khoa học theo chủ đề (keyword search)
-- Biểu đồ xu hướng công bố theo năm (trend chart)
-- Dashboard tổng hợp KPI (tổng bài, trích dẫn trung bình, năm hoạt động nhất, ...)
-- Xếp hạng Top Papers theo số lượt trích dẫn
-- Chi tiết từng bài báo (abstract, tác giả, DOI, concepts)
-- Xếp hạng top tác giả và top tạp chí
+- Search publications by free-text keyword.
+- Search publications by OpenAlex topic hierarchy filters: domain, field, subfield, and topic.
+- Analyze publication trends, KPIs, top journals, and top authors from the active result set.
+- Visualize geographic/institution research distribution and author collaboration networks.
 
----
-
-## 2. Cấu trúc thư mục (Source Code Architecture)
-
-```
-lib/
-├── main.dart                          # Entry point
-├── core/                              # Shared utilities & config
-│   ├── constants/
-│   │   └── api_constants.dart         # API base URL, timeout, pagination
-│   ├── router/
-│   │   └── app_router.dart            # GoRouter configuration
-│   ├── theme/
-│   │   ├── app_colors.dart            # Color palette (Material 3)
-│   │   ├── app_dimensions.dart        # Spacing & shape constants
-│   │   ├── app_text_styles.dart       # Typography styles
-│   │   └── app_theme.dart             # ThemeData definition
-│   └── utils/
-│       └── formatter.dart             # Formatting utilities
-├── data/                              # Data layer (infrastructure)
-│   ├── api/
-│   │   └── openalex_api_client.dart   # Dio HTTP client wrapper
-│   ├── datasources/
-│   │   └── publication_remote_datasource.dart  # Remote API calls
-│   ├── models/
-│   │   ├── author_model.dart          # Author JSON model
-│   │   ├── journal_model.dart         # Journal JSON model
-│   │   └── publication_model.dart     # Publication JSON model
-│   └── repositories/
-│       └── publication_repository_impl.dart  # Repository implementation
-├── domain/                            # Domain layer (business logic)
-│   ├── entities/
-│   │   ├── author.dart                # Author entity
-│   │   ├── journal.dart               # Journal entity
-│   │   └── publication.dart           # Publication entity
-│   ├── repositories/
-│   │   └── publication_repository.dart  # Repository interface (contract)
-│   └── usecases/
-│       ├── get_dashboard_summary.dart  # Dashboard KPIs computation
-│       ├── get_top_authors.dart        # Top authors aggregation
-│       ├── get_top_journals.dart       # Top journals aggregation
-│       ├── get_trend_data.dart         # Year-by-year trend computation
-│       └── search_publications.dart    # Search validation & delegation
-└── presentation/                      # UI layer
-    ├── providers/
-    │   └── providers.dart             # Riverpod DI & state management
-    ├── screens/
-    │   ├── dashboard_screen.dart      # Dashboard with KPI metrics
-    │   ├── publication_detail_screen.dart  # Publication detail page
-    │   ├── search_screen.dart         # Search input & results list
-    │   ├── top_papers_screen.dart     # Ranked papers with sorting
-    │   └── trend_analysis_screen.dart # Trend chart & rankings
-    └── widgets/
-        ├── author_chip.dart           # Author avatar chip
-        ├── empty_state.dart           # Empty state placeholder
-        ├── error_state.dart           # Error state with retry
-        ├── metric_card.dart           # KPI metric card widget
-        ├── publication_card.dart      # Publication list item
-        ├── ranked_list_tile.dart      # Ranked item with progress bar
-        ├── shimmer_loader.dart        # Skeleton loading animation
-        └── trend_chart.dart           # Line chart widget (fl_chart)
-```
+Important project change: the previous report described Dashboard and Top Papers as primary navigation tabs. The current router mounts Search, Trends, Heatmap, and Network. Dashboard and Top Papers screens still exist in the codebase, but they are not currently connected to the bottom navigation.
 
 ---
 
-## 3. Kiến trúc phần mềm (Clean Architecture)
+## 2. Current Source Structure
 
-Ứng dụng tuân theo **Clean Architecture** chia làm 3 layer rõ ràng:
-
-### 3.1. Domain Layer (Business Logic)
-
-- **Entities:** Các đối tượng thuần Dart, không phụ thuộc framework (`Publication`, `Author`, `Journal`)
-- **Repository Interface:** Contract trừu tượng (`PublicationRepository`) — đảm bảo nguyên tắc Open/Closed
-- **Use Cases:** Mỗi class chỉ chịu 1 trách nhiệm (Single Responsibility):
-  - `SearchPublications`: Validate query → gọi repository
-  - `GetTrendData`: Nhóm publications theo năm
-  - `GetDashboardSummary`: Tính toán KPI tổng hợp
-  - `GetTopAuthors`: Xếp hạng tác giả
-  - `GetTopJournals`: Xếp hạng tạp chí
-
-### 3.2. Data Layer (Infrastructure)
-
-- **API Client:** Wrapper Dio HTTP client với timeout, interceptor, logging
-- **Remote DataSource:** Gọi API, trả về Model objects (không trả entity)
-- **Models:** Parse JSON từ OpenAlex, có `toEntity()` để chuyển sang domain entity
-- **Repository Implementation:** Convert model → entity, triển khai interface từ domain layer
-
-### 3.3. Presentation Layer (UI)
-
-- **Providers:** Riverpod dependency injection + reactive state
-- **Screens:** 5 màn hình chính sử dụng `ConsumerWidget` / `ConsumerStatefulWidget`
-- **Widgets:** 8 reusable widgets tái sử dụng
-
----
-
-## 4. Các kỹ thuật và thư viện sử dụng
-
-### 4.1. State Management — Flutter Riverpod (`flutter_riverpod: ^2.5.1`)
-
-| Provider Type        | Mục đích                      | Ví dụ                                                |
-| -------------------- | ----------------------------- | ---------------------------------------------------- |
-| `Provider`           | Singleton DI (infrastructure) | `apiClientProvider`, `publicationRepositoryProvider` |
-| `StateProvider`      | Mutable simple state          | `searchQueryProvider`, `paperSortOptionProvider`     |
-| `FutureProvider`     | Async data fetching           | `publicationsProvider`                               |
-| `Provider` (derived) | Computed/derived state        | `trendDataProvider`, `topAuthorsProvider`            |
-
-**Reactive chain:** `searchQueryProvider` → `publicationsProvider` (auto-refetch) → derived providers tự động cập nhật.
-
-### 4.2. Navigation — GoRouter (`go_router: ^13.2.4`)
-
-- **Declarative routing** với `ShellRoute` cho bottom navigation
-- Bottom `NavigationBar` persistent qua các tab
-- Deep linking support (`/publication/:id` với `extra` parameter)
-- Tab-based navigation: Search → Trends → Dashboard → Top Papers
-
-### 4.3. Networking — Dio (`dio: ^5.4.0`)
-
-- Custom `BaseOptions`: base URL, timeout (15s connect + 15s receive)
-- `LogInterceptor` cho debug
-- Custom error handler interceptor
-- Polite pool header (`User-Agent`) theo yêu cầu OpenAlex API
-- RESTful API calls: `GET /works` với query params (`search`, `per_page`, `sort`, `filter`)
-
-### 4.4. Data Visualization — FL Chart (`fl_chart: ^0.68.0`)
-
-- `LineChart` cho biểu đồ xu hướng (trend line + area fill)
-- Touch tooltip hiển thị năm + số lượng papers
-- Adaptive dot display (ẩn dots nếu >24 data points)
-- Sparkline mini-chart trên dashboard
-- Custom axis titles với interval logic
-
-### 4.5. UI/UX Enhancements
-
-| Thư viện                       | Kỹ thuật                                    |
-| ------------------------------ | ------------------------------------------- |
-| `shimmer: ^3.0.0`              | Skeleton loading animation (shimmer effect) |
-| `google_fonts: ^6.2.1`         | Custom typography                           |
-| `cached_network_image: ^3.3.1` | Image caching (sẵn sàng mở rộng)            |
-| `url_launcher: ^6.2.5`         | Mở DOI link trong trình duyệt ngoài         |
-
-### 4.6. Domain Modeling — Equatable & Freezed
-
-| Thư viện                     | Mục đích                                  |
-| ---------------------------- | ----------------------------------------- |
-| `equatable: ^2.0.5`          | Value equality cho entities (props-based) |
-| `freezed_annotation: ^2.4.1` | Immutable data classes (code generation)  |
-| `json_annotation: ^4.9.0`    | JSON serialization annotations            |
-
-**Dev tools:** `build_runner`, `freezed`, `json_serializable`, `riverpod_generator`
-
-### 4.7. Theming — Material Design 3
-
-- Full `ColorScheme` definition với custom palette
-- Centralized `AppColors`, `AppDimensions`, `AppTextStyles`
-- Dark/light ready architecture (hiện tại triển khai light theme)
-- Consistent spacing system (xs=4, sm=8, md=12, base=16, lg=20, xl=24, xxl=32)
-- Border radius tokens (shapeXs=4, shapeSm=8, shapeMd=12, shapeFull=100)
-
----
-
-## 5. API Integration — OpenAlex
-
-| Endpoint             | Mục đích              | Parameters                                                   |
-| -------------------- | --------------------- | ------------------------------------------------------------ |
-| `GET /works?search=` | Tìm kiếm publications | `search`, `per_page=50`, `sort=cited_by_count:desc`          |
-| `GET /works?filter=` | Top papers theo topic | `filter=concepts.display_name:X`, `sort=cited_by_count:desc` |
-
-**Response parsing:**
-
-- `results[]` → `PublicationModel.fromJson()`
-- Nested: `primary_location.source.display_name` → journal name
-- Nested: `authorships[].author` → author info
-- `abstract_inverted_index` → reconstruct plaintext via `Formatter.reconstructAbstract()`
-
----
-
-## 6. Design Patterns áp dụng
-
-| Pattern                   | Áp dụng                                             |
-| ------------------------- | --------------------------------------------------- |
-| **Clean Architecture**    | 3-layer separation (domain / data / presentation)   |
-| **Repository Pattern**    | Abstract interface + concrete implementation        |
-| **Dependency Injection**  | Riverpod Provider tree                              |
-| **Observer Pattern**      | Riverpod reactive state (watch/listen)              |
-| **Single Responsibility** | Mỗi UseCase 1 nhiệm vụ duy nhất                     |
-| **Open/Closed Principle** | Repository interface cho phép thay đổi data source  |
-| **Composition**           | Reusable widgets compose thành screens              |
-| **Factory Method**        | `fromJson()` factory constructors trong models      |
-| **Strategy Pattern**      | `PaperSortOption` enum cho multiple sort algorithms |
-
----
-
-## 7. Screens & Navigation Flow
-
-```
-┌─────────────────────────────────────────────────────┐
-│                  ShellRoute (NavigationBar)         │
-│                                                     │
-│  ┌──────────┐  ┌──────────┐  ┌───────────┐  ┌─────┐ │
-│  │  Search  │  │  Trends  │  │ Dashboard │  │ Top │ │
-│  │  Screen  │  │  Screen  │  │  Screen   │  │Paper│ │
-│  └──────────┘  └──────────┘  └───────────┘  └─────┘ │
-└─────────────────────────────────────────────────────┘
-                        │
-                        ▼
-         ┌──────────────────────────┐
-         │  Publication Detail      │
-         │  (push route, no nav)    │
-         └──────────────────────────┘
+```text
+journal_trend_analysis/
+|-- lib/
+|   |-- main.dart
+|   |-- core/
+|   |   |-- constants/
+|   |   |   `-- api_constants.dart
+|   |   |-- router/
+|   |   |   `-- app_router.dart
+|   |   |-- theme/
+|   |   |   |-- app_colors.dart
+|   |   |   |-- app_dimensions.dart
+|   |   |   |-- app_text_styles.dart
+|   |   |   `-- app_theme.dart
+|   |   `-- utils/
+|   |       `-- formatter.dart
+|   |-- data/
+|   |   |-- api/
+|   |   |   `-- openalex_api_client.dart
+|   |   |-- datasources/
+|   |   |   |-- heatmap_remote_datasource.dart
+|   |   |   |-- publication_remote_datasource.dart
+|   |   |   `-- topic_remote_datasource.dart
+|   |   |-- models/
+|   |   |   |-- author_model.dart
+|   |   |   |-- journal_model.dart
+|   |   |   `-- publication_model.dart
+|   |   `-- repositories/
+|   |       `-- publication_repository_impl.dart
+|   |-- domain/
+|   |   |-- entities/
+|   |   |   |-- author.dart
+|   |   |   |-- heatmap_data.dart
+|   |   |   |-- journal.dart
+|   |   |   |-- paginated_result.dart
+|   |   |   |-- publication.dart
+|   |   |   `-- topic_hierarchy.dart
+|   |   |-- repositories/
+|   |   |   `-- publication_repository.dart
+|   |   `-- usecases/
+|   |       |-- get_dashboard_summary.dart
+|   |       |-- get_top_authors.dart
+|   |       |-- get_top_journals.dart
+|   |       |-- get_trend_data.dart
+|   |       `-- search_publications.dart
+|   `-- presentation/
+|       |-- providers/
+|       |   |-- heatmap_providers.dart
+|       |   `-- providers.dart
+|       |-- screens/
+|       |   |-- author_network_screen.dart
+|       |   |-- dashboard_screen.dart
+|       |   |-- heatmap_screen.dart
+|       |   |-- publication_detail_screen.dart
+|       |   |-- search_screen.dart
+|       |   |-- top_papers_screen.dart
+|       |   `-- trend_analysis_screen.dart
+|       `-- widgets/
+|           |-- author_chip.dart
+|           |-- empty_state.dart
+|           |-- error_state.dart
+|           |-- metric_card.dart
+|           |-- publication_card.dart
+|           |-- ranked_list_tile.dart
+|           |-- shimmer_loader.dart
+|           |-- topic_cascade_dialog.dart
+|           `-- trend_chart.dart
+|-- assets/
+|   `-- icon/app_icon.png
+|-- android/
+|-- ios/
+|-- linux/
+|-- macos/
+|-- web/
+|-- windows/
+|-- pubspec.yaml
+`-- test/
+    `-- widget_test.dart
 ```
 
 ---
 
-## 8. Error Handling & UX States
+## 3. Architecture
 
-Ứng dụng xử lý đầy đủ 3 trạng thái của async data:
+### 3.1 Core Layer
 
-| State   | Widget          | Mô tả                            |
-| ------- | --------------- | -------------------------------- |
-| Loading | `ShimmerLoader` | Skeleton placeholder animation   |
-| Error   | `ErrorState`    | Thông báo lỗi + nút Retry        |
-| Empty   | `EmptyState`    | Icon + message + optional action |
-| Data    | Screen content  | Hiển thị dữ liệu bình thường     |
+The core layer contains shared configuration and app-wide infrastructure:
 
-Pattern sử dụng: `pubAsync.when(loading: ..., error: ..., data: ...)`
+- `ApiConstants` stores the OpenAlex base URL, timeouts, and default page size.
+- `app_router.dart` defines navigation with `GoRouter` and `ShellRoute`.
+- Theme files centralize Material 3 colors, spacing, typography, and `ThemeData`.
+- `formatter.dart` handles formatting citation counts, numbers, DOI display, and abstract reconstruction.
+
+### 3.2 Domain Layer
+
+The domain layer is framework-light business logic:
+
+- `Publication`, `Author`, `Journal`, `PaginatedResult`, `TopicHierarchyItem`, and heatmap entities describe app data.
+- `PublicationRepository` is the abstract contract used by use cases and providers.
+- Use cases perform pure app calculations:
+  - `SearchPublications` validates query/page parameters and delegates search.
+  - `GetTrendData` groups publications by publication year and totals citations.
+  - `GetDashboardSummary` calculates KPIs such as average citations, most active year, top author, and top journal.
+  - `GetTopAuthors` aggregates author publication/citation counts.
+  - `GetTopJournals` aggregates journal publication/citation counts.
+
+### 3.3 Data Layer
+
+The data layer owns network access and JSON parsing:
+
+- `OpenAlexApiClient` wraps Dio with base URL, 15-second connect/receive timeouts, JSON headers, and OpenAlex polite-pool `User-Agent`.
+- `PublicationRemoteDataSource` calls `/works` for publication search, topic-filter search, and top papers.
+- `TopicRemoteDataSource` calls `/domains`, `/fields`, `/subfields`, `/topics`, and autocomplete endpoints for topic discovery.
+- `HeatmapRemoteDataSource` calls `/works` with `group_by` to aggregate countries and institutions.
+- `PublicationRepositoryImpl` converts data models into domain entities and wraps paginated results.
+
+### 3.4 Presentation Layer
+
+The presentation layer contains Riverpod providers, screens, and reusable UI widgets:
+
+- `providers.dart` wires dependency injection, search state, pagination, topic filters, derived trend data, dashboard summary, rankings, and sort option.
+- `heatmap_providers.dart` wires heatmap data source and country/institution view state.
+- Screens consume providers with `ConsumerWidget` or `ConsumerStatefulWidget`.
+- Shared widgets render loading, error, empty, ranking, metric, publication card, and trend chart states.
 
 ---
 
-## 9. Tóm tắt công nghệ
+## 4. Navigation and Screen Flow
 
-| Hạng mục         | Công nghệ                                    |
-| ---------------- | -------------------------------------------- |
-| Framework        | Flutter 3.x (Dart SDK ^3.12.0)               |
-| State Management | Riverpod 2.x                                 |
-| Navigation       | GoRouter 13.x                                |
-| HTTP Client      | Dio 5.x                                      |
-| Charts           | FL Chart 0.68.x                              |
-| Loading UX       | Shimmer 3.x                                  |
-| External Links   | url_launcher 6.x                             |
-| Typography       | Google Fonts 6.x                             |
-| Value Equality   | Equatable 2.x                                |
-| Code Generation  | Freezed + json_serializable + build_runner   |
-| Architecture     | Clean Architecture (Domain-Driven)           |
-| Design System    | Material Design 3 (M3)                       |
-| API              | OpenAlex REST API (https://api.openalex.org) |
-| Platforms        | Android, iOS, Web, Windows, Linux, macOS     |
+Current router configuration:
+
+```text
+ShellRoute with persistent NavigationBar
+|-- /search    -> SearchScreen
+|-- /trends    -> TrendAnalysisScreen
+|-- /heatmap   -> HeatmapScreen
+`-- /network   -> AuthorNetworkScreen
+
+Standalone push route:
+`-- /publication/:id -> PublicationDetailScreen
+```
+
+Navigation details:
+
+- The app starts at `/search`.
+- Search, Trends, Heatmap, and Network share one bottom `NavigationBar`.
+- Publication detail is opened with `context.push('/publication/:id', extra: publication)`.
+- Publication detail depends on the full `Publication` object passed through `state.extra`.
+
+Screens present in code but not mounted by the current router:
+
+- `dashboard_screen.dart`
+- `top_papers_screen.dart`
+
+These files can be reconnected later if the product wants separate Dashboard and Top Papers tabs again. For now, dashboard KPIs and top author/journal ranking are integrated into `TrendAnalysisScreen`.
+
+---
+
+## 5. Feature Analysis
+
+### 5.1 Search Screen
+
+`SearchScreen` is the main data entry point. It supports:
+
+- Free-text search with debounce-driven autocomplete display.
+- Topic autocomplete across domains, fields, subfields, and topics.
+- Hierarchical drawer for browsing OpenAlex topic levels.
+- End drawer filters and result sorting.
+- Infinite pagination through a "Read more" button.
+- Accumulated result list stored in widget state.
+- Search chips for authors, journals, and research topics.
+- Tap-to-open publication details.
+
+Search state is coordinated by:
+
+- `searchQueryProvider`
+- `selectedTopicFilterProvider`
+- `searchPageProvider`
+- `searchPerPageProvider`
+- `paginatedPublicationsProvider`
+- `publicationsProvider`
+- `sortedPublicationsProvider`
+
+Free-text search uses `/works?search=...&sort=relevance_score:desc`. Topic hierarchy filters use `/works?filter=<filterKey>:<id>&sort=cited_by_count:desc`.
+
+### 5.2 Trend Analysis Screen
+
+`TrendAnalysisScreen` derives analysis from the active search result set:
+
+- KPI row: total papers, average citations, most active year.
+- Line chart for publications per year.
+- Year-range filter dialog.
+- Top Journals and Top Authors sections.
+- Ranking mode toggle: papers or citations.
+- "Show more" controls for longer rankings.
+- Journal/author taps route back to Search with a new query.
+
+Supporting providers:
+
+- `trendDataProvider`
+- `dashboardSummaryProvider`
+- `topAuthorsProvider`
+- `topJournalsProvider`
+- `trendYearRangeProvider`
+- `trendRankModeProvider`
+- `filteredTrendDataProvider`
+
+### 5.3 Heatmap Screen
+
+`HeatmapScreen` visualizes research distribution for the active search context:
+
+- Country mode and Institution mode through `SegmentedButton`.
+- Country mode supports world map and grid display.
+- Country data is ranked by OpenAlex grouped work count.
+- Institution mode lists top institutions with proportional bars.
+- Empty, loading, and error states are handled with reusable widgets.
+
+OpenAlex aggregation uses:
+
+- `group_by=authorships.countries`
+- `group_by=authorships.institutions.lineage`
+
+### 5.4 Author Network Screen
+
+`AuthorNetworkScreen` builds a collaboration graph from the loaded publications:
+
+- Aggregates author nodes by ID or display name.
+- Builds co-author edges for every author pair in a publication.
+- Keeps the top 30 authors to reduce graph overcrowding.
+- Supports scale by paper count or citation count.
+- Uses a custom force-layout simulation and `CustomPainter`.
+- Supports pan/zoom with `InteractiveViewer`.
+- Supports dragging author nodes.
+- Tapping an edge opens a bottom sheet listing shared publications.
+
+This feature is computed locally from the current in-memory result set and does not call a separate API endpoint.
+
+### 5.5 Publication Detail Screen
+
+The detail screen receives a `Publication` entity from route `extra` and displays publication metadata:
+
+- Title, authors, journal, year, citation count.
+- DOI and external link behavior through `url_launcher`.
+- Abstract reconstructed from OpenAlex `abstract_inverted_index`.
+- Concepts/topics associated with the work.
+
+---
+
+## 6. Data and State Flow
+
+```text
+User action
+  -> SearchScreen updates searchQueryProvider or selectedTopicFilterProvider
+  -> paginatedPublicationsProvider calls SearchPublications or repository filter search
+  -> PublicationRepositoryImpl calls PublicationRemoteDataSource
+  -> OpenAlexApiClient performs Dio request
+  -> PublicationModel.fromJson parses OpenAlex JSON
+  -> model.toEntity() returns Publication domain entities
+  -> providers derive trend, dashboard, author, journal, heatmap, and network views
+  -> screens rebuild reactively
+```
+
+Key implementation details:
+
+- `PaginatedResult<T>` tracks `items`, `totalCount`, `page`, `perPage`, `totalPages`, `hasNextPage`, and `hasPreviousPage`.
+- `Publication` includes `countsByYear`, `abstractInvertedIndex`, concepts, authors, journal name, DOI, and citation count.
+- Search pagination defaults to 50 items per page through `searchPerPageProvider`.
+- Derived providers are synchronous once publication data is loaded.
+- Heatmap providers are asynchronous because they use OpenAlex `group_by` endpoints separately from publication search.
+
+---
+
+## 7. OpenAlex API Integration
+
+| Use case | Endpoint | Main parameters |
+| --- | --- | --- |
+| Free-text publication search | `GET /works` | `search`, `page`, `per_page`, `sort=relevance_score:desc` |
+| Topic-filter publication search | `GET /works` | `filter=<primary_topic...>:<id>`, `page`, `per_page`, `sort=cited_by_count:desc` |
+| Top papers | `GET /works` | `per_page=50`, `sort=cited_by_count:desc`, optional `filter=concepts.display_name:<topic>` |
+| Topic autocomplete | `GET /domains`, `/fields`, `/autocomplete/subfields`, `/autocomplete/topics` | `search` or `q`, small result limits |
+| Topic hierarchy drawer | `GET /domains`, `/fields`, `/subfields`, `/topics` | `filter` by parent level, `select=id,display_name,works_count` |
+| Country heatmap | `GET /works` | `group_by=authorships.countries`, optional `search` or topic `filter` |
+| Institution heatmap | `GET /works` | `group_by=authorships.institutions.lineage`, optional `search` or topic `filter` |
+
+Response parsing highlights:
+
+- `results[]` becomes `PublicationModel`.
+- `primary_location.source.display_name` becomes `journalName`.
+- `authorships[].author` becomes `AuthorModel`.
+- `concepts[].display_name` becomes publication concepts.
+- `counts_by_year[]` becomes `YearlyCitation`.
+- `abstract_inverted_index` is preserved and reconstructed later for display.
+- `meta.count` becomes `PaginatedResult.totalCount`.
+
+---
+
+## 8. Main Libraries and Roles
+
+| Library | Role in project |
+| --- | --- |
+| `flutter_riverpod` | Dependency injection and reactive state |
+| `go_router` | Declarative routing, shell navigation, detail route |
+| `dio` | HTTP client for OpenAlex |
+| `fl_chart` | Trend line chart |
+| `shimmer` | Skeleton loading UI |
+| `google_fonts` | Typography |
+| `url_launcher` | Opening DOI/external links |
+| `countries_world_map` | Interactive world map heatmap |
+| `equatable` | Value equality for domain entities |
+| `freezed_annotation`, `json_annotation` | Available for generated immutable/JSON models, though current shown models are manually parsed |
+| `flutter_launcher_icons` | Platform app icon generation |
+
+---
+
+## 9. Design Patterns Used
+
+| Pattern | Current usage |
+| --- | --- |
+| Clean Architecture | Separates core, data, domain, and presentation concerns |
+| Repository Pattern | `PublicationRepository` and `PublicationRepositoryImpl` |
+| Dependency Injection | Riverpod providers construct API client, data sources, repositories, and use cases |
+| Observer/Reactive State | Screens rebuild from provider changes |
+| Factory Method | `PublicationModel.fromJson`, author/journal model parsing |
+| Strategy-like enum | `PaperSortOption`, `TrendRankMode`, `HeatmapViewMode`, country display mode |
+| Composition | Screens are assembled from reusable widgets and providers |
+| Local aggregation | Trend, dashboard, rankings, and author network are computed from loaded publications |
+
+---
+
+## 10. Error Handling and UX States
+
+The app consistently handles asynchronous states:
+
+| State | Widget or behavior |
+| --- | --- |
+| Loading | `ShimmerLoader` or `CircularProgressIndicator` |
+| Error | `ErrorState`, retry buttons, and snackbars for pagination errors |
+| Empty | `EmptyState` with contextual message |
+| Data | Screen-specific content |
+
+Examples:
+
+- Search shows shimmer for initial loading and preserves already loaded results while loading more.
+- Trends shows an empty state until a topic/search result exists.
+- Heatmap shows an empty state when no search query is active or no geographic data exists.
+- Network shows an empty state when no publications or author data are loaded.
+
+---
+
+## 11. Functional and Structural Changes Found
+
+Compared with the previous report, the current codebase has these important changes:
+
+- Added topic hierarchy support through `TopicHierarchyItem`, `TopicRemoteDataSource`, autocomplete providers, and a hierarchy drawer.
+- Added paginated search through `PaginatedResult`, `searchPageProvider`, and "Read more" accumulation in `SearchScreen`.
+- Added heatmap functionality through `HeatmapRemoteDataSource`, `heatmap_providers.dart`, and `HeatmapScreen`.
+- Added author collaboration network visualization through `AuthorNetworkScreen`.
+- Added `countsByYear` parsing to `PublicationModel` and `Publication`.
+- Changed active navigation tabs to Search, Trends, Heatmap, and Network.
+- Moved dashboard-style KPIs and top author/journal rankings into the Trends page.
+- Kept Dashboard and Top Papers screens in the repository but removed them from active router navigation.
+- Added `countries_world_map` dependency for world map rendering.
+- Updated publication search sorting: free text uses relevance sorting, topic filters use citation sorting.
+
+---
+
+## 12. Technology Summary
+
+| Category | Technology |
+| --- | --- |
+| Framework | Flutter 3.x, Dart SDK ^3.12.0 |
+| State management | Riverpod 2.x |
+| Navigation | GoRouter 13.x |
+| HTTP client | Dio 5.x |
+| API | OpenAlex REST API |
+| Charts | FL Chart 0.68.x |
+| Map visualization | countries_world_map 1.3.x |
+| Loading UX | Shimmer 3.x |
+| External links | url_launcher 6.x |
+| Typography | Google Fonts 6.x |
+| Value equality | Equatable 2.x |
+| App icon tooling | flutter_launcher_icons 0.14.x |
+| Architecture | Clean Architecture with repository and use-case layers |
+| Supported platforms | Android, iOS, Web, Windows, Linux, macOS |
+
+---
+
+## 13. Maintenance Notes
+
+- If Dashboard and Top Papers are still required by the lab specification, reconnect them in `app_router.dart` and update the `NavigationBar` destinations.
+- The project imports generated-code packages, but the current inspected models are manually implemented. Remove unused generation dependencies or introduce generated models consistently.
+- `PublicationDetailScreen` assumes `state.extra` is a `Publication`; deep linking directly to `/publication/:id` without `extra` can fail.
+- Heatmap institution country codes are currently empty because OpenAlex institution lineage IDs do not directly include country information.
+- Several source comments still contain mojibake characters. Cleaning comments would improve readability without changing behavior.
 
 ---
 

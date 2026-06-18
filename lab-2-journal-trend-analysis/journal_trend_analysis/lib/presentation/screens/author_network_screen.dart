@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -823,71 +824,81 @@ class _PublicationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: AppColors.surfaceContainer,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
-        side: const BorderSide(color: AppColors.outlineVariant, width: 0.5),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimensions.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              publication.title,
-              style: AppTextStyles.titleMedium.copyWith(
-                color: AppColors.onSurface,
+    return GestureDetector(
+      onTap: () {
+        // Close the bottom sheet first, then navigate
+        Navigator.of(context).pop();
+        context.push(
+          '/publication/${Uri.encodeComponent(publication.id)}',
+          extra: publication,
+        );
+      },
+      child: Card(
+        elevation: 0,
+        color: AppColors.surfaceContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
+          side: const BorderSide(color: AppColors.outlineVariant, width: 0.5),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimensions.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                publication.title,
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: AppColors.onSurface,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: AppDimensions.sm),
-            Row(
-              children: [
-                if (publication.publicationYear != null) ...[
+              const SizedBox(height: AppDimensions.sm),
+              Row(
+                children: [
+                  if (publication.publicationYear != null) ...[
+                    Icon(
+                      Icons.calendar_today,
+                      size: 12,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: AppDimensions.xs),
+                    Text(
+                      '${publication.publicationYear}',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(width: AppDimensions.md),
+                  ],
                   Icon(
-                    Icons.calendar_today,
+                    Icons.format_quote,
                     size: 12,
                     color: AppColors.onSurfaceVariant,
                   ),
                   const SizedBox(width: AppDimensions.xs),
                   Text(
-                    '${publication.publicationYear}',
+                    '${publication.citedByCount} citations',
                     style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(width: AppDimensions.md),
                 ],
-                Icon(
-                  Icons.format_quote,
-                  size: 12,
-                  color: AppColors.onSurfaceVariant,
-                ),
-                const SizedBox(width: AppDimensions.xs),
+              ),
+              if (publication.journalName != null) ...[
+                const SizedBox(height: AppDimensions.xs),
                 Text(
-                  '${publication.citedByCount} citations',
+                  publication.journalName!,
                   style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.onSurfaceVariant,
+                    color: AppColors.primary,
+                    fontStyle: FontStyle.italic,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
-            ),
-            if (publication.journalName != null) ...[
-              const SizedBox(height: AppDimensions.xs),
-              Text(
-                publication.journalName!,
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.primary,
-                  fontStyle: FontStyle.italic,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
             ],
-          ],
+          ),
         ),
       ),
     );

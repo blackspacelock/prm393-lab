@@ -170,6 +170,17 @@ final topJournalsProvider = Provider<List<JournalWithCount>>((ref) {
   return ref.read(getTopJournalsUseCaseProvider)(pubs);
 });
 
+// ── Trending ──────────────────────────────────────────────────────────────────
+
+/// Fetches trending publications filtered by an optional OpenAlex concept ID.
+final trendingPublicationsProvider =
+    FutureProvider.family<List<Publication>, String?>((ref, conceptId) async {
+      final models = await ref
+          .read(remoteDataSourceProvider)
+          .getTrending(conceptId: conceptId);
+      return models.map((m) => m.toEntity()).toList();
+    });
+
 // ── Sort ──────────────────────────────────────────────────────────────────────
 
 enum PaperSortOption { relevance, citationCount, year, title }

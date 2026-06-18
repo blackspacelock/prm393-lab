@@ -478,7 +478,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ),
           ),
         ),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
         data: (items) {
           if (items.isEmpty) {
             return Padding(
@@ -495,7 +495,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             shrinkWrap: true,
             padding: const EdgeInsets.symmetric(vertical: AppDimensions.sm),
             itemCount: items.length,
-            separatorBuilder: (_, __) => const Divider(
+            separatorBuilder: (_, _) => const Divider(
               height: 1,
               indent: AppDimensions.base,
               endIndent: AppDimensions.base,
@@ -625,26 +625,29 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ),
                   ),
                   const SizedBox(height: AppDimensions.sm),
-                  ...PaperSortOption.values.map((opt) {
-                    return RadioListTile<PaperSortOption>(
-                      title: Text(
-                        _sortLabel(opt),
-                        style: AppTextStyles.bodyMedium,
-                      ),
-                      value: opt,
-                      groupValue: currentSort,
-                      activeColor: AppColors.primaryContainer,
-                      dense: true,
-                      onChanged: (val) {
-                        if (val != null) {
-                          ref.read(paperSortOptionProvider.notifier).state =
-                              val;
-                          // Re-sort existing accumulated results
-                          setState(() {});
-                        }
-                      },
-                    );
-                  }),
+                  RadioGroup<PaperSortOption>(
+                    groupValue: currentSort,
+                    onChanged: (val) {
+                      if (val != null) {
+                        ref.read(paperSortOptionProvider.notifier).state = val;
+                        setState(() {});
+                      }
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: PaperSortOption.values.map((opt) {
+                        return RadioListTile<PaperSortOption>(
+                          title: Text(
+                            _sortLabel(opt),
+                            style: AppTextStyles.bodyMedium,
+                          ),
+                          value: opt,
+                          activeColor: AppColors.primaryContainer,
+                          dense: true,
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ],
               ),
             );

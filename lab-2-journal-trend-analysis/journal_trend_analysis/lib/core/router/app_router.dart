@@ -2,28 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/entities/publication.dart';
 import '../../presentation/screens/author_network_screen.dart';
+import '../../presentation/screens/bookmarks_screen.dart';
 import '../../presentation/screens/heatmap_screen.dart';
 import '../../presentation/screens/publication_detail_screen.dart';
 import '../../presentation/screens/search_screen.dart';
 import '../../presentation/screens/trend_analysis_screen.dart';
+import '../../presentation/screens/trending_screen.dart';
 import '../theme/app_colors.dart';
 
 final appRouter = GoRouter(
-  initialLocation: '/search',
+  initialLocation: '/trending',
   routes: [
     ShellRoute(
       builder: (context, state, child) =>
           _ScaffoldWithNav(location: state.uri.path, child: child),
       routes: [
-        GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
         GoRoute(
-          path: '/trends',
-          builder: (_, __) => const TrendAnalysisScreen(),
+          path: '/trending',
+          builder: (_, _) => const TrendingScreen(),
         ),
-        GoRoute(path: '/heatmap', builder: (_, __) => const HeatmapScreen()),
+        GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
+        GoRoute(
+          path: '/dashboard',
+          builder: (_, _) => const TrendAnalysisScreen(),
+        ),
+        GoRoute(path: '/heatmap', builder: (_, _) => const HeatmapScreen()),
         GoRoute(
           path: '/network',
-          builder: (_, __) => const AuthorNetworkScreen(),
+          builder: (_, _) => const AuthorNetworkScreen(),
+        ),
+        GoRoute(
+          path: '/bookmarks',
+          builder: (_, _) => const BookmarksScreen(),
         ),
       ],
     ),
@@ -44,10 +54,12 @@ class _ScaffoldWithNav extends StatelessWidget {
   const _ScaffoldWithNav({required this.location, required this.child});
 
   int get _selectedIndex {
-    if (location.startsWith('/trends')) return 1;
-    if (location.startsWith('/heatmap')) return 2;
-    if (location.startsWith('/network')) return 3;
-    return 0;
+    if (location.startsWith('/search')) return 1;
+    if (location.startsWith('/dashboard')) return 2;
+    if (location.startsWith('/heatmap')) return 3;
+    if (location.startsWith('/network')) return 4;
+    if (location.startsWith('/bookmarks')) return 5;
+    return 0; // /trending
   }
 
   @override
@@ -65,21 +77,28 @@ class _ScaffoldWithNav extends StatelessWidget {
           backgroundColor: AppColors.surfaceContainerLowest,
           indicatorColor: AppColors.secondaryContainer,
           onDestinationSelected: (i) => switch (i) {
-            0 => context.go('/search'),
-            1 => context.go('/trends'),
-            2 => context.go('/heatmap'),
-            _ => context.go('/network'),
+            0 => context.go('/trending'),
+            1 => context.go('/search'),
+            2 => context.go('/dashboard'),
+            3 => context.go('/heatmap'),
+            4 => context.go('/network'),
+            _ => context.go('/bookmarks'),
           },
           destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.local_fire_department_outlined),
+              selectedIcon: Icon(Icons.local_fire_department),
+              label: 'Trending',
+            ),
             NavigationDestination(
               icon: Icon(Icons.search_outlined),
               selectedIcon: Icon(Icons.search),
               label: 'Search',
             ),
             NavigationDestination(
-              icon: Icon(Icons.show_chart_outlined),
-              selectedIcon: Icon(Icons.show_chart),
-              label: 'Trends',
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard),
+              label: 'Dashboard',
             ),
             NavigationDestination(
               icon: Icon(Icons.map_outlined),
@@ -90,6 +109,11 @@ class _ScaffoldWithNav extends StatelessWidget {
               icon: Icon(Icons.hub_outlined),
               selectedIcon: Icon(Icons.hub),
               label: 'Network',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.bookmark_border),
+              selectedIcon: Icon(Icons.bookmark),
+              label: 'Saved',
             ),
           ],
         ),

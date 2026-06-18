@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/entities/publication.dart';
 import '../../presentation/screens/author_network_screen.dart';
+import '../../presentation/screens/bookmarks_screen.dart';
 import '../../presentation/screens/heatmap_screen.dart';
 import '../../presentation/screens/publication_detail_screen.dart';
 import '../../presentation/screens/search_screen.dart';
@@ -25,6 +26,10 @@ final appRouter = GoRouter(
           path: '/network',
           builder: (_, __) => const AuthorNetworkScreen(),
         ),
+        GoRoute(
+          path: '/bookmarks',
+          builder: (_, _) => const BookmarksScreen(),
+        ),
       ],
     ),
     GoRoute(
@@ -47,6 +52,7 @@ class _ScaffoldWithNav extends StatelessWidget {
     if (location.startsWith('/trends')) return 1;
     if (location.startsWith('/heatmap')) return 2;
     if (location.startsWith('/network')) return 3;
+    if (location.startsWith('/bookmarks')) return 4;
     return 0;
   }
 
@@ -68,7 +74,8 @@ class _ScaffoldWithNav extends StatelessWidget {
             0 => context.go('/search'),
             1 => context.go('/trends'),
             2 => context.go('/heatmap'),
-            _ => context.go('/network'),
+            3 => context.go('/network'),
+            _ => context.go('/bookmarks'),
           },
           destinations: const [
             NavigationDestination(
@@ -90,6 +97,11 @@ class _ScaffoldWithNav extends StatelessWidget {
               icon: Icon(Icons.hub_outlined),
               selectedIcon: Icon(Icons.hub),
               label: 'Network',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.bookmark_border),
+              selectedIcon: Icon(Icons.bookmark),
+              label: 'Saved',
             ),
           ],
         ),

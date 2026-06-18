@@ -8,6 +8,7 @@ import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/formatter.dart';
 import '../../domain/entities/publication.dart';
+import '../providers/bookmark_providers.dart';
 import '../providers/providers.dart';
 import '../widgets/author_chip.dart';
 
@@ -49,6 +50,26 @@ class PublicationDetailScreen extends ConsumerWidget {
         leading: BackButton(color: AppColors.primaryContainer),
         title: const Text('Publication Details'),
         backgroundColor: AppColors.surfaceContainerLowest,
+        actions: [
+          Consumer(
+            builder: (context, ref, _) {
+              final isBookmarked =
+                  ref.watch(isBookmarkedProvider(publication.id));
+              return IconButton(
+                icon: Icon(
+                  isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  color: isBookmarked
+                      ? AppColors.primaryContainer
+                      : AppColors.onSurfaceVariant,
+                ),
+                tooltip: isBookmarked ? 'Remove bookmark' : 'Bookmark',
+                onPressed: () => ref
+                    .read(bookmarkNotifierProvider.notifier)
+                    .toggle(publication),
+              );
+            },
+          ),
+        ],
       ),
       bottomNavigationBar: publication.doi != null
           ? Container(

@@ -4,60 +4,12 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../domain/entities/topic_hierarchy.dart';
 import '../providers/providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
 import '../widgets/publication_card.dart';
 import '../widgets/shimmer_loader.dart';
-
-// ── Domain category definitions ───────────────────────────────────────────────
-
-class _Category {
-  final String label;
-  final String? conceptId;
-  final IconData icon;
-
-  const _Category({required this.label, required this.icon, this.conceptId});
-}
-
-const _categories = [
-  _Category(label: 'All Fields', icon: Icons.auto_awesome, conceptId: null),
-  _Category(
-    label: 'AI & ML',
-    icon: Icons.psychology,
-    conceptId: 'C154945302',
-  ),
-  _Category(
-    label: 'Medicine',
-    icon: Icons.health_and_safety_outlined,
-    conceptId: 'C71924100',
-  ),
-  _Category(
-    label: 'Physics',
-    icon: Icons.science_outlined,
-    conceptId: 'C121332964',
-  ),
-  _Category(
-    label: 'Biology',
-    icon: Icons.biotech_outlined,
-    conceptId: 'C86803240',
-  ),
-  _Category(
-    label: 'Comp. Sci.',
-    icon: Icons.computer_outlined,
-    conceptId: 'C41008148',
-  ),
-  _Category(
-    label: 'Chemistry',
-    icon: Icons.blender_outlined,
-    conceptId: 'C185592680',
-  ),
-  _Category(
-    label: 'Economics',
-    icon: Icons.trending_up_outlined,
-    conceptId: 'C162324750',
-  ),
-];
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -71,11 +23,20 @@ class TrendingScreen extends ConsumerStatefulWidget {
 class _TrendingScreenState extends ConsumerState<TrendingScreen> {
   int _selectedIndex = 0;
 
-  String? get _conceptId => _categories[_selectedIndex].conceptId;
-
   @override
   Widget build(BuildContext context) {
-    final pubAsync = ref.watch(trendingPublicationsProvider(_conceptId));
+    final categoriesAsync = ref.watch(trendingCategoriesProvider);
+    final categories = categoriesAsync.value ?? const <TopicHierarchyItem>[];
+    if (_selectedIndex > categories.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _selectedIndex = 0);
+      });
+    }
+    final selectedDomainId =
+        _selectedIndex == 0 || _selectedIndex > categories.length
+        ? null
+        : categories[_selectedIndex - 1].id;
+    final pubAsync = ref.watch(trendingPublicationsProvider(selectedDomainId));
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -85,6 +46,7 @@ class _TrendingScreenState extends ConsumerState<TrendingScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
           child: _CategoryChips(
+            categoriesAsync: categoriesAsync,
             selectedIndex: _selectedIndex,
             onSelected: (i) => setState(() => _selectedIndex = i),
           ),
@@ -94,7 +56,8 @@ class _TrendingScreenState extends ConsumerState<TrendingScreen> {
         loading: () => const ShimmerLoader(),
         error: (e, _) => ErrorState(
           message: e.toString(),
-          onRetry: () => ref.invalidate(trendingPublicationsProvider(_conceptId)),
+          onRetry: () =>
+              ref.invalidate(trendingPublicationsProvider(selectedDomainId)),
         ),
         data: (pubs) {
           if (pubs.isEmpty) {
@@ -131,62 +94,123 @@ class _TrendingScreenState extends ConsumerState<TrendingScreen> {
 // ── Category chip row ─────────────────────────────────────────────────────────
 
 class _CategoryChips extends StatelessWidget {
+  final AsyncValue<List<TopicHierarchyItem>> categoriesAsync;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
   const _CategoryChips({
+    required this.categoriesAsync,
     required this.selectedIndex,
     required this.onSelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.base,
-          vertical: AppDimensions.sm,
+    return categoriesAsync.when(
+      loading: () => const SizedBox(
+        height: 56,
+        child: Center(
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
         ),
-        itemCount: _categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppDimensions.sm),
-        itemBuilder: (_, i) {
-          final cat = _categories[i];
-          final selected = i == selectedIndex;
-          return ChoiceChip(
-            avatar: Icon(
-              cat.icon,
-              size: 16,
-              color: selected
-                  ? AppColors.onSecondaryContainer
-                  : AppColors.onSurfaceVariant,
-            ),
-            label: Text(
-              cat.label,
-              style: AppTextStyles.labelMedium.copyWith(
-                color: selected
-                    ? AppColors.onSecondaryContainer
-                    : AppColors.onSurface,
-              ),
-            ),
-            selected: selected,
-            onSelected: (_) => onSelected(i),
-            backgroundColor: AppColors.surfaceContainerLowest,
-            selectedColor: AppColors.secondaryContainer,
-            side: BorderSide(
-              color: selected
-                  ? AppColors.primaryContainer
-                  : AppColors.outlineVariant,
-              width: 1,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.shapeSm),
-            ),
-            visualDensity: VisualDensity.compact,
-          );
-        },
       ),
+      error: (_, _) => SizedBox(
+        height: 56,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.base,
+            vertical: AppDimensions.sm,
+          ),
+          children: [
+            _CategoryChip(
+              icon: Icons.auto_awesome,
+              label: 'All Fields',
+              selected: selectedIndex == 0,
+              onTap: () => onSelected(0),
+            ),
+          ],
+        ),
+      ),
+      data: (categories) => SizedBox(
+        height: 56,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.base,
+            vertical: AppDimensions.sm,
+          ),
+          itemCount: categories.length + 1,
+          separatorBuilder: (_, _) => const SizedBox(width: AppDimensions.sm),
+          itemBuilder: (_, i) {
+            if (i == 0) {
+              return _CategoryChip(
+                icon: Icons.auto_awesome,
+                label: 'All Fields',
+                selected: selectedIndex == 0,
+                onTap: () => onSelected(0),
+              );
+            }
+            final category = categories[i - 1];
+            return _CategoryChip(
+              icon: Icons.category_outlined,
+              label: category.displayName,
+              selected: i == selectedIndex,
+              onTap: () => onSelected(i),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _CategoryChip({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      avatar: Icon(
+        icon,
+        size: 16,
+        color: selected
+            ? AppColors.onSecondaryContainer
+            : AppColors.onSurfaceVariant,
+      ),
+      label: Text(
+        label,
+        style: AppTextStyles.labelMedium.copyWith(
+          color: selected
+              ? AppColors.onSecondaryContainer
+              : AppColors.onSurface,
+        ),
+      ),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      backgroundColor: AppColors.surfaceContainerLowest,
+      selectedColor: AppColors.secondaryContainer,
+      side: BorderSide(
+        color: selected ? AppColors.primaryContainer : AppColors.outlineVariant,
+        width: 1,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppDimensions.shapeSm),
+      ),
+      visualDensity: VisualDensity.compact,
     );
   }
 }

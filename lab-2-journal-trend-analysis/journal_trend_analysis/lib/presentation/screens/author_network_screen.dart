@@ -945,7 +945,7 @@ class _AuthorPublicationsSheet extends StatelessWidget {
             controller: scrollController,
             padding: const EdgeInsets.all(AppDimensions.base),
             itemCount: publications.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 const SizedBox(height: AppDimensions.sm),
             itemBuilder: (context, index) {
               final pub = publications[index];

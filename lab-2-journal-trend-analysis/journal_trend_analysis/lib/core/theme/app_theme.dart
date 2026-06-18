@@ -62,10 +62,15 @@ class AppTheme {
         indicatorColor: AppColors.secondaryContainer,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? AppTextStyles.labelMedium
-                  .copyWith(color: AppColors.primaryContainer)
-              : AppTextStyles.labelMedium
-                  .copyWith(color: AppColors.onSurfaceVariant),
+              ? AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.primaryContainer,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                )
+              : AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                  fontSize: 10,
+                ),
         ),
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
@@ -77,26 +82,29 @@ class AppTheme {
         backgroundColor: AppColors.surfaceContainerLowest,
         elevation: 0,
         scrolledUnderElevation: 1,
-        titleTextStyle:
-            AppTextStyles.headlineSmall.copyWith(color: AppColors.onSurface),
+        titleTextStyle: AppTextStyles.headlineSmall.copyWith(
+          color: AppColors.onSurface,
+        ),
         iconTheme: const IconThemeData(color: AppColors.onSurfaceVariant),
-        actionsIconTheme:
-            const IconThemeData(color: AppColors.onSurfaceVariant),
+        actionsIconTheme: const IconThemeData(
+          color: AppColors.onSurfaceVariant,
+        ),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: AppColors.surfaceContainerLowest,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
-          side:
-              const BorderSide(color: AppColors.outlineVariant, width: 0.5),
+          side: const BorderSide(color: AppColors.outlineVariant, width: 0.5),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceContainer,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimensions.shapeFull),
           borderSide: BorderSide.none,
@@ -107,24 +115,30 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimensions.shapeFull),
-          borderSide:
-              const BorderSide(color: AppColors.primaryContainer, width: 2),
+          borderSide: const BorderSide(
+            color: AppColors.primaryContainer,
+            width: 2,
+          ),
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceContainerHighest,
         selectedColor: AppColors.secondaryContainer,
         disabledColor: AppColors.surfaceContainerHighest,
-        labelStyle:
-            AppTextStyles.labelLarge.copyWith(color: AppColors.onSurface),
-        secondaryLabelStyle: AppTextStyles.labelLarge
-            .copyWith(color: AppColors.onSecondaryContainer),
+        labelStyle: AppTextStyles.labelLarge.copyWith(
+          color: AppColors.onSurface,
+        ),
+        secondaryLabelStyle: AppTextStyles.labelLarge.copyWith(
+          color: AppColors.onSecondaryContainer,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimensions.shapeSm),
         ),
         side: const BorderSide(color: AppColors.outlineVariant, width: 1),
-        padding:
-            const EdgeInsets.symmetric(horizontal: AppDimensions.md, vertical: AppDimensions.xs),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.md,
+          vertical: AppDimensions.xs,
+        ),
       ),
     );
   }

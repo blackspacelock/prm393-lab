@@ -8,8 +8,6 @@ import '../../domain/entities/publication.dart';
 import '../providers/bookmark_providers.dart';
 import '../widgets/publication_card.dart';
 
-enum _BookmarkFilter { all, recent, older }
-
 enum _BookmarkSort { citations, yearNewest, yearOldest, title }
 
 class BookmarksScreen extends ConsumerStatefulWidget {
@@ -21,13 +19,15 @@ class BookmarksScreen extends ConsumerStatefulWidget {
 
 class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
   final _searchController = TextEditingController();
+  final _yearController = TextEditingController();
   String _query = '';
-  _BookmarkFilter _filter = _BookmarkFilter.all;
+  int? _selectedYear;
   _BookmarkSort _sort = _BookmarkSort.citations;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _yearController.dispose();
     super.dispose();
   }
 
@@ -60,14 +60,17 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
         data: (pubs) {
           if (pubs.isEmpty) return const _EmptyBookmarks();
           final visiblePubs = _applySearchFilterAndSort(pubs);
+          final availableYears = _availableYears(pubs);
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _SavedPaperControls(
                 controller: _searchController,
+                yearController: _yearController,
                 query: _query,
-                filter: _filter,
+                selectedYear: _selectedYear,
+                availableYears: availableYears,
                 sort: _sort,
                 onQueryChanged: (value) {
                   setState(() => _query = value.trim().toLowerCase());
@@ -76,7 +79,8 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
                   _searchController.clear();
                   setState(() => _query = '');
                 },
-                onFilterChanged: (value) => setState(() => _filter = value),
+                onYearChanged: _setYearFilter,
+                onClearYear: () => _setYearFilter(null),
                 onSortChanged: (value) => setState(() => _sort = value),
               ),
               Padding(
@@ -136,11 +140,7 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
       if (!matchesSearch) return false;
 
       final year = pub.publicationYear;
-      return switch (_filter) {
-        _BookmarkFilter.all => true,
-        _BookmarkFilter.recent => year != null && year >= 2020,
-        _BookmarkFilter.older => year != null && year < 2020,
-      };
+      return _selectedYear == null || year == _selectedYear;
     }).toList();
 
     switch (_sort) {
@@ -164,11 +164,34 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
     return filtered;
   }
 
+  List<int> _availableYears(List<Publication> pubs) {
+    final publicationYears = pubs
+        .map((pub) => pub.publicationYear)
+        .whereType<int>()
+        .toList();
+    final currentYear = DateTime.now().year;
+    final earliestYear = publicationYears.isEmpty
+        ? currentYear
+        : publicationYears.reduce((a, b) => a < b ? a : b);
+    final years = <int>[];
+    for (var year = currentYear; year >= earliestYear; year--) {
+      years.add(year);
+    }
+    years.sort((a, b) => b.compareTo(a));
+    return years;
+  }
+
+  void _setYearFilter(int? year) {
+    _yearController.text = year?.toString() ?? '';
+    setState(() => _selectedYear = year);
+  }
+
   void _resetControls() {
     _searchController.clear();
+    _yearController.clear();
     setState(() {
       _query = '';
-      _filter = _BookmarkFilter.all;
+      _selectedYear = null;
       _sort = _BookmarkSort.citations;
     });
   }
@@ -203,22 +226,28 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
 
 class _SavedPaperControls extends StatelessWidget {
   final TextEditingController controller;
+  final TextEditingController yearController;
   final String query;
-  final _BookmarkFilter filter;
+  final int? selectedYear;
+  final List<int> availableYears;
   final _BookmarkSort sort;
   final ValueChanged<String> onQueryChanged;
   final VoidCallback onClearQuery;
-  final ValueChanged<_BookmarkFilter> onFilterChanged;
+  final ValueChanged<int?> onYearChanged;
+  final VoidCallback onClearYear;
   final ValueChanged<_BookmarkSort> onSortChanged;
 
   const _SavedPaperControls({
     required this.controller,
+    required this.yearController,
     required this.query,
-    required this.filter,
+    required this.selectedYear,
+    required this.availableYears,
     required this.sort,
     required this.onQueryChanged,
     required this.onClearQuery,
-    required this.onFilterChanged,
+    required this.onYearChanged,
+    required this.onClearYear,
     required this.onSortChanged,
   });
 
@@ -255,16 +284,19 @@ class _SavedPaperControls extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final stackControls = constraints.maxWidth < 360;
-              final filterMenu = _FilterMenu(
-                value: filter,
-                onChanged: onFilterChanged,
+              final yearFilter = _YearFilter(
+                controller: yearController,
+                selectedYear: selectedYear,
+                availableYears: availableYears,
+                onChanged: onYearChanged,
+                onClear: onClearYear,
               );
               final sortMenu = _SortMenu(value: sort, onChanged: onSortChanged);
 
               if (stackControls) {
                 return Column(
                   children: [
-                    filterMenu,
+                    yearFilter,
                     const SizedBox(height: AppDimensions.sm),
                     sortMenu,
                   ],
@@ -273,7 +305,7 @@ class _SavedPaperControls extends StatelessWidget {
 
               return Row(
                 children: [
-                  Expanded(child: filterMenu),
+                  Expanded(child: yearFilter),
                   const SizedBox(width: AppDimensions.sm),
                   Expanded(child: sortMenu),
                 ],
@@ -286,36 +318,91 @@ class _SavedPaperControls extends StatelessWidget {
   }
 }
 
-class _FilterMenu extends StatelessWidget {
-  final _BookmarkFilter value;
-  final ValueChanged<_BookmarkFilter> onChanged;
+class _YearFilter extends StatelessWidget {
+  final TextEditingController controller;
+  final int? selectedYear;
+  final List<int> availableYears;
+  final ValueChanged<int?> onChanged;
+  final VoidCallback onClear;
 
-  const _FilterMenu({required this.value, required this.onChanged});
+  const _YearFilter({
+    required this.controller,
+    required this.selectedYear,
+    required this.availableYears,
+    required this.onChanged,
+    required this.onClear,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<_BookmarkFilter>(
-      initialValue: value,
-      isExpanded: true,
-      decoration: const InputDecoration(
-        prefixIcon: Icon(Icons.filter_list, size: 20),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      ),
-      items: const [
-        DropdownMenuItem(value: _BookmarkFilter.all, child: Text('All years')),
-        DropdownMenuItem(value: _BookmarkFilter.recent, child: Text('2020+')),
-        DropdownMenuItem(
-          value: _BookmarkFilter.older,
-          child: Text('Before 2020'),
-        ),
-      ],
-      selectedItemBuilder: (context) => const [
-        Text('All', overflow: TextOverflow.ellipsis),
-        Text('2020+', overflow: TextOverflow.ellipsis),
-        Text('Old', overflow: TextOverflow.ellipsis),
-      ],
-      onChanged: (value) {
-        if (value != null) onChanged(value);
+    return Autocomplete<int>(
+      initialValue: TextEditingValue(text: selectedYear?.toString() ?? ''),
+      displayStringForOption: (year) => year.toString(),
+      optionsBuilder: (value) {
+        final query = value.text.trim();
+        if (query.isEmpty) return availableYears;
+        return availableYears.where((year) => year.toString().contains(query));
+      },
+      onSelected: (year) {
+        controller.text = year.toString();
+        onChanged(year);
+      },
+      fieldViewBuilder:
+          (context, textEditingController, focusNode, onFieldSubmitted) {
+            if (controller.text != textEditingController.text) {
+              textEditingController.text = controller.text;
+            }
+            return TextField(
+              controller: textEditingController,
+              focusNode: focusNode,
+              decoration: InputDecoration(
+                hintText: 'All years',
+                prefixIcon: const Icon(Icons.calendar_today_outlined, size: 18),
+                suffixIcon: selectedYear != null
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 16),
+                        onPressed: () {
+                          textEditingController.clear();
+                          onClear();
+                        },
+                      )
+                    : const Icon(Icons.arrow_drop_down),
+              ),
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              onChanged: (value) {
+                controller.text = value;
+                onChanged(int.tryParse(value.trim()));
+              },
+              onSubmitted: (_) => onFieldSubmitted(),
+            );
+          },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(AppDimensions.shapeSm),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 220, maxWidth: 240),
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: options.length,
+                separatorBuilder: (_, _) =>
+                    const Divider(height: 1, color: AppColors.outlineVariant),
+                itemBuilder: (context, index) {
+                  final year = options.elementAt(index);
+                  return ListTile(
+                    dense: true,
+                    title: Text(year.toString()),
+                    onTap: () => onSelected(year),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
       },
     );
   }

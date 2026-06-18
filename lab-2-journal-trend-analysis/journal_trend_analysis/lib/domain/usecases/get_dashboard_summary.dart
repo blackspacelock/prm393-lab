@@ -9,8 +9,10 @@ class DashboardSummary {
   final Publication? mostInfluentialPaper;
   final String? topJournalName;
   final int? topJournalPublications;
+  final int? topJournalCitations;
   final String? topAuthorName;
   final int? topAuthorPublications;
+  final int? topAuthorCitations;
   final List<YearTrendData> sparklineData;
 
   const DashboardSummary({
@@ -20,8 +22,10 @@ class DashboardSummary {
     this.mostInfluentialPaper,
     this.topJournalName,
     this.topJournalPublications,
+    this.topJournalCitations,
     this.topAuthorName,
     this.topAuthorPublications,
+    this.topAuthorCitations,
     required this.sparklineData,
   });
 }
@@ -53,18 +57,23 @@ class GetDashboardSummary {
       ..sort((a, b) => b.citedByCount.compareTo(a.citedByCount));
 
     final Map<String, int> journalCounts = {};
+    final Map<String, int> journalCitations = {};
     for (final pub in publications) {
       final j = pub.journalName;
       if (j != null && j.isNotEmpty) {
         journalCounts[j] = (journalCounts[j] ?? 0) + 1;
+        journalCitations[j] = (journalCitations[j] ?? 0) + pub.citedByCount;
       }
     }
 
     final Map<String, int> authorCounts = {};
+    final Map<String, int> authorCitations = {};
     for (final pub in publications) {
       for (final author in pub.authors) {
         authorCounts[author.displayName] =
             (authorCounts[author.displayName] ?? 0) + 1;
+        authorCitations[author.displayName] =
+            (authorCitations[author.displayName] ?? 0) + pub.citedByCount;
       }
     }
 
@@ -89,8 +98,14 @@ class GetDashboardSummary {
           : null,
       topJournalName: topJournalEntry?.key,
       topJournalPublications: topJournalEntry?.value,
+      topJournalCitations: topJournalEntry != null
+          ? journalCitations[topJournalEntry.key]
+          : null,
       topAuthorName: topAuthorEntry?.key,
       topAuthorPublications: topAuthorEntry?.value,
+      topAuthorCitations: topAuthorEntry != null
+          ? authorCitations[topAuthorEntry.key]
+          : null,
       sparklineData: trendData,
     );
   }

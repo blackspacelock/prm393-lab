@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/formatter.dart';
 import '../../domain/usecases/get_trend_data.dart';
 import '../providers/providers.dart';
-import '../widgets/author_chip.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
 import '../widgets/ranked_list_tile.dart';
@@ -34,15 +34,23 @@ final filteredTrendDataProvider = Provider<List<YearTrendData>>((ref) {
       .toList();
 });
 
-class TrendAnalysisScreen extends ConsumerWidget {
+class TrendAnalysisScreen extends ConsumerStatefulWidget {
   const TrendAnalysisScreen({super.key});
 
-  void _showYearRangeDialog(BuildContext context, WidgetRef ref) {
+  @override
+  ConsumerState<TrendAnalysisScreen> createState() =>
+      _TrendAnalysisScreenState();
+}
+
+class _TrendAnalysisScreenState extends ConsumerState<TrendAnalysisScreen> {
+  int _journalsVisible = 10;
+  int _authorsVisible = 10;
+
+  void _showYearRangeDialog() {
     final trendData = ref.read(trendDataProvider);
     final currentRange = ref.read(trendYearRangeProvider);
     final now = DateTime.now().year;
 
-    // Determine available year range from data
     final minYear = trendData.isNotEmpty ? trendData.first.year : now - 20;
     final maxYear = trendData.isNotEmpty ? trendData.last.year : now;
 
@@ -59,7 +67,6 @@ class TrendAnalysisScreen extends ConsumerWidget {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Start year
                   Row(
                     children: [
                       Text(
@@ -90,7 +97,6 @@ class TrendAnalysisScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: AppDimensions.base),
-                  // End year
                   Row(
                     children: [
                       Text(
@@ -150,13 +156,14 @@ class TrendAnalysisScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final pubAsync = ref.watch(paginatedPublicationsProvider);
     final trendData = ref.watch(filteredTrendDataProvider);
     final topJournals = ref.watch(topJournalsProvider);
     final topAuthors = ref.watch(topAuthorsProvider);
     final query = ref.watch(searchQueryProvider);
     final yearRange = ref.watch(trendYearRangeProvider);
+    final summary = ref.watch(dashboardSummaryProvider);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -169,7 +176,7 @@ class TrendAnalysisScreen extends ConsumerWidget {
               Icons.date_range_outlined,
               color: yearRange != null ? AppColors.primaryContainer : null,
             ),
-            onPressed: () => _showYearRangeDialog(context, ref),
+            onPressed: _showYearRangeDialog,
           ),
         ],
       ),
@@ -189,19 +196,35 @@ class TrendAnalysisScreen extends ConsumerWidget {
 
           final rankMode = ref.watch(trendRankModeProvider);
 
-          // Sort journals and authors based on rank mode
+          // Sort with tiebreaker
           final sortedJournals = List.of(topJournals)
-            ..sort(
-              (a, b) => rankMode == TrendRankMode.citations
-                  ? b.totalCitations.compareTo(a.totalCitations)
-                  : b.publicationCount.compareTo(a.publicationCount),
-            );
+            ..sort((a, b) {
+              if (rankMode == TrendRankMode.citations) {
+                final cmp = b.totalCitations.compareTo(a.totalCitations);
+                return cmp != 0
+                    ? cmp
+                    : b.publicationCount.compareTo(a.publicationCount);
+              } else {
+                final cmp = b.publicationCount.compareTo(a.publicationCount);
+                return cmp != 0
+                    ? cmp
+                    : b.totalCitations.compareTo(a.totalCitations);
+              }
+            });
           final sortedAuthors = List.of(topAuthors)
-            ..sort(
-              (a, b) => rankMode == TrendRankMode.citations
-                  ? b.totalCitations.compareTo(a.totalCitations)
-                  : b.publicationCount.compareTo(a.publicationCount),
-            );
+            ..sort((a, b) {
+              if (rankMode == TrendRankMode.citations) {
+                final cmp = b.totalCitations.compareTo(a.totalCitations);
+                return cmp != 0
+                    ? cmp
+                    : b.publicationCount.compareTo(a.publicationCount);
+              } else {
+                final cmp = b.publicationCount.compareTo(a.publicationCount);
+                return cmp != 0
+                    ? cmp
+                    : b.totalCitations.compareTo(a.totalCitations);
+              }
+            });
 
           final maxJ = sortedJournals.isNotEmpty
               ? (rankMode == TrendRankMode.citations
@@ -214,14 +237,21 @@ class TrendAnalysisScreen extends ConsumerWidget {
                     : sortedAuthors.first.publicationCount)
               : 1;
 
+          final visibleJournals = sortedJournals
+              .take(_journalsVisible)
+              .toList();
+          final visibleAuthors = sortedAuthors.take(_authorsVisible).toList();
+          final hasMoreJournals = sortedJournals.length > _journalsVisible;
+          final hasMoreAuthors = sortedAuthors.length > _authorsVisible;
+
           return Column(
             children: [
               // Sticky topic context bar
               if (query.isNotEmpty)
                 Container(
-                  height: 44,
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppDimensions.base,
+                    vertical: AppDimensions.sm,
                   ),
                   decoration: const BoxDecoration(
                     color: AppColors.surfaceContainerLowest,
@@ -241,25 +271,27 @@ class TrendAnalysisScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: AppDimensions.sm),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.md,
-                          vertical: AppDimensions.xs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondaryContainer,
-                          borderRadius: BorderRadius.circular(
-                            AppDimensions.shapeSm,
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppDimensions.md,
+                            vertical: AppDimensions.xs,
                           ),
-                        ),
-                        child: Text(
-                          query,
-                          style: AppTextStyles.labelMedium.copyWith(
-                            color: AppColors.onSecondaryContainer,
+                          decoration: BoxDecoration(
+                            color: AppColors.secondaryContainer,
+                            borderRadius: BorderRadius.circular(
+                              AppDimensions.shapeSm,
+                            ),
+                          ),
+                          child: Text(
+                            query,
+                            style: AppTextStyles.labelMedium.copyWith(
+                              color: AppColors.onSecondaryContainer,
+                            ),
                           ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: AppDimensions.sm),
                       if (yearRange != null) ...[
                         Text(
                           '${yearRange.$1}–${yearRange.$2}',
@@ -293,7 +325,57 @@ class TrendAnalysisScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Bar chart card
+                      // KPI row
+                      if (paginated.totalCount > 0)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppDimensions.base,
+                            AppDimensions.base,
+                            AppDimensions.base,
+                            0,
+                          ),
+                          child: IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: _KpiBox(
+                                    label: 'Total Papers',
+                                    value: Formatter.formatCitationCount(
+                                      paginated.totalCount,
+                                    ),
+                                    icon: Icons.article,
+                                    iconColor: AppColors.primaryContainer,
+                                  ),
+                                ),
+                                const SizedBox(width: AppDimensions.sm),
+                                Expanded(
+                                  child: _KpiBox(
+                                    label: 'Avg. Citations',
+                                    value: Formatter.formatDouble(
+                                      summary.avgCitations,
+                                    ),
+                                    icon: Icons.format_quote,
+                                    iconColor: AppColors.metricOrange,
+                                  ),
+                                ),
+                                const SizedBox(width: AppDimensions.sm),
+                                Expanded(
+                                  child: _KpiBox(
+                                    label: 'Most Active Year',
+                                    value:
+                                        summary.mostActiveYear?.toString() ??
+                                        'N/A',
+                                    icon: Icons.calendar_today,
+                                    iconColor: AppColors.metricGreen,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      // Publications per year chart
                       Padding(
                         padding: const EdgeInsets.all(AppDimensions.base),
                         child: Container(
@@ -399,17 +481,20 @@ class TrendAnalysisScreen extends ConsumerWidget {
                         ),
                       ),
                       ...List.generate(
-                        sortedJournals.length,
+                        visibleJournals.length,
                         (i) => RankedListTile(
                           rank: i + 1,
-                          title: sortedJournals[i].name,
+                          title: visibleJournals[i].name,
                           subtitle: rankMode == TrendRankMode.citations
-                              ? '${sortedJournals[i].publicationCount} publications'
-                              : '${sortedJournals[i].totalCitations} total citations',
+                              ? '${visibleJournals[i].publicationCount} papers'
+                              : '${visibleJournals[i].totalCitations} total citations',
                           count: rankMode == TrendRankMode.citations
-                              ? sortedJournals[i].totalCitations
-                              : sortedJournals[i].publicationCount,
+                              ? visibleJournals[i].totalCitations
+                              : visibleJournals[i].publicationCount,
                           maxCount: maxJ,
+                          countLabel: rankMode == TrendRankMode.citations
+                              ? 'citations'
+                              : null,
                           onTap: () {
                             ref
                                     .read(selectedTopicFilterProvider.notifier)
@@ -417,11 +502,18 @@ class TrendAnalysisScreen extends ConsumerWidget {
                                 null;
                             ref.read(searchPageProvider.notifier).state = 1;
                             ref.read(searchQueryProvider.notifier).state =
-                                sortedJournals[i].name;
+                                visibleJournals[i].name;
+                            ref.read(paperSortOptionProvider.notifier).state =
+                                PaperSortOption.relevance;
                             context.go('/search');
                           },
                         ),
                       ),
+                      if (hasMoreJournals)
+                        _ShowMoreButton(
+                          onPressed: () =>
+                              setState(() => _journalsVisible += 10),
+                        ),
 
                       // Top Authors
                       Padding(
@@ -438,19 +530,21 @@ class TrendAnalysisScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      ...List.generate(sortedAuthors.length, (i) {
-                        final name = sortedAuthors[i].author.displayName;
+                      ...List.generate(visibleAuthors.length, (i) {
+                        final name = visibleAuthors[i].author.displayName;
                         return RankedListTile(
                           rank: i + 1,
                           title: name,
                           subtitle: rankMode == TrendRankMode.citations
-                              ? '${sortedAuthors[i].publicationCount} publications'
-                              : '${sortedAuthors[i].totalCitations} total citations',
+                              ? '${visibleAuthors[i].publicationCount} papers'
+                              : '${visibleAuthors[i].totalCitations} total citations',
                           count: rankMode == TrendRankMode.citations
-                              ? sortedAuthors[i].totalCitations
-                              : sortedAuthors[i].publicationCount,
+                              ? visibleAuthors[i].totalCitations
+                              : visibleAuthors[i].publicationCount,
                           maxCount: maxA,
-                          leading: AuthorChip(displayName: name),
+                          countLabel: rankMode == TrendRankMode.citations
+                              ? 'citations'
+                              : null,
                           onTap: () {
                             ref
                                     .read(selectedTopicFilterProvider.notifier)
@@ -458,10 +552,17 @@ class TrendAnalysisScreen extends ConsumerWidget {
                                 null;
                             ref.read(searchPageProvider.notifier).state = 1;
                             ref.read(searchQueryProvider.notifier).state = name;
+                            ref.read(paperSortOptionProvider.notifier).state =
+                                PaperSortOption.relevance;
                             context.go('/search');
                           },
                         );
                       }),
+                      if (hasMoreAuthors)
+                        _ShowMoreButton(
+                          onPressed: () =>
+                              setState(() => _authorsVisible += 10),
+                        ),
                       const SizedBox(height: AppDimensions.xxl),
                     ],
                   ),
@@ -470,6 +571,85 @@ class TrendAnalysisScreen extends ConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _KpiBox extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color iconColor;
+
+  const _KpiBox({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.sm,
+        vertical: AppDimensions.md,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
+        border: Border.all(color: AppColors.outlineVariant, width: 1),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 20, color: iconColor),
+          const SizedBox(height: AppDimensions.xs),
+          Text(
+            value,
+            style: AppTextStyles.titleMedium.copyWith(
+              color: AppColors.onSurface,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShowMoreButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _ShowMoreButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.base,
+        vertical: AppDimensions.sm,
+      ),
+      child: Center(
+        child: OutlinedButton.icon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.expand_more),
+          label: const Text('Show more'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primaryContainer,
+            side: const BorderSide(color: AppColors.primaryContainer),
+            shape: const StadiumBorder(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+          ),
+        ),
       ),
     );
   }

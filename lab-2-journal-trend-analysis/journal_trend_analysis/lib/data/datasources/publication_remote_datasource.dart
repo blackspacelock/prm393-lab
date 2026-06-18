@@ -46,7 +46,7 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
         '/works',
         queryParameters: {
-          'filter': 'default.search:$query',
+          'search': query,
           'per_page': perPage,
           'page': page,
           'sort': 'relevance_score:desc',
@@ -74,14 +74,23 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
     int perPage = 25,
   }) async {
     try {
+      final queryParameters = <String, dynamic>{
+        'per_page': perPage,
+        'page': page,
+      };
+
+      // Use 'search' param for text-based searches (avoids comma issues in names)
+      if (filterKey == 'default.search') {
+        queryParameters['search'] = filterId;
+        queryParameters['sort'] = 'relevance_score:desc';
+      } else {
+        queryParameters['filter'] = '$filterKey:$filterId';
+        queryParameters['sort'] = 'cited_by_count:desc';
+      }
+
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
         '/works',
-        queryParameters: {
-          'filter': '$filterKey:$filterId',
-          'per_page': perPage,
-          'page': page,
-          'sort': 'cited_by_count:desc',
-        },
+        queryParameters: queryParameters,
       );
 
       final data = response.data;

@@ -147,11 +147,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _searchJournal(String journalName) {
+    ref.read(paperSortOptionProvider.notifier).state =
+        PaperSortOption.relevance;
     _controller.text = journalName;
     _submitFreeText(journalName);
   }
 
   void _searchAuthor(String authorName) {
+    ref.read(paperSortOptionProvider.notifier).state =
+        PaperSortOption.relevance;
     _controller.text = authorName;
     _submitFreeText(authorName);
   }
@@ -652,6 +656,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   List<Publication> _sortResults(List<Publication> pubs, PaperSortOption sort) {
     switch (sort) {
+      case PaperSortOption.relevance:
+        break;
       case PaperSortOption.citationCount:
         pubs.sort((a, b) => b.citedByCount.compareTo(a.citedByCount));
       case PaperSortOption.year:
@@ -665,6 +671,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   String _sortLabel(PaperSortOption opt) => switch (opt) {
+    PaperSortOption.relevance => 'Relevance',
     PaperSortOption.citationCount => 'Most Cited',
     PaperSortOption.year => 'Newest First',
     PaperSortOption.title => 'A–Z (Title)',

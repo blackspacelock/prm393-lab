@@ -11,6 +11,7 @@ class RankedListTile extends StatefulWidget {
   final int maxCount;
   final Widget? leading;
   final VoidCallback? onTap;
+  final String? countLabel;
 
   const RankedListTile({
     super.key,
@@ -21,6 +22,7 @@ class RankedListTile extends StatefulWidget {
     required this.maxCount,
     this.leading,
     this.onTap,
+    this.countLabel,
   });
 
   @override
@@ -33,7 +35,7 @@ class _RankedListTileState extends State<RankedListTile> {
 
   @override
   Widget build(BuildContext context) {
-    final paperLabel = widget.count == 1 ? 'paper' : 'papers';
+    final label = widget.countLabel ?? (widget.count == 1 ? 'paper' : 'papers');
     final isActive = _hovering || _pressing;
 
     return MouseRegion(
@@ -99,7 +101,7 @@ class _RankedListTileState extends State<RankedListTile> {
                 ),
               ),
               const SizedBox(width: AppDimensions.xs),
-              _CountBadge(label: '${widget.count} $paperLabel'),
+              _CountBadge(label: '${widget.count} $label'),
             ],
           ),
         ),

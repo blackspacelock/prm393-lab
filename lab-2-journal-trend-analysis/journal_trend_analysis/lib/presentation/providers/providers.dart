@@ -172,12 +172,15 @@ final topJournalsProvider = Provider<List<JournalWithCount>>((ref) {
 
 // ── Trending ──────────────────────────────────────────────────────────────────
 
-/// Fetches trending publications filtered by an optional OpenAlex concept ID.
+/// Fetches live domain categories for the trending chips.
+final trendingCategoriesProvider = domainsProvider;
+
+/// Fetches trending publications filtered by an optional OpenAlex domain ID.
 final trendingPublicationsProvider =
-    FutureProvider.family<List<Publication>, String?>((ref, conceptId) async {
+    FutureProvider.family<List<Publication>, String?>((ref, domainId) async {
       final models = await ref
           .read(remoteDataSourceProvider)
-          .getTrending(conceptId: conceptId);
+          .getTrending(domainId: domainId);
       return models.map((m) => m.toEntity()).toList();
     });
 

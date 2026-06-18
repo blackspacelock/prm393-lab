@@ -17,10 +17,7 @@ final appRouter = GoRouter(
       builder: (context, state, child) =>
           _ScaffoldWithNav(location: state.uri.path, child: child),
       routes: [
-        GoRoute(
-          path: '/trending',
-          builder: (_, _) => const TrendingScreen(),
-        ),
+        GoRoute(path: '/trending', builder: (_, _) => const TrendingScreen()),
         GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
         GoRoute(
           path: '/dashboard',
@@ -31,10 +28,7 @@ final appRouter = GoRouter(
           path: '/network',
           builder: (_, _) => const AuthorNetworkScreen(),
         ),
-        GoRoute(
-          path: '/bookmarks',
-          builder: (_, _) => const BookmarksScreen(),
-        ),
+        GoRoute(path: '/bookmarks', builder: (_, _) => const BookmarksScreen()),
       ],
     ),
     GoRoute(
@@ -72,50 +66,72 @@ class _ScaffoldWithNav extends StatelessWidget {
             top: BorderSide(color: AppColors.outlineVariant, width: 0.5),
           ),
         ),
-        child: NavigationBar(
-          selectedIndex: _selectedIndex,
-          backgroundColor: AppColors.surfaceContainerLowest,
-          indicatorColor: AppColors.secondaryContainer,
-          onDestinationSelected: (i) => switch (i) {
-            0 => context.go('/trending'),
-            1 => context.go('/search'),
-            2 => context.go('/dashboard'),
-            3 => context.go('/heatmap'),
-            4 => context.go('/network'),
-            _ => context.go('/bookmarks'),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final labelFontSize = (constraints.maxWidth / 48).clamp(8.0, 10.0);
+
+            return NavigationBarTheme(
+              data: NavigationBarTheme.of(context).copyWith(
+                labelTextStyle: WidgetStateProperty.resolveWith(
+                  (states) => TextStyle(
+                    fontSize: labelFontSize,
+                    fontWeight: states.contains(WidgetState.selected)
+                        ? FontWeight.w500
+                        : FontWeight.w400,
+                    color: states.contains(WidgetState.selected)
+                        ? AppColors.primaryContainer
+                        : AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              child: NavigationBar(
+                selectedIndex: _selectedIndex,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                backgroundColor: AppColors.surfaceContainerLowest,
+                indicatorColor: AppColors.secondaryContainer,
+                onDestinationSelected: (i) => switch (i) {
+                  0 => context.go('/trending'),
+                  1 => context.go('/search'),
+                  2 => context.go('/dashboard'),
+                  3 => context.go('/heatmap'),
+                  4 => context.go('/network'),
+                  _ => context.go('/bookmarks'),
+                },
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.local_fire_department_outlined),
+                    selectedIcon: Icon(Icons.local_fire_department),
+                    label: 'Trending',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.search_outlined),
+                    selectedIcon: Icon(Icons.search),
+                    label: 'Search',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.dashboard_outlined),
+                    selectedIcon: Icon(Icons.dashboard),
+                    label: 'Dashboard',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.map_outlined),
+                    selectedIcon: Icon(Icons.map),
+                    label: 'Heatmap',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.hub_outlined),
+                    selectedIcon: Icon(Icons.hub),
+                    label: 'Network',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.bookmark_border),
+                    selectedIcon: Icon(Icons.bookmark),
+                    label: 'Saved',
+                  ),
+                ],
+              ),
+            );
           },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.local_fire_department_outlined),
-              selectedIcon: Icon(Icons.local_fire_department),
-              label: 'Trending',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.search_outlined),
-              selectedIcon: Icon(Icons.search),
-              label: 'Search',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard),
-              label: 'Dashboard',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.map_outlined),
-              selectedIcon: Icon(Icons.map),
-              label: 'Heatmap',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.hub_outlined),
-              selectedIcon: Icon(Icons.hub),
-              label: 'Network',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.bookmark_border),
-              selectedIcon: Icon(Icons.bookmark),
-              label: 'Saved',
-            ),
-          ],
         ),
       ),
     );

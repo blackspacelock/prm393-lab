@@ -30,9 +30,9 @@ abstract class PublicationRemoteDataSource {
 
   Future<List<PublicationModel>> getTopPapers({String? topic});
 
-  /// Recent (2022–present) high-impact papers, optionally scoped to a concept.
+  /// Recent (2022-present) high-impact papers, optionally scoped to a domain.
   Future<List<PublicationModel>> getTrending({
-    String? conceptId,
+    String? domainId,
     int perPage = 30,
   });
 }
@@ -137,12 +137,12 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
 
   @override
   Future<List<PublicationModel>> getTrending({
-    String? conceptId,
+    String? domainId,
     int perPage = 30,
   }) async {
     try {
-      final filter = conceptId != null
-          ? 'from_publication_date:2022-01-01,type:article,concepts.id:$conceptId'
+      final filter = domainId != null
+          ? 'from_publication_date:2022-01-01,type:article,primary_topic.domain.id:$domainId'
           : 'from_publication_date:2022-01-01,type:article';
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
         '/works',

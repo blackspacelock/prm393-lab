@@ -13,6 +13,7 @@ class BookmarksScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(bookmarkNotifierProvider);
+    final hasItems = state.value?.isNotEmpty ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -20,42 +21,63 @@ class BookmarksScreen extends ConsumerWidget {
         title: const Text('Saved Papers'),
         backgroundColor: AppColors.surfaceContainerLowest,
         actions: [
-          state.whenOrNull(
-            data: (bookmarks) => bookmarks.isNotEmpty
-                ? TextButton(
-                    onPressed: () => _confirmClearAll(context, ref),
-                    child: Text(
-                      'Clear all',
-                      style: AppTextStyles.labelLarge.copyWith(
-                        color: AppColors.primaryContainer,
-                      ),
-                    ),
-                  )
-                : null,
-          ) ?? const SizedBox.shrink(),
+          if (hasItems)
+            TextButton(
+              onPressed: () => _confirmClearAll(context, ref),
+              child: Text(
+                'Clear all',
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: AppColors.primaryContainer,
+                ),
+              ),
+            ),
         ],
       ),
       body: state.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data: (bookmarks) {
-          if (bookmarks.isEmpty) {
-            return _EmptyBookmarks();
-          }
-          return ListView.separated(
-            itemCount: bookmarks.length,
-            separatorBuilder: (_, _) => const Divider(
-              height: 1,
-              indent: AppDimensions.base,
-              endIndent: AppDimensions.base,
-            ),
-            itemBuilder: (context, i) {
-              final pub = bookmarks[i];
-              return PublicationCard(
-                publication: pub,
-                onTap: () => context.push('/publication/${pub.id}', extra: pub),
-              );
-            },
+        data: (pubs) {
+          if (pubs.isEmpty) return const _EmptyBookmarks();
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppDimensions.base,
+                  AppDimensions.md,
+                  AppDimensions.base,
+                  AppDimensions.sm,
+                ),
+                child: Text(
+                  '${pubs.length} saved paper${pubs.length == 1 ? '' : 's'}',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Divider(height: 1, color: AppColors.outlineVariant),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: pubs.length,
+                  separatorBuilder: (_, _) => const Divider(
+                    height: 1,
+                    indent: AppDimensions.base,
+                    endIndent: AppDimensions.base,
+                  ),
+                  itemBuilder: (context, i) {
+                    final pub = pubs[i];
+                    return PublicationCard(
+                      publication: pub,
+                      onTap: () => context.push(
+                        '/publication/${Uri.encodeComponent(pub.id)}',
+                        extra: pub,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -94,13 +116,15 @@ class BookmarksScreen extends ConsumerWidget {
 }
 
 class _EmptyBookmarks extends StatelessWidget {
+  const _EmptyBookmarks();
+
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
+          const Icon(
             Icons.bookmark_border,
             size: 64,
             color: AppColors.outlineVariant,
@@ -113,12 +137,15 @@ class _EmptyBookmarks extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppDimensions.sm),
-          Text(
-            'Tap the bookmark icon on any paper to save it here.',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.onSurfaceVariant,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppDimensions.xl),
+            child: Text(
+              'Tap the bookmark icon on any paper to save it here.',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

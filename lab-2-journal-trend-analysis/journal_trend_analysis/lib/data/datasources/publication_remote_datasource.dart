@@ -29,6 +29,12 @@ abstract class PublicationRemoteDataSource {
   });
 
   Future<List<PublicationModel>> getTopPapers({String? topic});
+
+  /// Recent (2022–present) high-impact papers, optionally scoped to a concept.
+  Future<List<PublicationModel>> getTrending({
+    String? conceptId,
+    int perPage = 30,
+  });
 }
 
 class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
@@ -120,6 +126,31 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
         '/works',
         queryParameters: params,
+      );
+      return _parseResults(response.data);
+    } on DioException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      throw Exception('Parse error: $e');
+    }
+  }
+
+  @override
+  Future<List<PublicationModel>> getTrending({
+    String? conceptId,
+    int perPage = 30,
+  }) async {
+    try {
+      final filter = conceptId != null
+          ? 'from_publication_date:2022-01-01,type:article,concepts.id:$conceptId'
+          : 'from_publication_date:2022-01-01,type:article';
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/works',
+        queryParameters: {
+          'filter': filter,
+          'sort': 'cited_by_count:desc',
+          'per_page': perPage,
+        },
       );
       return _parseResults(response.data);
     } on DioException catch (e) {

@@ -1,11 +1,14 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/export_helper.dart';
 import '../../core/utils/formatter.dart';
 import '../../domain/entities/publication.dart';
 import '../providers/bookmark_providers.dart';
@@ -38,6 +41,50 @@ class PublicationDetailScreen extends ConsumerWidget {
     context.go('/search');
   }
 
+  Future<void> _openExportSheet(BuildContext context) async {
+    final format = await showModalBottomSheet<_PaperExportFormat>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppDimensions.shapeMd),
+        ),
+      ),
+      builder: (_) => const _PaperExportSheet(),
+    );
+
+    if (format == null || !context.mounted) return;
+
+    switch (format) {
+      case _PaperExportFormat.bibtex:
+        await Share.share(
+          ExportHelper.toBibTeX([publication]),
+          subject: '${publication.title} (BibTeX)',
+        );
+      case _PaperExportFormat.ris:
+        await Share.share(
+          ExportHelper.toRIS([publication]),
+          subject: '${publication.title} (RIS)',
+        );
+      case _PaperExportFormat.csv:
+        await Share.share(
+          ExportHelper.toCSV([publication]),
+          subject: '${publication.title} (CSV)',
+        );
+      case _PaperExportFormat.copyText:
+        await Clipboard.setData(
+          ClipboardData(text: ExportHelper.toPlainCitation(publication)),
+        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Citation copied to clipboard'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final abstract = Formatter.reconstructAbstract(
@@ -51,6 +98,11 @@ class PublicationDetailScreen extends ConsumerWidget {
         title: const Text('Publication Details'),
         backgroundColor: AppColors.surfaceContainerLowest,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.ios_share_outlined),
+            tooltip: 'Export / Share',
+            onPressed: () => _openExportSheet(context),
+          ),
           Consumer(
             builder: (context, ref, _) {
               final isBookmarked =
@@ -650,8 +702,9 @@ class _CitationLineChartState extends State<_CitationLineChart> {
               ],
               onChanged: (val) => setState(() {
                 _fromYear = val;
-                if (_toYear != null && val != null && _toYear! < val)
+                if (_toYear != null && val != null && _toYear! < val) {
                   _toYear = val;
+                }
               }),
             ),
             const SizedBox(width: AppDimensions.base),
@@ -789,6 +842,117 @@ class _CitationLineChartState extends State<_CitationLineChart> {
     );
   }
 }
+
+// ── Paper export ──────────────────────────────────────────────────────────────
+
+enum _PaperExportFormat { bibtex, ris, csv, copyText }
+
+class _PaperExportSheet extends StatelessWidget {
+  const _PaperExportSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppDimensions.base,
+          AppDimensions.base,
+          AppDimensions.base,
+          AppDimensions.xl,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppDimensions.base),
+            Text(
+              'Export / Share',
+              style: AppTextStyles.titleLarge.copyWith(color: AppColors.onSurface),
+            ),
+            const SizedBox(height: AppDimensions.xs),
+            Text(
+              'Choose a format for this paper.',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppDimensions.base),
+            _ExportTile(
+              icon: Icons.copy_outlined,
+              label: 'Copy citation',
+              description: 'Plain text — paste anywhere',
+              onTap: () => Navigator.of(context).pop(_PaperExportFormat.copyText),
+            ),
+            const Divider(height: 1),
+            _ExportTile(
+              icon: Icons.code,
+              label: 'BibTeX',
+              description: 'For LaTeX, Overleaf, Zotero',
+              onTap: () => Navigator.of(context).pop(_PaperExportFormat.bibtex),
+            ),
+            const Divider(height: 1),
+            _ExportTile(
+              icon: Icons.description_outlined,
+              label: 'RIS',
+              description: 'For Mendeley, EndNote, RefWorks',
+              onTap: () => Navigator.of(context).pop(_PaperExportFormat.ris),
+            ),
+            const Divider(height: 1),
+            _ExportTile(
+              icon: Icons.table_chart_outlined,
+              label: 'CSV',
+              description: 'For Excel, Google Sheets',
+              onTap: () => Navigator.of(context).pop(_PaperExportFormat.csv),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExportTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String description;
+  final VoidCallback onTap;
+
+  const _ExportTile({
+    required this.icon,
+    required this.label,
+    required this.description,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primaryContainer),
+      title: Text(
+        label,
+        style: AppTextStyles.titleMedium.copyWith(color: AppColors.onSurface),
+      ),
+      subtitle: Text(
+        description,
+        style: AppTextStyles.bodySmall.copyWith(color: AppColors.onSurfaceVariant),
+      ),
+      trailing: const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
+      onTap: onTap,
+    );
+  }
+}
+
+// ── Shared mini card ──────────────────────────────────────────────────────────
 
 class _MiniBox extends StatelessWidget {
   final String label;

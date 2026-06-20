@@ -53,17 +53,12 @@ class AuthorNetworkScreen extends ConsumerWidget {
     final query = ref.watch(searchQueryProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Author Network'),
-        backgroundColor: AppColors.surfaceContainerLowest,
-        elevation: 0,
-        scrolledUnderElevation: 1,
-      ),
+      backgroundColor: AppColors.surface,
       body: query.isEmpty
           ? const EmptyState(
               icon: Icons.hub_outlined,
               message:
-                  'Search for a topic in the Search tab to see the author collaboration network.',
+                  'Search for a topic in the Keywords tab to see the author collaboration network.',
             )
           : const _AuthorNetworkBody(),
     );

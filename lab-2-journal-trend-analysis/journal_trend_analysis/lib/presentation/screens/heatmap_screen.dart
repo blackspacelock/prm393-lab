@@ -28,12 +28,7 @@ class HeatmapScreen extends ConsumerWidget {
     final viewMode = ref.watch(heatmapViewModeProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Research Heatmap'),
-        backgroundColor: AppColors.surfaceContainerLowest,
-        elevation: 0,
-        scrolledUnderElevation: 1,
-      ),
+      backgroundColor: AppColors.surface,
       body: Column(
         children: [
           // Current topic indicator
@@ -96,7 +91,7 @@ class HeatmapScreen extends ConsumerWidget {
                 ? const EmptyState(
                     icon: Icons.map_outlined,
                     message:
-                        'Search for a topic in the Search tab to see the geographic distribution of research.',
+                        'Search for a topic in the Keywords tab to see the geographic distribution of research.',
                   )
                 : viewMode == HeatmapViewMode.country
                 ? const _CountryHeatmapView()

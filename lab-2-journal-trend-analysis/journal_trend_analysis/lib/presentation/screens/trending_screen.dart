@@ -41,7 +41,7 @@ class _TrendingScreenState extends ConsumerState<TrendingScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('All Trending'),
+        title: const Text('Home'),
         backgroundColor: AppColors.surfaceContainerLowest,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),

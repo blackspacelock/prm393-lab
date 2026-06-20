@@ -200,29 +200,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      appBar: AppBar(
-        title: const Text('Journal Trend Analyzer'),
-        backgroundColor: AppColors.surfaceContainerLowest,
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: AppColors.onSurfaceVariant),
-          tooltip: 'Topic Hierarchy',
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
-        actions: [
-          Builder(
-            builder: (ctx) => TextButton.icon(
-              icon: const Icon(Icons.tune, size: 20),
-              label: const Text('Filter'),
-              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.surface,
       drawer: _buildTopicHierarchyDrawer(),
       endDrawer: _buildFilterDrawer(),
       body: Column(
@@ -279,6 +257,53 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
               textInputAction: TextInputAction.search,
               onSubmitted: _submitFreeText,
+            ),
+          ),
+
+          // Topic Hierarchy & Filter buttons
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimensions.base,
+              AppDimensions.sm,
+              AppDimensions.base,
+              0,
+            ),
+            child: Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                  icon: const Icon(Icons.account_tree_outlined, size: 16),
+                  label: const Text('Topic Hierarchy'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.onSurfaceVariant,
+                    side: const BorderSide(color: AppColors.outlineVariant),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimensions.md,
+                      vertical: AppDimensions.sm,
+                    ),
+                    textStyle: AppTextStyles.labelMedium,
+                    shape: const StadiumBorder(),
+                  ),
+                ),
+                const SizedBox(width: AppDimensions.sm),
+                Builder(
+                  builder: (ctx) => OutlinedButton.icon(
+                    onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+                    icon: const Icon(Icons.tune, size: 16),
+                    label: const Text('Filter'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.onSurfaceVariant,
+                      side: const BorderSide(color: AppColors.outlineVariant),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimensions.md,
+                        vertical: AppDimensions.sm,
+                      ),
+                      textStyle: AppTextStyles.labelMedium,
+                      shape: const StadiumBorder(),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 

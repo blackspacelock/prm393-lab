@@ -102,144 +102,156 @@ class _JournalsScreenState extends ConsumerState<JournalsScreen> {
         elevation: 0,
         scrolledUnderElevation: 1,
       ),
-      body: Column(
-        children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppDimensions.base,
-              AppDimensions.md,
-              AppDimensions.base,
-              AppDimensions.sm,
-            ),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search journals by name…',
-                hintStyle: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                ),
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          _onSearchChanged('');
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: AppColors.surfaceContainer,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.shapeFull),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.shapeFull),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.shapeFull),
-                  borderSide: const BorderSide(
-                    color: AppColors.primaryContainer,
-                    width: 2,
-                  ),
-                ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: Column(
+          children: [
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimensions.base,
+                AppDimensions.md,
+                AppDimensions.base,
+                AppDimensions.sm,
               ),
-              textInputAction: TextInputAction.search,
-              onChanged: _onSearchChanged,
-            ),
-          ),
-
-          // Sort options
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppDimensions.base),
-            child: SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _SortChip(
-                    label: 'Citations',
-                    icon: Icons.format_quote,
-                    selected:
-                        ref.watch(journalSortProvider) ==
-                        JournalSortOption.citations,
-                    onTap: () => _onSortChanged(JournalSortOption.citations),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search journals by name…',
+                  hintStyle: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.onSurfaceVariant,
                   ),
-                  const SizedBox(width: AppDimensions.sm),
-                  _SortChip(
-                    label: 'Papers',
-                    icon: Icons.article_outlined,
-                    selected:
-                        ref.watch(journalSortProvider) ==
-                        JournalSortOption.papers,
-                    onTap: () => _onSortChanged(JournalSortOption.papers),
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            _onSearchChanged('');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: AppColors.surfaceContainer,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppDimensions.shapeFull,
+                    ),
+                    borderSide: BorderSide.none,
                   ),
-                  const SizedBox(width: AppDimensions.sm),
-                  _SortChip(
-                    label: 'Authors',
-                    icon: Icons.people_outlined,
-                    selected:
-                        ref.watch(journalSortProvider) ==
-                        JournalSortOption.authors,
-                    onTap: () => _onSortChanged(JournalSortOption.authors),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppDimensions.shapeFull,
+                    ),
+                    borderSide: BorderSide.none,
                   ),
-                  const SizedBox(width: AppDimensions.sm),
-                  _SortChip(
-                    label: 'Recently Active',
-                    icon: Icons.schedule,
-                    selected:
-                        ref.watch(journalSortProvider) ==
-                        JournalSortOption.recentlyActive,
-                    onTap: () =>
-                        _onSortChanged(JournalSortOption.recentlyActive),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppDimensions.shapeFull,
+                    ),
+                    borderSide: const BorderSide(
+                      color: AppColors.primaryContainer,
+                      width: 2,
+                    ),
                   ),
-                ],
+                ),
+                textInputAction: TextInputAction.search,
+                onChanged: _onSearchChanged,
               ),
             ),
-          ),
 
-          // Results count
-          if (_allJournals.isNotEmpty)
+            // Sort options
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppDimensions.base,
-                vertical: AppDimensions.xs,
               ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '${Formatter.formatCitationCount(_totalCount)} journals found',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
+              child: SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    _SortChip(
+                      label: 'Citations',
+                      icon: Icons.format_quote,
+                      selected:
+                          ref.watch(journalSortProvider) ==
+                          JournalSortOption.citations,
+                      onTap: () => _onSortChanged(JournalSortOption.citations),
+                    ),
+                    const SizedBox(width: AppDimensions.sm),
+                    _SortChip(
+                      label: 'Papers',
+                      icon: Icons.article_outlined,
+                      selected:
+                          ref.watch(journalSortProvider) ==
+                          JournalSortOption.papers,
+                      onTap: () => _onSortChanged(JournalSortOption.papers),
+                    ),
+                    const SizedBox(width: AppDimensions.sm),
+                    _SortChip(
+                      label: 'Authors',
+                      icon: Icons.people_outlined,
+                      selected:
+                          ref.watch(journalSortProvider) ==
+                          JournalSortOption.authors,
+                      onTap: () => _onSortChanged(JournalSortOption.authors),
+                    ),
+                    const SizedBox(width: AppDimensions.sm),
+                    _SortChip(
+                      label: 'Recently Active',
+                      icon: Icons.schedule,
+                      selected:
+                          ref.watch(journalSortProvider) ==
+                          JournalSortOption.recentlyActive,
+                      onTap: () =>
+                          _onSortChanged(JournalSortOption.recentlyActive),
+                    ),
+                  ],
                 ),
               ),
             ),
 
-          // Journal list
-          Expanded(
-            child: journalListAsync.when(
-              loading: () => _allJournals.isEmpty
-                  ? const ShimmerLoader()
-                  : _buildJournalList(),
-              error: (e, _) => _allJournals.isEmpty
-                  ? ErrorState(
-                      message: e.toString(),
-                      onRetry: () => ref.invalidate(journalListProvider),
-                    )
-                  : _buildJournalList(),
-              data: (_) => _allJournals.isEmpty
-                  ? const EmptyState(
-                      icon: Icons.menu_book,
-                      message: 'No journals found. Try a different search.',
-                    )
-                  : _buildJournalList(),
+            // Results count
+            if (_allJournals.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.base,
+                  vertical: AppDimensions.xs,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${Formatter.formatCitationCount(_totalCount)} journals found',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+
+            // Journal list
+            Expanded(
+              child: journalListAsync.when(
+                loading: () => _allJournals.isEmpty
+                    ? const ShimmerLoader()
+                    : _buildJournalList(),
+                error: (e, _) => _allJournals.isEmpty
+                    ? ErrorState(
+                        message: e.toString(),
+                        onRetry: () => ref.invalidate(journalListProvider),
+                      )
+                    : _buildJournalList(),
+                data: (_) => _allJournals.isEmpty
+                    ? const EmptyState(
+                        icon: Icons.menu_book,
+                        message: 'No journals found. Try a different search.',
+                      )
+                    : _buildJournalList(),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

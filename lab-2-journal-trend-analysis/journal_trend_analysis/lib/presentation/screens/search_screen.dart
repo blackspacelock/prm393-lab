@@ -203,94 +203,88 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       backgroundColor: AppColors.surface,
       drawer: _buildTopicHierarchyDrawer(),
       endDrawer: _buildFilterDrawer(),
-      body: Column(
-        children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppDimensions.base,
-              AppDimensions.md,
-              AppDimensions.base,
-              0,
-            ),
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              decoration: InputDecoration(
-                hintText: 'Search research topics…',
-                hintStyle: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                ),
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _controller.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _controller.clear();
-                          setState(() {
-                            _allResults = [];
-                            _totalCount = 0;
-                          });
-                          ref.read(searchQueryProvider.notifier).state = '';
-                          ref.read(selectedTopicFilterProvider.notifier).state =
-                              null;
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: AppColors.surfaceContainer,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.shapeFull),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.shapeFull),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.shapeFull),
-                  borderSide: const BorderSide(
-                    color: AppColors.primaryContainer,
-                    width: 2,
-                  ),
-                ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: Column(
+          children: [
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimensions.base,
+                AppDimensions.md,
+                AppDimensions.base,
+                0,
               ),
-              textInputAction: TextInputAction.search,
-              onSubmitted: _submitFreeText,
-            ),
-          ),
-
-          // Topic Hierarchy & Filter buttons
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppDimensions.base,
-              AppDimensions.sm,
-              AppDimensions.base,
-              0,
-            ),
-            child: Row(
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                  icon: const Icon(Icons.account_tree_outlined, size: 16),
-                  label: const Text('Topic Hierarchy'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.onSurfaceVariant,
-                    side: const BorderSide(color: AppColors.outlineVariant),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimensions.md,
-                      vertical: AppDimensions.sm,
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                decoration: InputDecoration(
+                  hintText: 'Search research topics…',
+                  hintStyle: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: _controller.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _controller.clear();
+                            setState(() {
+                              _allResults = [];
+                              _totalCount = 0;
+                            });
+                            ref.read(searchQueryProvider.notifier).state = '';
+                            ref
+                                    .read(selectedTopicFilterProvider.notifier)
+                                    .state =
+                                null;
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: AppColors.surfaceContainer,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppDimensions.shapeFull,
                     ),
-                    textStyle: AppTextStyles.labelMedium,
-                    shape: const StadiumBorder(),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppDimensions.shapeFull,
+                    ),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppDimensions.shapeFull,
+                    ),
+                    borderSide: const BorderSide(
+                      color: AppColors.primaryContainer,
+                      width: 2,
+                    ),
                   ),
                 ),
-                const SizedBox(width: AppDimensions.sm),
-                Builder(
-                  builder: (ctx) => OutlinedButton.icon(
-                    onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-                    icon: const Icon(Icons.tune, size: 16),
-                    label: const Text('Filter'),
+                textInputAction: TextInputAction.search,
+                onSubmitted: _submitFreeText,
+              ),
+            ),
+
+            // Topic Hierarchy & Filter buttons
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimensions.base,
+                AppDimensions.sm,
+                AppDimensions.base,
+                0,
+              ),
+              child: Row(
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                    icon: const Icon(Icons.account_tree_outlined, size: 16),
+                    label: const Text('Topic Hierarchy'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.onSurfaceVariant,
                       side: const BorderSide(color: AppColors.outlineVariant),
@@ -302,59 +296,78 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       shape: const StadiumBorder(),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // Autocomplete
-          if (_showAutocomplete) _buildAutocompleteSuggestions(),
-
-          // Active topic filter chip
-          if (topicFilter != null && !_showAutocomplete)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppDimensions.base,
-                AppDimensions.sm,
-                AppDimensions.base,
-                0,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Chip(
-                  avatar: Icon(
-                    _levelIcon(topicFilter.level),
-                    size: 16,
-                    color: AppColors.primaryContainer,
-                  ),
-                  label: Text(
-                    '${topicFilter.displayName} (${topicFilter.levelLabel})',
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: AppColors.onSurface,
+                  const SizedBox(width: AppDimensions.sm),
+                  Builder(
+                    builder: (ctx) => OutlinedButton.icon(
+                      onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+                      icon: const Icon(Icons.tune, size: 16),
+                      label: const Text('Filter'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.onSurfaceVariant,
+                        side: const BorderSide(color: AppColors.outlineVariant),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.md,
+                          vertical: AppDimensions.sm,
+                        ),
+                        textStyle: AppTextStyles.labelMedium,
+                        shape: const StadiumBorder(),
+                      ),
                     ),
                   ),
-                  deleteIcon: const Icon(Icons.close, size: 16),
-                  onDeleted: () {
-                    ref.read(selectedTopicFilterProvider.notifier).state = null;
-                    ref.read(searchQueryProvider.notifier).state = '';
-                    _controller.clear();
-                    setState(() {
-                      _allResults = [];
-                      _totalCount = 0;
-                    });
-                  },
-                  backgroundColor: AppColors.secondaryContainer,
-                  side: BorderSide.none,
-                ),
+                ],
               ),
             ),
 
-          if (!_showAutocomplete) const SizedBox(height: AppDimensions.sm),
+            // Autocomplete
+            if (_showAutocomplete) _buildAutocompleteSuggestions(),
 
-          // Results
-          if (!_showAutocomplete)
-            Expanded(child: _buildResults(paginatedAsync, sorted, query)),
-        ],
+            // Active topic filter chip
+            if (topicFilter != null && !_showAutocomplete)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppDimensions.base,
+                  AppDimensions.sm,
+                  AppDimensions.base,
+                  0,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Chip(
+                    avatar: Icon(
+                      _levelIcon(topicFilter.level),
+                      size: 16,
+                      color: AppColors.primaryContainer,
+                    ),
+                    label: Text(
+                      '${topicFilter.displayName} (${topicFilter.levelLabel})',
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: AppColors.onSurface,
+                      ),
+                    ),
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    onDeleted: () {
+                      ref.read(selectedTopicFilterProvider.notifier).state =
+                          null;
+                      ref.read(searchQueryProvider.notifier).state = '';
+                      _controller.clear();
+                      setState(() {
+                        _allResults = [];
+                        _totalCount = 0;
+                      });
+                    },
+                    backgroundColor: AppColors.secondaryContainer,
+                    side: BorderSide.none,
+                  ),
+                ),
+              ),
+
+            if (!_showAutocomplete) const SizedBox(height: AppDimensions.sm),
+
+            // Results
+            if (!_showAutocomplete)
+              Expanded(child: _buildResults(paginatedAsync, sorted, query)),
+          ],
+        ),
       ),
     );
   }

@@ -38,97 +38,101 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: state.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (pubs) {
-          if (pubs.isEmpty) return const _EmptyBookmarks();
-          final visiblePubs = _applySearchFilterAndSort(pubs);
-          final availableYears = _availableYears(pubs);
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: state.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (pubs) {
+            if (pubs.isEmpty) return const _EmptyBookmarks();
+            final visiblePubs = _applySearchFilterAndSort(pubs);
+            final availableYears = _availableYears(pubs);
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _SavedPaperControls(
-                controller: _searchController,
-                yearController: _yearController,
-                query: _query,
-                selectedYear: _selectedYear,
-                availableYears: availableYears,
-                sort: _sort,
-                onQueryChanged: (value) {
-                  setState(() => _query = value.trim().toLowerCase());
-                },
-                onClearQuery: () {
-                  _searchController.clear();
-                  setState(() => _query = '');
-                },
-                onYearChanged: _setYearFilter,
-                onClearYear: () => _setYearFilter(null),
-                onSortChanged: (value) => setState(() => _sort = value),
-              ),
-              // Clear all button (moved from AppBar)
-              if (hasItems)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.base,
-                  ),
-                  child: OutlinedButton.icon(
-                    onPressed: () => _confirmClearAll(context, ref),
-                    icon: const Icon(Icons.delete_outline, size: 16),
-                    label: const Text('Clear all'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red.shade600,
-                      side: BorderSide(color: Colors.red.shade300),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimensions.md,
-                        vertical: AppDimensions.sm,
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SavedPaperControls(
+                  controller: _searchController,
+                  yearController: _yearController,
+                  query: _query,
+                  selectedYear: _selectedYear,
+                  availableYears: availableYears,
+                  sort: _sort,
+                  onQueryChanged: (value) {
+                    setState(() => _query = value.trim().toLowerCase());
+                  },
+                  onClearQuery: () {
+                    _searchController.clear();
+                    setState(() => _query = '');
+                  },
+                  onYearChanged: _setYearFilter,
+                  onClearYear: () => _setYearFilter(null),
+                  onSortChanged: (value) => setState(() => _sort = value),
+                ),
+                // Clear all button (moved from AppBar)
+                if (hasItems)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimensions.base,
+                    ),
+                    child: OutlinedButton.icon(
+                      onPressed: () => _confirmClearAll(context, ref),
+                      icon: const Icon(Icons.delete_outline, size: 16),
+                      label: const Text('Clear all'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red.shade600,
+                        side: BorderSide(color: Colors.red.shade300),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.md,
+                          vertical: AppDimensions.sm,
+                        ),
+                        textStyle: AppTextStyles.labelMedium,
+                        shape: const StadiumBorder(),
                       ),
-                      textStyle: AppTextStyles.labelMedium,
-                      shape: const StadiumBorder(),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimensions.base,
+                    AppDimensions.sm,
+                    AppDimensions.base,
+                    AppDimensions.sm,
+                  ),
+                  child: Text(
+                    '${visiblePubs.length} of ${pubs.length} saved paper${pubs.length == 1 ? '' : 's'}',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
                     ),
                   ),
                 ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimensions.base,
-                  AppDimensions.sm,
-                  AppDimensions.base,
-                  AppDimensions.sm,
-                ),
-                child: Text(
-                  '${visiblePubs.length} of ${pubs.length} saved paper${pubs.length == 1 ? '' : 's'}',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              const Divider(height: 1, color: AppColors.outlineVariant),
-              Expanded(
-                child: visiblePubs.isEmpty
-                    ? _NoSavedPaperMatches(onClear: _resetControls)
-                    : ListView.separated(
-                        itemCount: visiblePubs.length,
-                        separatorBuilder: (_, _) => const Divider(
-                          height: 1,
-                          indent: AppDimensions.base,
-                          endIndent: AppDimensions.base,
+                const Divider(height: 1, color: AppColors.outlineVariant),
+                Expanded(
+                  child: visiblePubs.isEmpty
+                      ? _NoSavedPaperMatches(onClear: _resetControls)
+                      : ListView.separated(
+                          itemCount: visiblePubs.length,
+                          separatorBuilder: (_, _) => const Divider(
+                            height: 1,
+                            indent: AppDimensions.base,
+                            endIndent: AppDimensions.base,
+                          ),
+                          itemBuilder: (context, i) {
+                            final pub = visiblePubs[i];
+                            return PublicationCard(
+                              publication: pub,
+                              onTap: () => context.push(
+                                '/publication/${Uri.encodeComponent(pub.id)}',
+                                extra: pub,
+                              ),
+                            );
+                          },
                         ),
-                        itemBuilder: (context, i) {
-                          final pub = visiblePubs[i];
-                          return PublicationCard(
-                            publication: pub,
-                            onTap: () => context.push(
-                              '/publication/${Uri.encodeComponent(pub.id)}',
-                              extra: pub,
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          );
-        },
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

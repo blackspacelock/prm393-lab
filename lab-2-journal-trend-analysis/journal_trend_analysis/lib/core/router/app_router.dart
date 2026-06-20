@@ -1,34 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../domain/entities/journal.dart';
 import '../../domain/entities/publication.dart';
-import '../../presentation/screens/author_network_screen.dart';
-import '../../presentation/screens/bookmarks_screen.dart';
-import '../../presentation/screens/heatmap_screen.dart';
+import '../../presentation/screens/journal_detail_screen.dart';
+import '../../presentation/screens/journals_screen.dart';
+import '../../presentation/screens/keywords_screen.dart';
+import '../../presentation/screens/profile_screen.dart';
 import '../../presentation/screens/publication_detail_screen.dart';
-import '../../presentation/screens/search_screen.dart';
-import '../../presentation/screens/trend_analysis_screen.dart';
 import '../../presentation/screens/trending_screen.dart';
 import '../theme/app_colors.dart';
 
 final appRouter = GoRouter(
-  initialLocation: '/trending',
+  initialLocation: '/home',
   routes: [
     ShellRoute(
       builder: (context, state, child) =>
           _ScaffoldWithNav(location: state.uri.path, child: child),
       routes: [
-        GoRoute(path: '/trending', builder: (_, _) => const TrendingScreen()),
-        GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
-        GoRoute(
-          path: '/dashboard',
-          builder: (_, _) => const TrendAnalysisScreen(),
-        ),
-        GoRoute(path: '/heatmap', builder: (_, _) => const HeatmapScreen()),
-        GoRoute(
-          path: '/network',
-          builder: (_, _) => const AuthorNetworkScreen(),
-        ),
-        GoRoute(path: '/bookmarks', builder: (_, _) => const BookmarksScreen()),
+        // Tab 1: Home (formerly Trending)
+        GoRoute(path: '/home', builder: (_, _) => const TrendingScreen()),
+        // Tab 2: Journals
+        GoRoute(path: '/journals', builder: (_, _) => const JournalsScreen()),
+        // Tab 3: Keywords (integrated Search + Dashboard + Heatmap + Network)
+        GoRoute(path: '/keywords', builder: (_, _) => const KeywordsScreen()),
+        // Tab 4: Profile
+        GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
       ],
     ),
     GoRoute(
@@ -36,6 +32,13 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final pub = state.extra as Publication;
         return PublicationDetailScreen(publication: pub);
+      },
+    ),
+    GoRoute(
+      path: '/journals/:id',
+      builder: (context, state) {
+        final journal = state.extra as Journal;
+        return JournalDetailScreen(journal: journal);
       },
     ),
   ],
@@ -48,12 +51,10 @@ class _ScaffoldWithNav extends StatelessWidget {
   const _ScaffoldWithNav({required this.location, required this.child});
 
   int get _selectedIndex {
-    if (location.startsWith('/search')) return 1;
-    if (location.startsWith('/dashboard')) return 2;
-    if (location.startsWith('/heatmap')) return 3;
-    if (location.startsWith('/network')) return 4;
-    if (location.startsWith('/bookmarks')) return 5;
-    return 0; // /trending
+    if (location.startsWith('/journals')) return 1;
+    if (location.startsWith('/keywords')) return 2;
+    if (location.startsWith('/profile')) return 3;
+    return 0; // /home
   }
 
   @override
@@ -90,43 +91,31 @@ class _ScaffoldWithNav extends StatelessWidget {
                 backgroundColor: AppColors.surfaceContainerLowest,
                 indicatorColor: AppColors.secondaryContainer,
                 onDestinationSelected: (i) => switch (i) {
-                  0 => context.go('/trending'),
-                  1 => context.go('/search'),
-                  2 => context.go('/dashboard'),
-                  3 => context.go('/heatmap'),
-                  4 => context.go('/network'),
-                  _ => context.go('/bookmarks'),
+                  0 => context.go('/home'),
+                  1 => context.go('/journals'),
+                  2 => context.go('/keywords'),
+                  _ => context.go('/profile'),
                 },
                 destinations: const [
                   NavigationDestination(
-                    icon: Icon(Icons.local_fire_department_outlined),
-                    selectedIcon: Icon(Icons.local_fire_department),
-                    label: 'Trending',
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home),
+                    label: 'Home',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.menu_book_outlined),
+                    selectedIcon: Icon(Icons.menu_book),
+                    label: 'Journals',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.search_outlined),
                     selectedIcon: Icon(Icons.search),
-                    label: 'Search',
+                    label: 'Keywords',
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.dashboard_outlined),
-                    selectedIcon: Icon(Icons.dashboard),
-                    label: 'Dashboard',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.map_outlined),
-                    selectedIcon: Icon(Icons.map),
-                    label: 'Heatmap',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.hub_outlined),
-                    selectedIcon: Icon(Icons.hub),
-                    label: 'Network',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.bookmark_border),
-                    selectedIcon: Icon(Icons.bookmark),
-                    label: 'Saved',
+                    icon: Icon(Icons.person_outline),
+                    selectedIcon: Icon(Icons.person),
+                    label: 'Profile',
                   ),
                 ],
               ),

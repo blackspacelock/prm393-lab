@@ -167,19 +167,6 @@ class _TrendAnalysisScreenState extends ConsumerState<TrendAnalysisScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        title: const Text('Trend Analysis'),
-        backgroundColor: AppColors.surfaceContainerLowest,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.date_range_outlined,
-              color: yearRange != null ? AppColors.primaryContainer : null,
-            ),
-            onPressed: _showYearRangeDialog,
-          ),
-        ],
-      ),
       body: pubAsync.when(
         loading: () => const ShimmerLoader(),
         error: (e, _) => ErrorState(
@@ -320,6 +307,46 @@ class _TrendAnalysisScreenState extends ConsumerState<TrendAnalysisScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Filter by year range button
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppDimensions.base,
+                          AppDimensions.sm,
+                          AppDimensions.base,
+                          0,
+                        ),
+                        child: OutlinedButton.icon(
+                          onPressed: _showYearRangeDialog,
+                          icon: Icon(
+                            Icons.date_range_outlined,
+                            size: 16,
+                            color: yearRange != null
+                                ? AppColors.primaryContainer
+                                : AppColors.onSurfaceVariant,
+                          ),
+                          label: Text(
+                            yearRange != null
+                                ? 'Year range: ${yearRange.$1}–${yearRange.$2}'
+                                : 'Filter by year range',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: yearRange != null
+                                ? AppColors.primaryContainer
+                                : AppColors.onSurfaceVariant,
+                            side: BorderSide(
+                              color: yearRange != null
+                                  ? AppColors.primaryContainer
+                                  : AppColors.outlineVariant,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppDimensions.md,
+                              vertical: AppDimensions.sm,
+                            ),
+                            textStyle: AppTextStyles.labelMedium,
+                            shape: const StadiumBorder(),
+                          ),
+                        ),
+                      ),
                       // KPI row
                       if (paginated.totalCount > 0)
                         Padding(
@@ -500,7 +527,7 @@ class _TrendAnalysisScreenState extends ConsumerState<TrendAnalysisScreen> {
                                 visibleJournals[i].name;
                             ref.read(paperSortOptionProvider.notifier).state =
                                 PaperSortOption.relevance;
-                            context.go('/search');
+                            context.go('/keywords');
                           },
                         ),
                       ),
@@ -549,7 +576,7 @@ class _TrendAnalysisScreenState extends ConsumerState<TrendAnalysisScreen> {
                             ref.read(searchQueryProvider.notifier).state = name;
                             ref.read(paperSortOptionProvider.notifier).state =
                                 PaperSortOption.relevance;
-                            context.go('/search');
+                            context.go('/keywords');
                           },
                         );
                       }),

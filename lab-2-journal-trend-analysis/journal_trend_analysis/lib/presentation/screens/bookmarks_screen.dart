@@ -38,22 +38,6 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        title: const Text('Saved Papers'),
-        backgroundColor: AppColors.surfaceContainerLowest,
-        actions: [
-          if (hasItems)
-            TextButton(
-              onPressed: () => _confirmClearAll(context, ref),
-              child: Text(
-                'Clear all',
-                style: AppTextStyles.labelLarge.copyWith(
-                  color: AppColors.primaryContainer,
-                ),
-              ),
-            ),
-        ],
-      ),
       body: state.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
@@ -83,6 +67,28 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
                 onClearYear: () => _setYearFilter(null),
                 onSortChanged: (value) => setState(() => _sort = value),
               ),
+              // Clear all button (moved from AppBar)
+              if (hasItems)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.base,
+                  ),
+                  child: OutlinedButton.icon(
+                    onPressed: () => _confirmClearAll(context, ref),
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    label: const Text('Clear all'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade600,
+                      side: BorderSide(color: Colors.red.shade300),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimensions.md,
+                        vertical: AppDimensions.sm,
+                      ),
+                      textStyle: AppTextStyles.labelMedium,
+                      shape: const StadiumBorder(),
+                    ),
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppDimensions.base,

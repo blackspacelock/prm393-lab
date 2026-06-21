@@ -1,6 +1,7 @@
 // Domain layer — clean entity with no JSON or framework dependencies.
 import 'package:equatable/equatable.dart';
 import 'author.dart';
+import 'concept.dart';
 
 /// Yearly citation count for a publication.
 class YearlyCitation {
@@ -20,7 +21,7 @@ class Publication extends Equatable {
   final List<Author> authors;
   // Kept as raw map so formatter.dart can reconstruct the abstract on demand.
   final Map<String, dynamic>? abstractInvertedIndex;
-  final List<String> concepts;
+  final List<Concept> concepts;
 
   /// Citation counts per year (from OpenAlex counts_by_year).
   final List<YearlyCitation> countsByYear;

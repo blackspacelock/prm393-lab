@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/entities/author.dart';
+import '../../domain/entities/concept.dart';
 import '../../domain/entities/publication.dart';
 
 class BookmarkLocalDatasource {
@@ -9,12 +10,17 @@ class BookmarkLocalDatasource {
   Future<List<Publication>> loadAll() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList(_key) ?? [];
-    return raw.map((s) => _decode(jsonDecode(s) as Map<String, dynamic>)).toList();
+    return raw
+        .map((s) => _decode(jsonDecode(s) as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> save(List<Publication> pubs) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_key, pubs.map((p) => jsonEncode(_encode(p))).toList());
+    await prefs.setStringList(
+      _key,
+      pubs.map((p) => jsonEncode(_encode(p))).toList(),
+    );
   }
 
   Map<String, dynamic> _encode(Publication p) => {
@@ -28,7 +34,15 @@ class BookmarkLocalDatasource {
         .map((a) => {'id': a.id, 'displayName': a.displayName})
         .toList(),
     'abstractInvertedIndex': p.abstractInvertedIndex,
-    'concepts': p.concepts,
+    'concepts': p.concepts
+        .map(
+          (c) => {
+            'displayName': c.displayName,
+            'score': c.score,
+            'level': c.level,
+          },
+        )
+        .toList(),
     'countsByYear': p.countsByYear
         .map((c) => {'year': c.year, 'citedByCount': c.citedByCount})
         .toList(),
@@ -43,13 +57,36 @@ class BookmarkLocalDatasource {
     journalName: j['journalName'] as String?,
     authors: (j['authors'] as List<dynamic>)
         .cast<Map<String, dynamic>>()
-        .map((a) => Author(id: a['id'] as String, displayName: a['displayName'] as String))
+        .map(
+          (a) => Author(
+            id: a['id'] as String,
+            displayName: a['displayName'] as String,
+          ),
+        )
         .toList(),
     abstractInvertedIndex: j['abstractInvertedIndex'] as Map<String, dynamic>?,
-    concepts: (j['concepts'] as List<dynamic>).cast<String>(),
+    concepts: (j['concepts'] as List<dynamic>? ?? [])
+        .map((raw) {
+          if (raw is String) {
+            return Concept(displayName: raw, score: 0.0, level: 0);
+          }
+          final concept = raw as Map<String, dynamic>;
+          return Concept(
+            displayName: concept['displayName'] as String? ?? '',
+            score: (concept['score'] as num?)?.toDouble() ?? 0.0,
+            level: concept['level'] as int? ?? 0,
+          );
+        })
+        .where((c) => c.displayName.isNotEmpty)
+        .toList(),
     countsByYear: (j['countsByYear'] as List<dynamic>)
         .cast<Map<String, dynamic>>()
-        .map((c) => YearlyCitation(year: c['year'] as int, citedByCount: c['citedByCount'] as int))
+        .map(
+          (c) => YearlyCitation(
+            year: c['year'] as int,
+            citedByCount: c['citedByCount'] as int,
+          ),
+        )
         .toList(),
   );
 }

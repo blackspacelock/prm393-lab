@@ -136,7 +136,9 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
           pub.authors.any(
             (a) => a.displayName.toLowerCase().contains(_query),
           ) ||
-          pub.concepts.any((topic) => topic.toLowerCase().contains(_query));
+          pub.concepts.any(
+            (topic) => topic.displayName.toLowerCase().contains(_query),
+          );
       if (!matchesSearch) return false;
 
       final year = pub.publicationYear;

@@ -105,8 +105,9 @@ class PublicationDetailScreen extends ConsumerWidget {
           ),
           Consumer(
             builder: (context, ref, _) {
-              final isBookmarked =
-                  ref.watch(isBookmarkedProvider(publication.id));
+              final isBookmarked = ref.watch(
+                isBookmarkedProvider(publication.id),
+              );
               return IconButton(
                 icon: Icon(
                   isBookmarked ? Icons.bookmark : Icons.bookmark_border,
@@ -296,8 +297,8 @@ class PublicationDetailScreen extends ConsumerWidget {
                 runSpacing: AppDimensions.sm,
                 children: publication.concepts.take(10).map((c) {
                   return _HoverChip(
-                    label: c,
-                    onTap: () => _searchText(context, ref, c),
+                    label: c.displayName,
+                    onTap: () => _searchText(context, ref, c.displayName),
                   );
                 }).toList(),
               ),
@@ -877,7 +878,9 @@ class _PaperExportSheet extends StatelessWidget {
             const SizedBox(height: AppDimensions.base),
             Text(
               'Export / Share',
-              style: AppTextStyles.titleLarge.copyWith(color: AppColors.onSurface),
+              style: AppTextStyles.titleLarge.copyWith(
+                color: AppColors.onSurface,
+              ),
             ),
             const SizedBox(height: AppDimensions.xs),
             Text(
@@ -891,7 +894,8 @@ class _PaperExportSheet extends StatelessWidget {
               icon: Icons.copy_outlined,
               label: 'Copy citation',
               description: 'Plain text — paste anywhere',
-              onTap: () => Navigator.of(context).pop(_PaperExportFormat.copyText),
+              onTap: () =>
+                  Navigator.of(context).pop(_PaperExportFormat.copyText),
             ),
             const Divider(height: 1),
             _ExportTile(
@@ -944,9 +948,14 @@ class _ExportTile extends StatelessWidget {
       ),
       subtitle: Text(
         description,
-        style: AppTextStyles.bodySmall.copyWith(color: AppColors.onSurfaceVariant),
+        style: AppTextStyles.bodySmall.copyWith(
+          color: AppColors.onSurfaceVariant,
+        ),
       ),
-      trailing: const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
+      trailing: const Icon(
+        Icons.chevron_right,
+        color: AppColors.onSurfaceVariant,
+      ),
       onTap: onTap,
     );
   }

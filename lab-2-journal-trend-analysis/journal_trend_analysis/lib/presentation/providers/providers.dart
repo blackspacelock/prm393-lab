@@ -127,8 +127,9 @@ final paginatedPublicationsProvider =
       }
 
       if (query.isEmpty) {
-        final models =
-            await ref.read(remoteDataSourceProvider).getTrending(domainId: null);
+        final models = await ref
+            .read(remoteDataSourceProvider)
+            .getTrending(domainId: null);
         final items = models.map((m) => m.toEntity()).toList();
         return PaginatedResult(
           items: items,
@@ -173,6 +174,16 @@ final topJournalsProvider = Provider<List<JournalWithCount>>((ref) {
   return ref.read(getTopJournalsUseCaseProvider)(pubs);
 });
 
+/// Publications from one journal in the current result set, sorted by citations.
+final journalPublicationsProvider = Provider.family<List<Publication>, String>((
+  ref,
+  journalName,
+) {
+  final pubs = ref.watch(publicationsProvider).value ?? [];
+  return pubs.where((p) => p.journalName == journalName).toList()
+    ..sort((a, b) => b.citedByCount.compareTo(a.citedByCount));
+});
+
 /// Year-by-year publication counts for 2016–present using OpenAlex group_by.
 /// Reacts to the active search query / topic filter so the chart updates on demand.
 final yearlyTrendProvider = FutureProvider<List<YearTrendData>>((ref) async {
@@ -200,13 +211,15 @@ final yearlyTrendProvider = FutureProvider<List<YearTrendData>>((ref) async {
       );
 
   return (counts.entries
-          .map((e) => YearTrendData(
-                year: e.key,
-                publicationCount: e.value,
-                totalCitations: 0,
-              ))
-          .toList()
-        ..sort((a, b) => a.year.compareTo(b.year)));
+      .map(
+        (e) => YearTrendData(
+          year: e.key,
+          publicationCount: e.value,
+          totalCitations: 0,
+        ),
+      )
+      .toList()
+    ..sort((a, b) => a.year.compareTo(b.year)));
 });
 
 /// Top concept names extracted from the current publication list, ranked by frequency.
@@ -215,7 +228,8 @@ final trendingTopicsProvider = Provider<List<String>>((ref) {
   final counts = <String, int>{};
   for (final pub in pubs) {
     for (final concept in pub.concepts) {
-      counts[concept] = (counts[concept] ?? 0) + 1;
+      final name = concept.displayName;
+      counts[name] = (counts[name] ?? 0) + 1;
     }
   }
   final sorted = counts.entries.toList()

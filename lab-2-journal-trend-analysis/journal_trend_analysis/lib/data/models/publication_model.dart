@@ -1,5 +1,6 @@
 // Data layer — maps the full OpenAlex /works JSON object to a typed model.
 import '../../domain/entities/publication.dart';
+import '../../domain/entities/concept.dart';
 import 'author_model.dart';
 
 class PublicationModel {
@@ -11,7 +12,7 @@ class PublicationModel {
   final String? journalName;
   final List<AuthorModel> authors;
   final Map<String, dynamic>? abstractInvertedIndex;
-  final List<String> concepts;
+  final List<Concept> concepts;
   final List<YearlyCitation> countsByYear;
 
   const PublicationModel({
@@ -43,8 +44,14 @@ class PublicationModel {
 
     final concepts = (json['concepts'] as List<dynamic>? ?? [])
         .whereType<Map<String, dynamic>>()
-        .map((c) => c['display_name'] as String? ?? '')
-        .where((c) => c.isNotEmpty)
+        .map(
+          (c) => Concept(
+            displayName: c['display_name'] as String? ?? '',
+            score: (c['score'] as num?)?.toDouble() ?? 0.0,
+            level: c['level'] as int? ?? 0,
+          ),
+        )
+        .where((c) => c.displayName.isNotEmpty)
         .toList();
 
     // Parse counts_by_year

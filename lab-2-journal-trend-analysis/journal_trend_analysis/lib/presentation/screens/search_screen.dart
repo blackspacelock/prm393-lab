@@ -1185,8 +1185,8 @@ class _PaperCard extends StatelessWidget {
                             runSpacing: AppDimensions.xs,
                             children: publication.concepts.map((topic) {
                               return _TopicChip(
-                                topic: topic,
-                                onTap: () => onTopicTap(topic),
+                                topic: topic.displayName,
+                                onTap: () => onTopicTap(topic.displayName),
                               );
                             }).toList(),
                           ),

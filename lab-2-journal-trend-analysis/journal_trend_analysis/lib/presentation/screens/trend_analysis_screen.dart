@@ -500,7 +500,7 @@ class _TrendAnalysisScreenState extends ConsumerState<TrendAnalysisScreen> {
                                 visibleJournals[i].name;
                             ref.read(paperSortOptionProvider.notifier).state =
                                 PaperSortOption.relevance;
-                            context.go('/search');
+                            context.go('/home');
                           },
                         ),
                       ),
@@ -549,7 +549,7 @@ class _TrendAnalysisScreenState extends ConsumerState<TrendAnalysisScreen> {
                             ref.read(searchQueryProvider.notifier).state = name;
                             ref.read(paperSortOptionProvider.notifier).state =
                                 PaperSortOption.relevance;
-                            context.go('/search');
+                            context.go('/home');
                           },
                         );
                       }),

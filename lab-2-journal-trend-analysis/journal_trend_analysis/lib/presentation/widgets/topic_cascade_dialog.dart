@@ -599,14 +599,18 @@ class _TopicBrowserDialogState extends ConsumerState<TopicBrowserDialog> {
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimensions.base,
-                ),
-                child: Wrap(
-                  spacing: AppDimensions.sm,
-                  runSpacing: AppDimensions.sm,
-                  children: trendingTopics.take(8).map((topic) {
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.base,
+                  ),
+                  itemCount: trendingTopics.take(8).length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(width: AppDimensions.sm),
+                  itemBuilder: (context, index) {
+                    final topic = trendingTopics[index];
                     return ActionChip(
                       avatar: const Icon(
                         Icons.trending_up,
@@ -625,7 +629,7 @@ class _TopicBrowserDialogState extends ConsumerState<TopicBrowserDialog> {
                       visualDensity: VisualDensity.compact,
                       onPressed: () => _selectTrending(topic),
                     );
-                  }).toList(),
+                  },
                 ),
               ),
               const SizedBox(height: AppDimensions.md),

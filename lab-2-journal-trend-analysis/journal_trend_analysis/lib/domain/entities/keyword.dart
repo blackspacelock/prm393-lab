@@ -5,12 +5,14 @@ class KeywordItem extends Equatable {
   final int frequency;
   final double avgScore;
   final double trendRatio;
+  final int level;
 
   const KeywordItem({
     required this.name,
     required this.frequency,
     required this.avgScore,
     required this.trendRatio,
+    required this.level,
   });
 
   @override

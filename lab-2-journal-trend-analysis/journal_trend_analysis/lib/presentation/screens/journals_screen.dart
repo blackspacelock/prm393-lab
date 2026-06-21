@@ -12,19 +12,36 @@ import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
 import '../widgets/shimmer_loader.dart';
 
-class JournalsScreen extends ConsumerWidget {
+class JournalsScreen extends ConsumerStatefulWidget {
   const JournalsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<JournalsScreen> createState() => _JournalsScreenState();
+}
+
+class _JournalsScreenState extends ConsumerState<JournalsScreen> {
+  final _searchController = TextEditingController();
+  String _localQuery = '';
+  _JournalSort _sort = _JournalSort.publications;
+  int? _publicationCountFilter;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final query = ref.watch(searchQueryProvider).trim();
     final isDefaultView = query.isEmpty;
     final paginated = ref.watch(paginatedPublicationsProvider);
+    final recentPublications = ref.watch(recentPublicationsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Journals')),
       body: paginated.when(
-        data: (result) {
+        data: (_) {
           final journals = ref.watch(topJournalsProvider);
           if (journals.isEmpty) {
             return EmptyState(
@@ -34,6 +51,21 @@ class JournalsScreen extends ConsumerWidget {
                   : 'No journal data available for "$query"',
             );
           }
+          final localQuery = _localQuery.trim().toLowerCase();
+          final countOptions = _publicationCountOptions(journals);
+          if (_publicationCountFilter != null &&
+              !countOptions.contains(_publicationCountFilter)) {
+            _publicationCountFilter = null;
+          }
+          final visibleJournals = _sortJournals(
+            (localQuery.isEmpty
+                    ? journals
+                    : journals.where(
+                        (j) => j.name.toLowerCase().contains(localQuery),
+                      ))
+                .where(_matchesFilter)
+                .toList(),
+          );
 
           return CustomScrollView(
             slivers: [
@@ -41,7 +73,7 @@ class JournalsScreen extends ConsumerWidget {
                 child: _HeroSummary(
                   isDefaultView: isDefaultView,
                   query: query,
-                  publications: result.items,
+                  publications: recentPublications,
                   journals: journals,
                 ),
               ),
@@ -53,9 +85,35 @@ class JournalsScreen extends ConsumerWidget {
                     AppDimensions.base,
                     AppDimensions.sm,
                   ),
-                  child: _TopSourcesPanel(journals: journals),
+                  child: _JournalControls(
+                    controller: _searchController,
+                    query: _localQuery,
+                    sort: _sort,
+                    publicationCountFilter: _publicationCountFilter,
+                    publicationCountOptions: countOptions,
+                    onChanged: (value) => setState(() => _localQuery = value),
+                    onClear: () {
+                      _searchController.clear();
+                      setState(() => _localQuery = '');
+                    },
+                    onSortChanged: (value) => setState(() => _sort = value),
+                    onFilterChanged: (value) =>
+                        setState(() => _publicationCountFilter = value),
+                  ),
                 ),
               ),
+              if (visibleJournals.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppDimensions.base,
+                      AppDimensions.md,
+                      AppDimensions.base,
+                      AppDimensions.sm,
+                    ),
+                    child: _TopSourcesPanel(journals: visibleJournals),
+                  ),
+                ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
@@ -66,31 +124,45 @@ class JournalsScreen extends ConsumerWidget {
                   ),
                   child: _SectionHeader(
                     title: 'All Sources',
-                    subtitle: '${journals.length} journals ordered by activity',
+                    subtitle: visibleJournals.isEmpty
+                        ? 'No journals match "$_localQuery"'
+                        : '${visibleJournals.length} journals ordered by activity',
                   ),
                 ),
               ),
-              SliverList.builder(
-                itemCount: journals.length,
-                itemBuilder: (context, index) {
-                  final journal = journals[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
+              if (visibleJournals.isEmpty)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
                       horizontal: AppDimensions.base,
-                      vertical: AppDimensions.xs,
                     ),
-                    child: _JournalListTile(
-                      rank: index + 1,
-                      journal: journal,
-                      maxCount: journals.first.publicationCount,
-                      onTap: () => context.push(
-                        '/journal/${Uri.encodeComponent(journal.name)}',
-                        extra: journal,
+                    child: _SoftEmptyMessage(
+                      message: 'Try a different journal name.',
+                    ),
+                  ),
+                )
+              else
+                SliverList.builder(
+                  itemCount: visibleJournals.length,
+                  itemBuilder: (context, index) {
+                    final journal = visibleJournals[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimensions.base,
+                        vertical: AppDimensions.xs,
                       ),
-                    ),
-                  );
-                },
-              ),
+                      child: _JournalListTile(
+                        rank: index + 1,
+                        journal: journal,
+                        maxCount: visibleJournals.first.publicationCount,
+                        onTap: () => context.push(
+                          '/journal/${Uri.encodeComponent(journal.name)}',
+                          extra: journal,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               const SliverToBoxAdapter(
                 child: SizedBox(height: AppDimensions.xl),
               ),
@@ -103,6 +175,155 @@ class JournalsScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(paginatedPublicationsProvider),
         ),
       ),
+    );
+  }
+
+  bool _matchesFilter(JournalWithCount journal) {
+    return _publicationCountFilter == null ||
+        journal.publicationCount == _publicationCountFilter;
+  }
+
+  List<int> _publicationCountOptions(List<JournalWithCount> journals) {
+    final options = journals.map((j) => j.publicationCount).toSet().toList()
+      ..sort((a, b) => b.compareTo(a));
+    return options.take(8).toList();
+  }
+
+  List<JournalWithCount> _sortJournals(List<JournalWithCount> journals) {
+    final sorted = List<JournalWithCount>.from(journals);
+    switch (_sort) {
+      case _JournalSort.publications:
+        sorted.sort((a, b) => b.publicationCount.compareTo(a.publicationCount));
+      case _JournalSort.citations:
+        sorted.sort((a, b) => b.totalCitations.compareTo(a.totalCitations));
+      case _JournalSort.averageCitations:
+        sorted.sort((a, b) {
+          final aAvg = a.publicationCount == 0
+              ? 0.0
+              : a.totalCitations / a.publicationCount;
+          final bAvg = b.publicationCount == 0
+              ? 0.0
+              : b.totalCitations / b.publicationCount;
+          return bAvg.compareTo(aAvg);
+        });
+      case _JournalSort.name:
+        sorted.sort((a, b) => a.name.compareTo(b.name));
+    }
+    return sorted;
+  }
+}
+
+enum _JournalSort { publications, citations, averageCitations, name }
+
+class _JournalControls extends StatelessWidget {
+  final TextEditingController controller;
+  final String query;
+  final _JournalSort sort;
+  final int? publicationCountFilter;
+  final List<int> publicationCountOptions;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+  final ValueChanged<_JournalSort> onSortChanged;
+  final ValueChanged<int?> onFilterChanged;
+
+  const _JournalControls({
+    required this.controller,
+    required this.query,
+    required this.sort,
+    required this.publicationCountFilter,
+    required this.publicationCountOptions,
+    required this.onChanged,
+    required this.onClear,
+    required this.onSortChanged,
+    required this.onFilterChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TextField(
+          controller: controller,
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            hintText: 'Search journals...',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: query.isEmpty
+                ? null
+                : IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: onClear,
+                    tooltip: 'Clear',
+                  ),
+          ),
+        ),
+        const SizedBox(height: AppDimensions.sm),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<int?>(
+                initialValue: publicationCountFilter,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.filter_list, size: 20),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                ),
+                items: [
+                  const DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text('All pub counts'),
+                  ),
+                  ...publicationCountOptions.map(
+                    (count) => DropdownMenuItem<int?>(
+                      value: count,
+                      child: Text('$count pubs'),
+                    ),
+                  ),
+                ],
+                onChanged: onFilterChanged,
+              ),
+            ),
+            const SizedBox(width: AppDimensions.sm),
+            Expanded(
+              child: DropdownButtonFormField<_JournalSort>(
+                initialValue: sort,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.sort, size: 20),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: _JournalSort.publications,
+                    child: Text('Publications'),
+                  ),
+                  DropdownMenuItem(
+                    value: _JournalSort.citations,
+                    child: Text('Citations'),
+                  ),
+                  DropdownMenuItem(
+                    value: _JournalSort.averageCitations,
+                    child: Text('Avg cites'),
+                  ),
+                  DropdownMenuItem(
+                    value: _JournalSort.name,
+                    child: Text('Name'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) onSortChanged(value);
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -510,6 +731,30 @@ class _RankBadge extends StatelessWidget {
         style: AppTextStyles.labelMedium.copyWith(
           color: fg,
           fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _SoftEmptyMessage extends StatelessWidget {
+  final String message;
+
+  const _SoftEmptyMessage({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppDimensions.base),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppDimensions.shapeSm),
+      ),
+      child: Text(
+        message,
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: AppColors.onSurfaceVariant,
         ),
       ),
     );

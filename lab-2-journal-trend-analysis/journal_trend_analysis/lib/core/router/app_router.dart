@@ -4,6 +4,7 @@ import '../../domain/entities/keyword.dart';
 import '../../domain/entities/publication.dart';
 import '../../domain/usecases/get_top_journals.dart';
 import '../../presentation/screens/author_network_screen.dart';
+import '../../presentation/screens/bookmarks_screen.dart';
 import '../../presentation/screens/heatmap_screen.dart';
 import '../../presentation/screens/home_screen.dart';
 import '../../presentation/screens/journal_detail_screen.dart';
@@ -17,10 +18,12 @@ import '../../presentation/screens/publication_detail_screen.dart';
 final appRouter = GoRouter(
   initialLocation: '/home',
   routes: [
+    GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
     GoRoute(
-      path: '/login',
-      builder: (_, _) => const LoginScreen(),
+      path: '/profile/bookmarks',
+      builder: (_, _) => const BookmarksScreen(),
     ),
+    GoRoute(path: '/bookmarks', builder: (_, _) => const BookmarksScreen()),
     ShellRoute(
       builder: (context, state, child) =>
           _MainShell(location: state.uri.path, child: child),

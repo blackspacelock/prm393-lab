@@ -30,13 +30,13 @@ abstract class PublicationRemoteDataSource {
 
   Future<List<PublicationModel>> getTopPapers({String? topic});
 
-  /// High-impact articles from 2016–present, optionally scoped to a domain.
+  /// High-impact articles from the latest 10-year window, optionally scoped to a domain.
   Future<List<PublicationModel>> getTrending({
     String? domainId,
     int perPage = 50,
   });
 
-  /// Returns {year → paper count} for 2016–present using OpenAlex group_by.
+  /// Returns {year → paper count} for the latest 10-year window using OpenAlex group_by.
   /// [filterString] is a raw OpenAlex filter clause (may be null).
   /// [searchQuery] is an optional free-text search term.
   Future<Map<int, int>> getYearlyPublicationCounts({
@@ -149,9 +149,11 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
     int perPage = 50,
   }) async {
     try {
+      final cutoffYear = DateTime.now().year - 10;
+      final cutoffDate = '$cutoffYear-01-01';
       final filter = domainId != null
-          ? 'from_publication_date:2016-01-01,type:article,primary_topic.domain.id:$domainId'
-          : 'from_publication_date:2016-01-01,type:article';
+          ? 'from_publication_date:$cutoffDate,type:article,primary_topic.domain.id:$domainId'
+          : 'from_publication_date:$cutoffDate,type:article';
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
         '/works',
         queryParameters: {
@@ -174,9 +176,13 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
     String? searchQuery,
   }) async {
     try {
-      final baseFilter = 'from_publication_date:2016-01-01,type:article';
+      final currentYear = DateTime.now().year;
+      final cutoffYear = currentYear - 10;
+      final baseFilter = 'from_publication_date:$cutoffYear-01-01,type:article';
       final params = <String, dynamic>{
-        'filter': filterString != null ? '$baseFilter,$filterString' : baseFilter,
+        'filter': filterString != null
+            ? '$baseFilter,$filterString'
+            : baseFilter,
         'group_by': 'publication_year',
       };
       if (searchQuery != null && searchQuery.isNotEmpty) {
@@ -189,13 +195,15 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
       );
 
       final groupBy = response.data?['group_by'] as List<dynamic>? ?? [];
-      final currentYear = DateTime.now().year;
       final result = <int, int>{};
 
       for (final entry in groupBy.whereType<Map<String, dynamic>>()) {
         final year = int.tryParse(entry['key'] as String? ?? '');
         final count = entry['count'] as int?;
-        if (year != null && count != null && year >= 2016 && year <= currentYear) {
+        if (year != null &&
+            count != null &&
+            year >= cutoffYear &&
+            year <= currentYear) {
           result[year] = count;
         }
       }

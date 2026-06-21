@@ -38,7 +38,7 @@ class PublicationDetailScreen extends ConsumerWidget {
     ref.read(selectedTopicFilterProvider.notifier).state = null;
     ref.read(searchPageProvider.notifier).state = 1;
     ref.read(searchQueryProvider.notifier).state = text;
-    context.go('/search');
+    context.go('/home');
   }
 
   Future<void> _openExportSheet(BuildContext context) async {

@@ -6,10 +6,12 @@ import '../../data/datasources/publication_remote_datasource.dart';
 import '../../data/datasources/topic_remote_datasource.dart';
 import '../../data/repositories/publication_repository_impl.dart';
 import '../../domain/entities/paginated_result.dart';
+import '../../domain/entities/keyword.dart';
 import '../../domain/entities/publication.dart';
 import '../../domain/entities/topic_hierarchy.dart';
 import '../../domain/repositories/publication_repository.dart';
 import '../../domain/usecases/get_dashboard_summary.dart';
+import '../../domain/usecases/get_keyword_analysis.dart';
 import '../../domain/usecases/get_top_authors.dart';
 import '../../domain/usecases/get_top_journals.dart';
 import '../../domain/usecases/get_trend_data.dart';
@@ -53,6 +55,10 @@ final getTopJournalsUseCaseProvider = Provider<GetTopJournals>(
 
 final getDashboardSummaryUseCaseProvider = Provider<GetDashboardSummary>(
   (ref) => GetDashboardSummary(ref.read(getTrendDataUseCaseProvider)),
+);
+
+final getKeywordAnalysisProvider = Provider<GetKeywordAnalysis>(
+  (_) => GetKeywordAnalysis(),
 );
 
 // ── Search State ──────────────────────────────────────────────────────────────
@@ -150,27 +156,34 @@ final publicationsProvider = Provider<AsyncValue<List<Publication>>>((ref) {
   return ref.watch(paginatedPublicationsProvider).whenData((r) => r.items);
 });
 
+/// Analysis views focus on the most recent 10-year window, matching Home trend.
+final recentPublicationsProvider = Provider<List<Publication>>((ref) {
+  final pubs = ref.watch(publicationsProvider).value ?? [];
+  final cutoffYear = DateTime.now().year - 10;
+  return pubs.where((p) => (p.publicationYear ?? 0) >= cutoffYear).toList();
+});
+
 /// Year-by-year trend derived from the current publication list.
 final trendDataProvider = Provider<List<YearTrendData>>((ref) {
-  final pubs = ref.watch(publicationsProvider).value ?? [];
+  final pubs = ref.watch(recentPublicationsProvider);
   return ref.read(getTrendDataUseCaseProvider)(pubs);
 });
 
 /// Dashboard KPIs derived from the current publication list.
 final dashboardSummaryProvider = Provider<DashboardSummary>((ref) {
-  final pubs = ref.watch(publicationsProvider).value ?? [];
+  final pubs = ref.watch(recentPublicationsProvider);
   return ref.read(getDashboardSummaryUseCaseProvider)(pubs);
 });
 
 /// Top authors ranked by publication count.
 final topAuthorsProvider = Provider<List<AuthorWithCount>>((ref) {
-  final pubs = ref.watch(publicationsProvider).value ?? [];
+  final pubs = ref.watch(recentPublicationsProvider);
   return ref.read(getTopAuthorsUseCaseProvider)(pubs);
 });
 
 /// Top journals ranked by publication count.
 final topJournalsProvider = Provider<List<JournalWithCount>>((ref) {
-  final pubs = ref.watch(publicationsProvider).value ?? [];
+  final pubs = ref.watch(recentPublicationsProvider);
   return ref.read(getTopJournalsUseCaseProvider)(pubs);
 });
 
@@ -179,9 +192,52 @@ final journalPublicationsProvider = Provider.family<List<Publication>, String>((
   ref,
   journalName,
 ) {
-  final pubs = ref.watch(publicationsProvider).value ?? [];
+  final pubs = ref.watch(recentPublicationsProvider);
   return pubs.where((p) => p.journalName == journalName).toList()
     ..sort((a, b) => b.citedByCount.compareTo(a.citedByCount));
+});
+
+final keywordsProvider = Provider<List<KeywordItem>>((ref) {
+  final pubs = ref.watch(recentPublicationsProvider);
+  return ref.read(getKeywordAnalysisProvider)(pubs);
+});
+
+final keywordPublicationsProvider = Provider.family<List<Publication>, String>((
+  ref,
+  name,
+) {
+  final pubs = ref.watch(recentPublicationsProvider);
+  return pubs
+      .where((p) => p.concepts.any((c) => c.displayName == name))
+      .toList()
+    ..sort((a, b) => b.citedByCount.compareTo(a.citedByCount));
+});
+
+final keywordTrendProvider = Provider.family<List<YearTrendData>, String>((
+  ref,
+  name,
+) {
+  return ref.read(getTrendDataUseCaseProvider)(
+    ref.watch(keywordPublicationsProvider(name)),
+  );
+});
+
+final keywordJournalsProvider = Provider.family<List<JournalWithCount>, String>(
+  (ref, name) {
+    return ref.read(getTopJournalsUseCaseProvider)(
+      ref.watch(keywordPublicationsProvider(name)),
+      limit: 5,
+    );
+  },
+);
+
+final keywordAuthorsProvider = Provider.family<List<AuthorWithCount>, String>((
+  ref,
+  name,
+) {
+  return ref.read(getTopAuthorsUseCaseProvider)(
+    ref.watch(keywordPublicationsProvider(name)),
+  );
 });
 
 /// Year-by-year publication counts for 2016–present using OpenAlex group_by.
@@ -224,7 +280,7 @@ final yearlyTrendProvider = FutureProvider<List<YearTrendData>>((ref) async {
 
 /// Top concept names extracted from the current publication list, ranked by frequency.
 final trendingTopicsProvider = Provider<List<String>>((ref) {
-  final pubs = ref.watch(publicationsProvider).value ?? [];
+  final pubs = ref.watch(recentPublicationsProvider);
   final counts = <String, int>{};
   for (final pub in pubs) {
     for (final concept in pub.concepts) {

@@ -111,8 +111,9 @@ class _DashboardContextBanner extends ConsumerWidget {
     } else {
       icon = Icons.public;
       label = 'Global Trending Research';
+      final cutoffYear = DateTime.now().year - 10;
       subtitle =
-          'Top cited articles · all fields · 2016–${DateTime.now().year}';
+          'Top cited articles · all fields · $cutoffYear–${DateTime.now().year}';
     }
 
     return Padding(
@@ -656,26 +657,29 @@ class _ExploreMoreSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppDimensions.sm),
-          Row(
-            children: [
-              Expanded(
-                child: _ExploreCard(
-                  title: 'Publication Heatmap',
-                  subtitle: 'Yearly distribution by topic',
-                  icon: Icons.grid_view_rounded,
-                  onTap: () => context.push('/heatmap'),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _ExploreCard(
+                    title: 'Publication Heatmap',
+                    subtitle: 'Yearly distribution by topic',
+                    icon: Icons.grid_view_rounded,
+                    onTap: () => context.push('/heatmap'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppDimensions.sm),
-              Expanded(
-                child: _ExploreCard(
-                  title: 'Author Network',
-                  subtitle: 'Co-authorship connections',
-                  icon: Icons.hub_outlined,
-                  onTap: () => context.push('/network'),
+                const SizedBox(width: AppDimensions.sm),
+                Expanded(
+                  child: _ExploreCard(
+                    title: 'Author Network',
+                    subtitle: 'Co-authorship connections',
+                    icon: Icons.hub_outlined,
+                    onTap: () => context.push('/network'),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -705,6 +709,7 @@ class _ExploreCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
         child: Container(
+          height: double.infinity,
           padding: const EdgeInsets.all(AppDimensions.md),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppDimensions.shapeMd),

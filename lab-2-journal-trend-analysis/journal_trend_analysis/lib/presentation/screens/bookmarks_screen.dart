@@ -283,36 +283,22 @@ class _SavedPaperControls extends StatelessWidget {
             onChanged: onQueryChanged,
           ),
           const SizedBox(height: AppDimensions.sm),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final stackControls = constraints.maxWidth < 360;
-              final yearFilter = _YearFilter(
-                controller: yearController,
-                selectedYear: selectedYear,
-                availableYears: availableYears,
-                onChanged: onYearChanged,
-                onClear: onClearYear,
-              );
-              final sortMenu = _SortMenu(value: sort, onChanged: onSortChanged);
-
-              if (stackControls) {
-                return Column(
-                  children: [
-                    yearFilter,
-                    const SizedBox(height: AppDimensions.sm),
-                    sortMenu,
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: yearFilter),
-                  const SizedBox(width: AppDimensions.sm),
-                  Expanded(child: sortMenu),
-                ],
-              );
-            },
+          Row(
+            children: [
+              Expanded(
+                child: _YearFilter(
+                  controller: yearController,
+                  selectedYear: selectedYear,
+                  availableYears: availableYears,
+                  onChanged: onYearChanged,
+                  onClear: onClearYear,
+                ),
+              ),
+              const SizedBox(width: AppDimensions.sm),
+              Expanded(
+                child: _SortMenu(value: sort, onChanged: onSortChanged),
+              ),
+            ],
           ),
         ],
       ),

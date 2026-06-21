@@ -50,8 +50,6 @@ class AuthorNetworkScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final query = ref.watch(searchQueryProvider);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Author Network'),
@@ -59,13 +57,7 @@ class AuthorNetworkScreen extends ConsumerWidget {
         elevation: 0,
         scrolledUnderElevation: 1,
       ),
-      body: query.isEmpty
-          ? const EmptyState(
-              icon: Icons.hub_outlined,
-              message:
-                  'Search for a topic in the Search tab to see the author collaboration network.',
-            )
-          : const _AuthorNetworkBody(),
+      body: const _AuthorNetworkBody(),
     );
   }
 }
@@ -110,7 +102,7 @@ class _AuthorNetworkBodyState extends ConsumerState<_AuthorNetworkBody>
     if (pubs.isEmpty) {
       return const EmptyState(
         icon: Icons.hub_outlined,
-        message: 'No publications loaded yet.',
+        message: 'No author data available.',
       );
     }
 

@@ -14,6 +14,15 @@ class TrendChart extends StatelessWidget {
     return (year - firstYear) % 5 == 0;
   }
 
+  String _formatAxisValue(double value) {
+    final count = value.round();
+    if (count == 0) return '0';
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 10000) return '${(count / 1000).round()}K';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
+    return count.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
@@ -91,14 +100,21 @@ class TrendChart extends StatelessWidget {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 32,
+              reservedSize: 44,
               interval: horizontalInterval,
               getTitlesWidget: (value, meta) {
                 if (value < 0) return const SizedBox.shrink();
-                return Text(
-                  value.toInt().toString(),
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.onSurfaceVariant,
+                return SideTitleWidget(
+                  axisSide: meta.axisSide,
+                  space: 8,
+                  child: Text(
+                    _formatAxisValue(value),
+                    maxLines: 1,
+                    textAlign: TextAlign.right,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 10,
+                    ),
                   ),
                 );
               },

@@ -21,16 +21,14 @@ final heatmapViewModeProvider = StateProvider<HeatmapViewMode>(
 // ── Country distribution ──────────────────────────────────────────────────────
 
 /// Fetches country-level research distribution for the current search context.
+/// When no query or filter is active, returns the global distribution.
 final countryDistributionProvider =
     FutureProvider<List<CountryHeatmapData>>((ref) async {
   final topicFilter = ref.watch(selectedTopicFilterProvider);
   final query = ref.watch(searchQueryProvider);
 
-  // No query or filter → empty
-  if (topicFilter == null && query.isEmpty) return [];
-
   return ref.read(heatmapDataSourceProvider).getCountryDistribution(
-        searchQuery: topicFilter == null ? query : null,
+        searchQuery: (topicFilter == null && query.isNotEmpty) ? query : null,
         filterKey: topicFilter?.filterKey,
         filterId: topicFilter?.id,
       );
@@ -39,16 +37,14 @@ final countryDistributionProvider =
 // ── Institution distribution ──────────────────────────────────────────────────
 
 /// Fetches institution-level research distribution for the current search context.
+/// When no query or filter is active, returns the global distribution.
 final institutionDistributionProvider =
     FutureProvider<List<InstitutionHeatmapData>>((ref) async {
   final topicFilter = ref.watch(selectedTopicFilterProvider);
   final query = ref.watch(searchQueryProvider);
 
-  // No query or filter → empty
-  if (topicFilter == null && query.isEmpty) return [];
-
   return ref.read(heatmapDataSourceProvider).getInstitutionDistribution(
-        searchQuery: topicFilter == null ? query : null,
+        searchQuery: (topicFilter == null && query.isNotEmpty) ? query : null,
         filterKey: topicFilter?.filterKey,
         filterId: topicFilter?.id,
       );

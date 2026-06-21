@@ -127,11 +127,14 @@ final paginatedPublicationsProvider =
       }
 
       if (query.isEmpty) {
-        return const PaginatedResult(
-          items: [],
-          totalCount: 0,
+        final models =
+            await ref.read(remoteDataSourceProvider).getTrending(domainId: null);
+        final items = models.map((m) => m.toEntity()).toList();
+        return PaginatedResult(
+          items: items,
+          totalCount: items.length,
           page: 1,
-          perPage: 50,
+          perPage: items.length,
         );
       }
       return ref.read(searchPublicationsUseCaseProvider)(
@@ -168,6 +171,56 @@ final topAuthorsProvider = Provider<List<AuthorWithCount>>((ref) {
 final topJournalsProvider = Provider<List<JournalWithCount>>((ref) {
   final pubs = ref.watch(publicationsProvider).value ?? [];
   return ref.read(getTopJournalsUseCaseProvider)(pubs);
+});
+
+/// Year-by-year publication counts for 2016–present using OpenAlex group_by.
+/// Reacts to the active search query / topic filter so the chart updates on demand.
+final yearlyTrendProvider = FutureProvider<List<YearTrendData>>((ref) async {
+  final topicFilter = ref.watch(selectedTopicFilterProvider);
+  final query = ref.watch(searchQueryProvider);
+
+  String? filterString;
+  String? searchQuery;
+
+  if (topicFilter != null) {
+    if (topicFilter.filterKey == 'default.search') {
+      searchQuery = topicFilter.id;
+    } else {
+      filterString = '${topicFilter.filterKey}:${topicFilter.id}';
+    }
+  } else if (query.isNotEmpty) {
+    searchQuery = query;
+  }
+
+  final counts = await ref
+      .read(remoteDataSourceProvider)
+      .getYearlyPublicationCounts(
+        filterString: filterString,
+        searchQuery: searchQuery,
+      );
+
+  return (counts.entries
+          .map((e) => YearTrendData(
+                year: e.key,
+                publicationCount: e.value,
+                totalCitations: 0,
+              ))
+          .toList()
+        ..sort((a, b) => a.year.compareTo(b.year)));
+});
+
+/// Top concept names extracted from the current publication list, ranked by frequency.
+final trendingTopicsProvider = Provider<List<String>>((ref) {
+  final pubs = ref.watch(publicationsProvider).value ?? [];
+  final counts = <String, int>{};
+  for (final pub in pubs) {
+    for (final concept in pub.concepts) {
+      counts[concept] = (counts[concept] ?? 0) + 1;
+    }
+  }
+  final sorted = counts.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  return sorted.take(16).map((e) => e.key).toList();
 });
 
 // ── Trending ──────────────────────────────────────────────────────────────────

@@ -30,10 +30,18 @@ abstract class PublicationRemoteDataSource {
 
   Future<List<PublicationModel>> getTopPapers({String? topic});
 
-  /// Recent (2022-present) high-impact papers, optionally scoped to a domain.
+  /// High-impact articles from 2016–present, optionally scoped to a domain.
   Future<List<PublicationModel>> getTrending({
     String? domainId,
-    int perPage = 30,
+    int perPage = 50,
+  });
+
+  /// Returns {year → paper count} for 2016–present using OpenAlex group_by.
+  /// [filterString] is a raw OpenAlex filter clause (may be null).
+  /// [searchQuery] is an optional free-text search term.
+  Future<Map<int, int>> getYearlyPublicationCounts({
+    String? filterString,
+    String? searchQuery,
   });
 }
 
@@ -138,12 +146,12 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
   @override
   Future<List<PublicationModel>> getTrending({
     String? domainId,
-    int perPage = 30,
+    int perPage = 50,
   }) async {
     try {
       final filter = domainId != null
-          ? 'from_publication_date:2022-01-01,type:article,primary_topic.domain.id:$domainId'
-          : 'from_publication_date:2022-01-01,type:article';
+          ? 'from_publication_date:2016-01-01,type:article,primary_topic.domain.id:$domainId'
+          : 'from_publication_date:2016-01-01,type:article';
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
         '/works',
         queryParameters: {
@@ -153,6 +161,45 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
         },
       );
       return _parseResults(response.data);
+    } on DioException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      throw Exception('Parse error: $e');
+    }
+  }
+
+  @override
+  Future<Map<int, int>> getYearlyPublicationCounts({
+    String? filterString,
+    String? searchQuery,
+  }) async {
+    try {
+      final baseFilter = 'from_publication_date:2016-01-01,type:article';
+      final params = <String, dynamic>{
+        'filter': filterString != null ? '$baseFilter,$filterString' : baseFilter,
+        'group_by': 'publication_year',
+      };
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        params['search'] = searchQuery;
+      }
+
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/works',
+        queryParameters: params,
+      );
+
+      final groupBy = response.data?['group_by'] as List<dynamic>? ?? [];
+      final currentYear = DateTime.now().year;
+      final result = <int, int>{};
+
+      for (final entry in groupBy.whereType<Map<String, dynamic>>()) {
+        final year = int.tryParse(entry['key'] as String? ?? '');
+        final count = entry['count'] as int?;
+        if (year != null && count != null && year >= 2016 && year <= currentYear) {
+          result[year] = count;
+        }
+      }
+      return result;
     } on DioException catch (e) {
       throw Exception('Network error: ${e.message}');
     } catch (e) {

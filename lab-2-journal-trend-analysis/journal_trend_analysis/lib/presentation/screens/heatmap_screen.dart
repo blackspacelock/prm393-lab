@@ -24,7 +24,7 @@ class HeatmapScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final query = ref.watch(searchQueryProvider);
+    final query = ref.watch(searchQueryProvider); // for topic indicator banner
     final viewMode = ref.watch(heatmapViewModeProvider);
 
     return Scaffold(
@@ -92,13 +92,7 @@ class HeatmapScreen extends ConsumerWidget {
 
           // Content
           Expanded(
-            child: query.isEmpty
-                ? const EmptyState(
-                    icon: Icons.map_outlined,
-                    message:
-                        'Search for a topic in the Search tab to see the geographic distribution of research.',
-                  )
-                : viewMode == HeatmapViewMode.country
+            child: viewMode == HeatmapViewMode.country
                 ? const _CountryHeatmapView()
                 : const _InstitutionListView(),
           ),

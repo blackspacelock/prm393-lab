@@ -53,7 +53,7 @@ class _KeywordsScreenState extends ConsumerState<KeywordsScreen>
           tabAlignment: TabAlignment.start,
           padding: const EdgeInsets.symmetric(horizontal: AppDimensions.sm),
           tabs: const [
-            Tab(text: 'Keywords'),
+            Tab(text: 'Search'),
             Tab(text: 'Dashboard'),
             Tab(text: 'Heatmap'),
             Tab(text: 'Network'),
@@ -63,7 +63,7 @@ class _KeywordsScreenState extends ConsumerState<KeywordsScreen>
       body: TabBarView(
         controller: _tabController,
         children: const [
-          // Tab 1: Keywords (current Search functionality)
+          // Tab 1: Search (current Search functionality)
           SearchScreen(),
           // Tab 2: Dashboard (trend analysis)
           TrendAnalysisScreen(),

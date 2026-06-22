@@ -65,14 +65,14 @@ final journalListProvider = FutureProvider<PaginatedResult<Journal>>((
         .read(journalRepositoryProvider)
         .getRecentJournals(
           page: page,
-          perPage: 25,
+          perPage: 50,
           sort: sortParam,
           filter: extraFilter,
         );
   }
   return ref
       .read(journalRepositoryProvider)
-      .searchJournals(query, page: page, perPage: 25, sort: sortParam);
+      .searchJournals(query, page: page, perPage: 50, sort: sortParam);
 });
 
 // ── Journal Detail ────────────────────────────────────────────────────────────

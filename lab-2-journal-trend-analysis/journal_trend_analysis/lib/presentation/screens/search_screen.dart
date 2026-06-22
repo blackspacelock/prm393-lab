@@ -53,6 +53,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         });
       }
     });
+    // Reset page to 1 when entering the screen to avoid stale accumulated state
+    // after navigating away and back.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(searchPageProvider.notifier).state = 1;
+    });
   }
 
   @override
@@ -457,25 +463,27 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         vertical: AppDimensions.base,
       ),
       child: Center(
-        child: _isLoadingMore
-            ? const Padding(
-                padding: EdgeInsets.all(AppDimensions.base),
-                child: CircularProgressIndicator(),
-              )
-            : OutlinedButton.icon(
-                onPressed: _loadMore,
-                icon: const Icon(Icons.expand_more),
-                label: const Text('Read more'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primaryContainer,
-                  side: const BorderSide(color: AppColors.primaryContainer),
-                  shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
+        child: Column(
+          children: [
+            Text(
+              'Showing ${_allResults.length} of ${Formatter.formatCitationCount(_totalCount)} results',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.onSurfaceVariant,
               ),
+            ),
+            const SizedBox(height: AppDimensions.sm),
+            _isLoadingMore
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : FilledButton.tonal(
+                    onPressed: _loadMore,
+                    child: const Text('Show more'),
+                  ),
+          ],
+        ),
       ),
     );
   }

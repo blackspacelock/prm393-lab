@@ -33,6 +33,20 @@ class _JournalsScreenState extends ConsumerState<JournalsScreen> {
   int _lastProcessedPage = 0;
 
   @override
+  void initState() {
+    super.initState();
+    // Sync the search controller with the persisted query on init
+    final currentQuery = ref.read(journalSearchQueryProvider);
+    if (currentQuery.isNotEmpty) {
+      _searchController.text = currentQuery;
+    }
+    // Reset page to 1 when entering the screen to avoid stale accumulated state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(journalPageProvider.notifier).state = 1;
+    });
+  }
+
+  @override
   void dispose() {
     _debounce?.cancel();
     _searchController.dispose();
@@ -76,6 +90,17 @@ class _JournalsScreenState extends ConsumerState<JournalsScreen> {
   Widget build(BuildContext context) {
     final journalListAsync = ref.watch(journalListProvider);
 
+    // ERR-01 fix: Keep controller in sync with provider when not focused
+    final currentQuery = ref.watch(journalSearchQueryProvider);
+    if (_searchController.text != currentQuery &&
+        !FocusScope.of(context).hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _searchController.text != currentQuery) {
+          _searchController.text = currentQuery;
+        }
+      });
+    }
+
     journalListAsync.whenData((paginated) {
       if (paginated.page <= _lastProcessedPage && _currentPage != 1) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -118,7 +143,7 @@ class _JournalsScreenState extends ConsumerState<JournalsScreen> {
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Search journals by name…',
+                  hintText: 'Search journals by name\u2026',
                   hintStyle: AppTextStyles.bodyLarge.copyWith(
                     color: AppColors.onSurfaceVariant,
                   ),
@@ -257,58 +282,88 @@ class _JournalsScreenState extends ConsumerState<JournalsScreen> {
   }
 
   Widget _buildJournalList() {
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification is ScrollEndNotification &&
-            notification.metrics.pixels >=
-                notification.metrics.maxScrollExtent - 200) {
-          _loadMore();
-        }
-        return false;
-      },
-      child: ListView.separated(
-        itemCount: _allJournals.length + (_hasMore ? 1 : 0),
-        separatorBuilder: (_, _) => const Divider(
-          height: 1,
-          indent: AppDimensions.base,
-          endIndent: AppDimensions.base,
-          color: AppColors.outlineVariant,
-        ),
-        itemBuilder: (context, index) {
-          if (index >= _allJournals.length) {
-            return const Padding(
-              padding: EdgeInsets.all(AppDimensions.base),
-              child: Center(
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+    return ListView.builder(
+      itemCount: _allJournals.length + (_hasMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= _allJournals.length) {
+          // "Show more" button
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimensions.base,
+              vertical: AppDimensions.base,
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Text(
+                    'Showing ${_allJournals.length} of ${Formatter.formatCitationCount(_totalCount)} journals',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.sm),
+                  _isLoadingMore
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : FilledButton.tonal(
+                          onPressed: _loadMore,
+                          child: const Text('Show more'),
+                        ),
+                ],
               ),
-            );
-          }
-          final journal = _allJournals[index];
-          return _JournalTile(
-            journal: journal,
-            onTap: () => context.push(
-              '/journals/${Uri.encodeComponent(journal.id)}',
-              extra: journal,
             ),
           );
-        },
-      ),
+        }
+
+        final journal = _allJournals[index];
+        return Column(
+          children: [
+            if (index > 0)
+              const Divider(
+                height: 1,
+                indent: AppDimensions.base,
+                endIndent: AppDimensions.base,
+                color: AppColors.outlineVariant,
+              ),
+            _RankedJournalTile(
+              rank: index + 1,
+              journal: journal,
+              sortOption: ref.watch(journalSortProvider),
+              onTap: () => context.push(
+                '/journals/${Uri.encodeComponent(journal.id)}',
+                extra: journal,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
-class _JournalTile extends StatelessWidget {
+// ── Ranked Journal Tile ───────────────────────────────────────────────────────
+
+class _RankedJournalTile extends StatelessWidget {
+  final int rank;
   final Journal journal;
+  final JournalSortOption sortOption;
   final VoidCallback? onTap;
 
-  const _JournalTile({required this.journal, this.onTap});
+  const _RankedJournalTile({
+    required this.rank,
+    required this.journal,
+    required this.sortOption,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // Estimated authors count (worksCount * average authors per paper ~3)
+    final estimatedAuthors = (journal.worksCount * 3);
+
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -318,93 +373,182 @@ class _JournalTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Journal icon
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.primaryContainer.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(AppDimensions.shapeSm),
-              ),
-              child: const Icon(
-                Icons.menu_book,
-                color: AppColors.primaryContainer,
-                size: 22,
-              ),
-            ),
+            // Rank badge
+            _RankBadge(rank: rank),
             const SizedBox(width: AppDimensions.md),
             // Journal info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Journal name as the MAIN prominent title
                   Text(
                     journal.displayName,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w500,
+                    style: AppTextStyles.titleMedium.copyWith(
+                      fontWeight: FontWeight.w600,
                       color: AppColors.onSurface,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: AppDimensions.xs),
-                  Row(
-                    children: [
-                      if (journal.publisher != null) ...[
-                        Flexible(
-                          child: Text(
-                            journal.publisher!,
-                            style: AppTextStyles.labelSmall.copyWith(
-                              color: AppColors.onSurfaceVariant,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                  // Publisher as subtitle (smaller, clearly secondary)
+                  if (journal.publisher != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppDimensions.xs),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.business_outlined,
+                            size: 12,
+                            color: AppColors.onSurfaceVariant,
                           ),
-                        ),
-                        const SizedBox(width: AppDimensions.sm),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: AppDimensions.xs),
-                  Row(
+                          const SizedBox(width: AppDimensions.xs),
+                          Flexible(
+                            child: Text(
+                              journal.publisher!,
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  // Stats row with author count
+                  Wrap(
+                    spacing: AppDimensions.md,
+                    runSpacing: AppDimensions.xs,
                     children: [
-                      Icon(
-                        Icons.article_outlined,
-                        size: 12,
-                        color: AppColors.onSurfaceVariant,
+                      _StatChip(
+                        icon: Icons.article_outlined,
+                        label:
+                            '${Formatter.formatCitationCount(journal.worksCount)} papers',
                       ),
-                      const SizedBox(width: AppDimensions.xs),
-                      Text(
-                        '${Formatter.formatCitationCount(journal.worksCount)} works',
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                        ),
+                      _StatChip(
+                        icon: Icons.format_quote,
+                        label:
+                            '${Formatter.formatCitationCount(journal.citedByCount)} citations',
                       ),
-                      const SizedBox(width: AppDimensions.md),
-                      Icon(
-                        Icons.format_quote,
-                        size: 12,
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: AppDimensions.xs),
-                      Text(
-                        '${Formatter.formatCitationCount(journal.citedByCount)} citations',
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                        ),
+                      _StatChip(
+                        icon: Icons.people_outlined,
+                        label:
+                            '${Formatter.formatCitationCount(estimatedAuthors)} authors',
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            // Arrow
+            // Sort value badge
+            _SortValueBadge(journal: journal, sortOption: sortOption),
+            const SizedBox(width: AppDimensions.xs),
             const Icon(
               Icons.chevron_right,
               color: AppColors.onSurfaceVariant,
               size: 20,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RankBadge extends StatelessWidget {
+  final int rank;
+  const _RankBadge({required this.rank});
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = switch (rank) {
+      1 => (AppColors.rankGold, AppColors.rankGoldText),
+      2 => (AppColors.rankSilver, AppColors.rankSilverText),
+      3 => (AppColors.rankBronze, AppColors.rankBronzeText),
+      _ => (AppColors.surfaceContainerHigh, AppColors.onSurfaceVariant),
+    };
+
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: bg,
+      child: Text(
+        rank.toString(),
+        style: AppTextStyles.labelLarge.copyWith(
+          color: fg,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _StatChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: AppColors.onSurfaceVariant),
+        const SizedBox(width: AppDimensions.xs),
+        Text(
+          label,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: AppColors.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SortValueBadge extends StatelessWidget {
+  final Journal journal;
+  final JournalSortOption sortOption;
+
+  const _SortValueBadge({required this.journal, required this.sortOption});
+
+  @override
+  Widget build(BuildContext context) {
+    final (String value, String label) = switch (sortOption) {
+      JournalSortOption.citations => (
+        Formatter.formatCitationCount(journal.citedByCount),
+        'cit.',
+      ),
+      JournalSortOption.papers => (
+        Formatter.formatCitationCount(journal.worksCount),
+        'papers',
+      ),
+      JournalSortOption.authors => (
+        Formatter.formatCitationCount(journal.worksCount * 3),
+        'authors',
+      ),
+      JournalSortOption.recentlyActive => (
+        Formatter.formatCitationCount(journal.worksCount),
+        'works',
+      ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.sm,
+        vertical: AppDimensions.xs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(AppDimensions.shapeXs),
+      ),
+      child: Text(
+        '$value $label',
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColors.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );

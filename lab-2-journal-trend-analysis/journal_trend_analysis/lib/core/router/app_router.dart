@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/entities/journal.dart';
 import '../../domain/entities/publication.dart';
+import '../../presentation/screens/bookmarks_screen.dart';
 import '../../presentation/screens/journal_detail_screen.dart';
 import '../../presentation/screens/journals_screen.dart';
 import '../../presentation/screens/keywords_screen.dart';
@@ -40,6 +41,19 @@ final appRouter = GoRouter(
         final journal = state.extra as Journal;
         return JournalDetailScreen(journal: journal);
       },
+    ),
+    GoRoute(
+      path: '/profile/bookmarks',
+      builder: (_, _) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Saved Papers'),
+          backgroundColor: AppColors.surfaceContainerLowest,
+          elevation: 0,
+          scrolledUnderElevation: 1,
+        ),
+        backgroundColor: AppColors.surface,
+        body: const BookmarksScreen(),
+      ),
     ),
   ],
 );

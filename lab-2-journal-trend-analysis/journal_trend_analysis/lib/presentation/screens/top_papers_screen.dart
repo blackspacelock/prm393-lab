@@ -74,7 +74,7 @@ class _TopPapersScreenState extends ConsumerState<TopPapersScreen> {
         loading: () => const ShimmerLoader(),
         error: (e, _) => ErrorState(
           message: e.toString(),
-          onRetry: () => ref.invalidate(publicationsProvider),
+          onRetry: () => ref.invalidate(paginatedPublicationsProvider),
         ),
         data: (_) {
           if (sorted.isEmpty) {

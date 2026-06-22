@@ -131,15 +131,27 @@ class _CountryHeatmapView extends ConsumerWidget {
   }
 }
 
-class _CountryHeatmapContent extends ConsumerWidget {
+class _CountryHeatmapContent extends ConsumerStatefulWidget {
   final List<CountryHeatmapData> countries;
 
   const _CountryHeatmapContent({required this.countries});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CountryHeatmapContent> createState() =>
+      _CountryHeatmapContentState();
+}
+
+class _CountryHeatmapContentState
+    extends ConsumerState<_CountryHeatmapContent> {
+  int _visibleCount = 50;
+
+  @override
+  Widget build(BuildContext context) {
+    final countries = widget.countries;
     final displayMode = ref.watch(countryDisplayModeProvider);
     final maxCount = countries.first.worksCount;
+    final visible = countries.take(_visibleCount).toList();
+    final hasMore = countries.length > _visibleCount;
 
     return CustomScrollView(
       slivers: [
@@ -225,7 +237,7 @@ class _CountryHeatmapContent extends ConsumerWidget {
 
         const SliverToBoxAdapter(child: SizedBox(height: AppDimensions.lg)),
 
-        // Full ranked list
+        // Full ranked list title
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppDimensions.base),
@@ -240,17 +252,45 @@ class _CountryHeatmapContent extends ConsumerWidget {
 
         const SliverToBoxAdapter(child: SizedBox(height: AppDimensions.sm)),
 
+        // Paginated country list (50 at a time)
         SliverList(
           delegate: SliverChildBuilderDelegate((context, index) {
-            final country = countries[index];
+            final country = visible[index];
             final ratio = country.worksCount / maxCount;
             return _CountryRankTile(
               rank: index + 1,
               country: country,
               ratio: ratio,
             );
-          }, childCount: countries.length),
+          }, childCount: visible.length),
         ),
+
+        // "Show more" button
+        if (hasMore)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppDimensions.base),
+              child: Center(
+                child: Column(
+                  children: [
+                    Text(
+                      'Showing $_visibleCount of ${countries.length} countries',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: AppDimensions.sm),
+                    FilledButton.tonal(
+                      onPressed: () {
+                        setState(() => _visibleCount += 50);
+                      },
+                      child: const Text('Show more'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
 
         const SliverToBoxAdapter(child: SizedBox(height: AppDimensions.xxl)),
       ],
@@ -601,16 +641,27 @@ class _InstitutionListView extends ConsumerWidget {
   }
 }
 
-class _InstitutionListContent extends StatelessWidget {
+class _InstitutionListContent extends StatefulWidget {
   final List<InstitutionHeatmapData> institutions;
 
   const _InstitutionListContent({required this.institutions});
 
   @override
+  State<_InstitutionListContent> createState() =>
+      _InstitutionListContentState();
+}
+
+class _InstitutionListContentState extends State<_InstitutionListContent> {
+  int _visibleCount = 50;
+
+  @override
   Widget build(BuildContext context) {
+    final institutions = widget.institutions;
     final maxCount = institutions.isNotEmpty
         ? institutions.first.worksCount
         : 1;
+    final visible = institutions.take(_visibleCount).toList();
+    final hasMore = institutions.length > _visibleCount;
 
     return CustomScrollView(
       slivers: [
@@ -640,15 +691,41 @@ class _InstitutionListContent extends StatelessWidget {
         ),
         SliverList(
           delegate: SliverChildBuilderDelegate((context, index) {
-            final inst = institutions[index];
+            final inst = visible[index];
             final ratio = inst.worksCount / maxCount;
             return _InstitutionTile(
               rank: index + 1,
               institution: inst,
               ratio: ratio,
             );
-          }, childCount: institutions.length),
+          }, childCount: visible.length),
         ),
+        // "Show more" button
+        if (hasMore)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppDimensions.base),
+              child: Center(
+                child: Column(
+                  children: [
+                    Text(
+                      'Showing $_visibleCount of ${institutions.length} institutions',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: AppDimensions.sm),
+                    FilledButton.tonal(
+                      onPressed: () {
+                        setState(() => _visibleCount += 50);
+                      },
+                      child: const Text('Show more'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         const SliverToBoxAdapter(child: SizedBox(height: AppDimensions.xxl)),
       ],
     );

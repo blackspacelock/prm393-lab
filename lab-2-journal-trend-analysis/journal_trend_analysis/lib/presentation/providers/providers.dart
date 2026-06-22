@@ -198,12 +198,30 @@ final trendingPublicationsProvider =
       );
     });
 
+/// Fetches yearly publication counts for a domain (or all fields) from OpenAlex group_by API.
+final trendingYearlyCountsProvider =
+    FutureProvider.family<List<YearCountData>, String?>((ref, domainId) async {
+      final results = await ref
+          .read(remoteDataSourceProvider)
+          .getYearlyCountsForDomain(domainId: domainId);
+      return results
+          .map((r) => YearCountData(year: r.year, count: r.count))
+          .toList();
+    });
+
+/// Simple year-count data class for the trending chart.
+class YearCountData {
+  final int year;
+  final int count;
+  const YearCountData({required this.year, required this.count});
+}
+
 // ── Sort ──────────────────────────────────────────────────────────────────────
 
 enum PaperSortOption { relevance, citationCount, year, title }
 
 final paperSortOptionProvider = StateProvider<PaperSortOption>(
-  (_) => PaperSortOption.citationCount,
+  (_) => PaperSortOption.relevance,
 );
 
 final sortedPublicationsProvider = Provider<List<Publication>>((ref) {

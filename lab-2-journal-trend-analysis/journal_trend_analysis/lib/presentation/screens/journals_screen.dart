@@ -197,21 +197,21 @@ class _JournalsScreenState extends ConsumerState<JournalsScreen> {
                   scrollDirection: Axis.horizontal,
                   children: [
                     _SortChip(
-                      label: 'Citations',
-                      icon: Icons.format_quote,
-                      selected:
-                          ref.watch(journalSortProvider) ==
-                          JournalSortOption.citations,
-                      onTap: () => _onSortChanged(JournalSortOption.citations),
-                    ),
-                    const SizedBox(width: AppDimensions.sm),
-                    _SortChip(
                       label: 'Papers',
                       icon: Icons.article_outlined,
                       selected:
                           ref.watch(journalSortProvider) ==
                           JournalSortOption.papers,
                       onTap: () => _onSortChanged(JournalSortOption.papers),
+                    ),
+                    const SizedBox(width: AppDimensions.sm),
+                    _SortChip(
+                      label: 'Citations',
+                      icon: Icons.format_quote,
+                      selected:
+                          ref.watch(journalSortProvider) ==
+                          JournalSortOption.citations,
+                      onTap: () => _onSortChanged(JournalSortOption.citations),
                     ),
                     const SizedBox(width: AppDimensions.sm),
                     _SortChip(

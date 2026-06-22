@@ -62,6 +62,7 @@ class _KeywordsScreenState extends ConsumerState<KeywordsScreen>
       ),
       body: TabBarView(
         controller: _tabController,
+        physics: const NeverScrollableScrollPhysics(),
         children: const [
           // Tab 1: Search (current Search functionality)
           SearchScreen(),

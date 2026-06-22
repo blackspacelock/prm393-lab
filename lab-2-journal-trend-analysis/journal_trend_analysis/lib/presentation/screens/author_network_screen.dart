@@ -72,31 +72,8 @@ class _AuthorNetworkBody extends ConsumerStatefulWidget {
   ConsumerState<_AuthorNetworkBody> createState() => _AuthorNetworkBodyState();
 }
 
-class _AuthorNetworkBodyState extends ConsumerState<_AuthorNetworkBody>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _AuthorNetworkBodyState extends ConsumerState<_AuthorNetworkBody> {
   _NetworkScaleMode _scaleMode = _NetworkScaleMode.papers;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        setState(() {
-          _scaleMode = _tabController.index == 0
-              ? _NetworkScaleMode.papers
-              : _NetworkScaleMode.citations;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,24 +100,60 @@ class _AuthorNetworkBodyState extends ConsumerState<_AuthorNetworkBody>
 
     return Column(
       children: [
-        // Tab bar
-        Container(
-          color: AppColors.surfaceContainerLowest,
-          child: TabBar(
-            controller: _tabController,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.onSurfaceVariant,
-            indicatorColor: AppColors.primary,
-            tabs: const [
-              Tab(
-                icon: Icon(Icons.article_outlined, size: 18),
-                text: 'Scale by Papers',
+        // Current topic indicator
+        Consumer(
+          builder: (context, ref, _) {
+            final query = ref.watch(searchQueryProvider);
+            if (query.isEmpty) return const SizedBox.shrink();
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.base,
+                vertical: AppDimensions.sm,
               ),
-              Tab(
+              color: AppColors.citationChipBg,
+              child: Row(
+                children: [
+                  const Icon(Icons.topic, size: 16, color: AppColors.primary),
+                  const SizedBox(width: AppDimensions.sm),
+                  Expanded(
+                    child: Text(
+                      'Topic: $query',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: AppColors.citationChipText,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        // Segmented button (like Heatmap's Countries/Institutions toggle)
+        Padding(
+          padding: const EdgeInsets.all(AppDimensions.base),
+          child: SegmentedButton<_NetworkScaleMode>(
+            segments: const [
+              ButtonSegment(
+                value: _NetworkScaleMode.papers,
+                icon: Icon(Icons.article_outlined, size: 18),
+                label: Text('Scale by Papers'),
+              ),
+              ButtonSegment(
+                value: _NetworkScaleMode.citations,
                 icon: Icon(Icons.format_quote_outlined, size: 18),
-                text: 'Scale by Citations',
+                label: Text('Scale by Citations'),
               ),
             ],
+            selected: {_scaleMode},
+            onSelectionChanged: (selected) {
+              setState(() => _scaleMode = selected.first);
+            },
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: AppColors.secondaryContainer,
+              selectedForegroundColor: AppColors.onSecondaryContainer,
+            ),
           ),
         ),
         // Network graph

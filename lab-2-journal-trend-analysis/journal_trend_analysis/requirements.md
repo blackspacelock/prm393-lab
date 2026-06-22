@@ -1,1 +1,2 @@
-1. The Heat map for countries and insitutions, each page list should first show 50 results, and a "Show more" button to show 50 each next click until all
+1. Show the Topic above the Author network
+2. 

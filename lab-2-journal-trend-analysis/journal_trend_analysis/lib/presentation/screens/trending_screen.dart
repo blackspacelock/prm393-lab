@@ -164,8 +164,8 @@ class _TrendingScreenState extends ConsumerState<TrendingScreen> {
         // Dashboard at the top
         if (i == 0) {
           return _TrendingDashboard(
-            publications: _allPubs,
             totalPapersInDomain: _totalCount,
+            domainId: domainId,
           );
         }
         // "Trending" title with count
@@ -506,52 +506,43 @@ class _CategoryChip extends StatelessWidget {
 
 // ── Trending Dashboard ────────────────────────────────────────────────────────
 
-class _TrendingDashboard extends StatelessWidget {
-  final List<Publication> publications;
+class _TrendingDashboard extends ConsumerWidget {
   final int totalPapersInDomain;
+  final String? domainId;
 
   const _TrendingDashboard({
-    required this.publications,
     required this.totalPapersInDomain,
+    required this.domainId,
   });
 
   @override
-  Widget build(BuildContext context) {
-    if (publications.isEmpty) return const SizedBox.shrink();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final yearlyAsync = ref.watch(trendingYearlyCountsProvider(domainId));
 
-    // Use totalPapersInDomain from API for the "Total Papers" KPI
-    final totalCitations = publications.fold<int>(
+    // Compute KPIs from the full domain yearly data
+    final yearlyData = yearlyAsync.value ?? [];
+    final totalPapersFromYearly = yearlyData.fold<int>(
       0,
-      (sum, pub) => sum + pub.citedByCount,
+      (s, d) => s + d.count,
     );
-
-    // Compute avg citations per year
-    final Map<int, int> citationsByYear = {};
-    final Map<int, int> papersByYear = {};
-    for (final pub in publications) {
-      final year = pub.publicationYear;
-      if (year == null) continue;
-      papersByYear[year] = (papersByYear[year] ?? 0) + 1;
-      citationsByYear[year] = (citationsByYear[year] ?? 0) + pub.citedByCount;
-    }
-
-    final yearsWithData = papersByYear.keys.toList()..sort();
-    final numYears = yearsWithData.length;
-    final avgCitationsPerYear = numYears > 0 ? totalCitations / numYears : 0.0;
+    final numYears = yearlyData.length;
+    final avgPapersPerYear = numYears > 0
+        ? totalPapersFromYearly / numYears
+        : 0.0;
 
     // Most active year
     int? mostActiveYear;
     int maxPapers = 0;
-    for (final entry in papersByYear.entries) {
-      if (entry.value > maxPapers) {
-        maxPapers = entry.value;
-        mostActiveYear = entry.key;
+    for (final d in yearlyData) {
+      if (d.count > maxPapers) {
+        maxPapers = d.count;
+        mostActiveYear = d.year;
       }
     }
 
-    // Build line chart data
-    final chartData = yearsWithData
-        .map((year) => _YearPoint(year: year, count: papersByYear[year] ?? 0))
+    // Chart data from API (full domain)
+    final chartData = yearlyData
+        .map((d) => _YearPoint(year: d.year, count: d.count))
         .toList();
 
     return Padding(
@@ -590,16 +581,18 @@ class _TrendingDashboard extends StatelessWidget {
                     const SizedBox(width: AppDimensions.sm),
                     Expanded(
                       child: _DashboardKpi(
-                        label: 'Avg Citations/Year',
-                        value: Formatter.formatDouble(avgCitationsPerYear),
-                        icon: Icons.format_quote,
+                        label: 'Avg Papers/Year',
+                        value: Formatter.formatCitationCount(
+                          avgPapersPerYear.round(),
+                        ),
+                        icon: Icons.show_chart,
                         iconColor: AppColors.metricOrange,
                       ),
                     ),
                     const SizedBox(width: AppDimensions.sm),
                     Expanded(
                       child: _DashboardKpi(
-                        label: 'Most Active Year',
+                        label: 'Most Active',
                         value: mostActiveYear?.toString() ?? 'N/A',
                         icon: Icons.calendar_today,
                         iconColor: AppColors.metricGreen,
@@ -609,7 +602,7 @@ class _TrendingDashboard extends StatelessWidget {
                 ),
               ),
             ),
-            // Publications per year chart
+            // Publications per year chart (full domain data from API)
             if (chartData.length >= 2) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -626,7 +619,7 @@ class _TrendingDashboard extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                height: 160,
+                height: 140,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppDimensions.sm,
@@ -635,6 +628,17 @@ class _TrendingDashboard extends StatelessWidget {
                     AppDimensions.base,
                   ),
                   child: _TrendingLineChart(data: chartData),
+                ),
+              ),
+            ] else if (yearlyAsync.isLoading) ...[
+              const Padding(
+                padding: EdgeInsets.all(AppDimensions.base),
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
               ),
             ],
@@ -705,9 +709,22 @@ class _TrendingLineChart extends StatelessWidget {
 
   const _TrendingLineChart({required this.data});
 
-  bool _shouldShowYearLabel(int year, int firstYear, int lastYear) {
+  bool _shouldShowYearLabel(
+    int year,
+    int firstYear,
+    int lastYear,
+    int totalYears,
+  ) {
     if (year == firstYear || year == lastYear) return true;
-    return (year - firstYear) % 5 == 0;
+    // Show fewer labels for larger datasets
+    final interval = totalYears > 30 ? 10 : (totalYears > 15 ? 5 : 3);
+    return (year - firstYear) % interval == 0;
+  }
+
+  String _formatCompact(double value) {
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(0)}K';
+    return value.toInt().toString();
   }
 
   @override
@@ -721,14 +738,15 @@ class _TrendingLineChart extends StatelessWidget {
 
     final firstYear = data.first.year;
     final lastYear = data.last.year;
-    final horizontalInterval = maxY > 0 ? (maxY / 4).ceilToDouble() : 1.0;
+    final totalYears = data.length;
+    final horizontalInterval = maxY > 0 ? (maxY / 3).ceilToDouble() : 1.0;
 
     return LineChart(
       LineChartData(
         minX: 0,
         maxX: (data.length - 1).toDouble(),
         minY: 0,
-        maxY: maxY * 1.25,
+        maxY: maxY * 1.2,
         lineTouchData: LineTouchData(
           enabled: true,
           touchTooltipData: LineTouchTooltipData(
@@ -737,10 +755,10 @@ class _TrendingLineChart extends StatelessWidget {
               return touchedSpots.map((spot) {
                 final d = data[spot.x.toInt()];
                 return LineTooltipItem(
-                  '${d.year}\n${d.count} papers',
+                  '${d.year}\n${_formatCompact(d.count.toDouble())} papers',
                   const TextStyle(
                     color: AppColors.onPrimary,
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w500,
                   ),
                 );
@@ -753,7 +771,7 @@ class _TrendingLineChart extends StatelessWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 32,
+              reservedSize: 28,
               interval: 1,
               getTitlesWidget: (value, meta) {
                 final idx = value.toInt();
@@ -761,17 +779,22 @@ class _TrendingLineChart extends StatelessWidget {
                   return const SizedBox.shrink();
                 }
                 final year = data[idx].year;
-                if (!_shouldShowYearLabel(year, firstYear, lastYear)) {
+                if (!_shouldShowYearLabel(
+                  year,
+                  firstYear,
+                  lastYear,
+                  totalYears,
+                )) {
                   return const SizedBox.shrink();
                 }
                 return Transform.rotate(
                   angle: -0.5,
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      year.toString(),
+                      "'${(year % 100).toString().padLeft(2, '0')}",
                       style: const TextStyle(
-                        fontSize: 9,
+                        fontSize: 8,
                         color: AppColors.onSurfaceVariant,
                       ),
                     ),
@@ -783,13 +806,14 @@ class _TrendingLineChart extends StatelessWidget {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 32,
+              reservedSize: 30,
               interval: horizontalInterval,
               getTitlesWidget: (value, meta) {
                 if (value < 0) return const SizedBox.shrink();
                 return Text(
-                  value.toInt().toString(),
-                  style: AppTextStyles.labelSmall.copyWith(
+                  _formatCompact(value),
+                  style: const TextStyle(
+                    fontSize: 8,
                     color: AppColors.onSurfaceVariant,
                   ),
                 );

@@ -37,6 +37,16 @@ abstract class PublicationRemoteDataSource {
     int page = 1,
     int perPage = 50,
   });
+
+  /// Get publication counts grouped by year for a domain or all fields.
+  Future<List<YearCount>> getYearlyCountsForDomain({String? domainId});
+}
+
+/// Simple year-count pair for grouped results.
+class YearCount {
+  final int year;
+  final int count;
+  const YearCount({required this.year, required this.count});
 }
 
 class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
@@ -163,6 +173,46 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
       final results = _parseResults(data);
 
       return PaginatedApiResponse(results: results, totalCount: totalCount);
+    } on DioException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      throw Exception('Parse error: $e');
+    }
+  }
+
+  @override
+  Future<List<YearCount>> getYearlyCountsForDomain({String? domainId}) async {
+    try {
+      final params = <String, dynamic>{
+        'group_by': 'publication_year',
+        'per_page': 200,
+      };
+      if (domainId != null) {
+        params['filter'] = 'primary_topic.domain.id:$domainId,type:article';
+      } else {
+        params['filter'] = 'type:article';
+      }
+
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/works',
+        queryParameters: params,
+      );
+
+      final data = response.data;
+      final groupBy = data?['group_by'] as List<dynamic>? ?? [];
+      final results = <YearCount>[];
+      for (final item in groupBy) {
+        if (item is Map<String, dynamic>) {
+          final key = item['key'] as String? ?? '';
+          final count = item['count'] as int? ?? 0;
+          final year = int.tryParse(key);
+          if (year != null && year > 1900 && count > 0) {
+            results.add(YearCount(year: year, count: count));
+          }
+        }
+      }
+      results.sort((a, b) => a.year.compareTo(b.year));
+      return results;
     } on DioException catch (e) {
       throw Exception('Network error: ${e.message}');
     } catch (e) {

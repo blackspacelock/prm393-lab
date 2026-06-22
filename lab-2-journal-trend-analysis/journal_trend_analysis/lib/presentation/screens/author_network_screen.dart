@@ -100,6 +100,36 @@ class _AuthorNetworkBodyState extends ConsumerState<_AuthorNetworkBody> {
 
     return Column(
       children: [
+        // Current topic indicator
+        Consumer(
+          builder: (context, ref, _) {
+            final query = ref.watch(searchQueryProvider);
+            if (query.isEmpty) return const SizedBox.shrink();
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.base,
+                vertical: AppDimensions.sm,
+              ),
+              color: AppColors.citationChipBg,
+              child: Row(
+                children: [
+                  const Icon(Icons.topic, size: 16, color: AppColors.primary),
+                  const SizedBox(width: AppDimensions.sm),
+                  Expanded(
+                    child: Text(
+                      'Topic: $query',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: AppColors.citationChipText,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
         // Segmented button (like Heatmap's Countries/Institutions toggle)
         Padding(
           padding: const EdgeInsets.all(AppDimensions.base),

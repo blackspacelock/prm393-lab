@@ -509,13 +509,15 @@ class _CountryRankTile extends StatelessWidget {
         children: [
           // Rank badge
           SizedBox(
-            width: 32,
+            width: 40,
             child: Text(
               '#$rank',
               style: AppTextStyles.labelMedium.copyWith(
                 color: _rankColor(rank),
                 fontWeight: FontWeight.bold,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.clip,
             ),
           ),
           const SizedBox(width: AppDimensions.sm),

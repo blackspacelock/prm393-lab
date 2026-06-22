@@ -114,16 +114,72 @@ class _JournalInfoHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (journal.publisher != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppDimensions.xs),
-              child: Text(
-                journal.publisher!,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.onSurfaceVariant,
+          // Journal name prominently displayed
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppDimensions.shapeSm),
+                ),
+                child: const Icon(
+                  Icons.menu_book,
+                  color: AppColors.primaryContainer,
+                  size: 22,
                 ),
               ),
-            ),
+              const SizedBox(width: AppDimensions.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      journal.displayName,
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: AppColors.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (journal.publisher != null) ...[
+                      const SizedBox(height: AppDimensions.xs),
+                      Text(
+                        journal.publisher!,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                    if (journal.type != null) ...[
+                      const SizedBox(height: AppDimensions.xs),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.sm,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondaryContainer,
+                          borderRadius: BorderRadius.circular(
+                            AppDimensions.shapeXs,
+                          ),
+                        ),
+                        child: Text(
+                          journal.type!,
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: AppColors.onSecondaryContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppDimensions.md),
+          // Stats row
           Row(
             children: [
               _InfoChip(
@@ -137,10 +193,6 @@ class _JournalInfoHeader extends StatelessWidget {
                 label:
                     '${Formatter.formatCitationCount(journal.citedByCount)} citations',
               ),
-              if (journal.type != null) ...[
-                const SizedBox(width: AppDimensions.md),
-                _InfoChip(icon: Icons.category_outlined, label: journal.type!),
-              ],
             ],
           ),
         ],
@@ -186,6 +238,8 @@ class _AuthorsTab extends ConsumerStatefulWidget {
 
 class _AuthorsTabState extends ConsumerState<_AuthorsTab>
     with AutomaticKeepAliveClientMixin {
+  int _visibleCount = 50;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -225,19 +279,54 @@ class _AuthorsTabState extends ConsumerState<_AuthorsTab>
           );
         }
 
-        return ListView.separated(
-          itemCount: authors.length,
-          separatorBuilder: (_, _) => const Divider(
-            height: 1,
-            indent: AppDimensions.base,
-            endIndent: AppDimensions.base,
-            color: AppColors.outlineVariant,
-          ),
+        final visibleAuthors = authors.take(_visibleCount).toList();
+        final hasMore = authors.length > _visibleCount;
+
+        return ListView.builder(
+          itemCount: visibleAuthors.length + (hasMore ? 1 : 0),
           itemBuilder: (context, index) {
-            final author = authors[index];
-            return _AuthorTile(
-              author: author,
-              onTap: () => _showAuthorPapers(context, author),
+            if (index >= visibleAuthors.length) {
+              // Show more button
+              return Padding(
+                padding: const EdgeInsets.all(AppDimensions.base),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Showing $_visibleCount of ${authors.length} authors',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: AppDimensions.sm),
+                      FilledButton.tonal(
+                        onPressed: () {
+                          setState(() => _visibleCount += 50);
+                        },
+                        child: const Text('Show more'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            final author = visibleAuthors[index];
+            return Column(
+              children: [
+                if (index > 0)
+                  const Divider(
+                    height: 1,
+                    indent: AppDimensions.base,
+                    endIndent: AppDimensions.base,
+                    color: AppColors.outlineVariant,
+                  ),
+                _AuthorTile(
+                  rank: index + 1,
+                  author: author,
+                  onTap: () => _showAuthorPapers(context, author),
+                ),
+              ],
             );
           },
         );
@@ -336,10 +425,11 @@ class _AuthorInfo {
 }
 
 class _AuthorTile extends StatelessWidget {
+  final int rank;
   final _AuthorInfo author;
   final VoidCallback? onTap;
 
-  const _AuthorTile({required this.author, this.onTap});
+  const _AuthorTile({required this.rank, required this.author, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -352,17 +442,7 @@ class _AuthorTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.primaryContainer.withValues(
-                alpha: 0.12,
-              ),
-              child: const Icon(
-                Icons.person,
-                color: AppColors.primaryContainer,
-                size: 18,
-              ),
-            ),
+            _RankBadge(rank: rank),
             const SizedBox(width: AppDimensions.md),
             Expanded(
               child: Column(
@@ -415,11 +495,13 @@ class _PapersTabState extends ConsumerState<_PapersTab>
   bool _hasMore = true;
   int _currentPage = 1;
   int _lastProcessedPage = 0;
+  bool _isLoadingMore = false;
 
   @override
   bool get wantKeepAlive => true;
 
   void _showMore() {
+    setState(() => _isLoadingMore = true);
     _currentPage++;
     ref.read(journalPubsPageProvider.notifier).state = _currentPage;
   }
@@ -442,9 +524,17 @@ class _PapersTabState extends ConsumerState<_PapersTab>
           }
           _lastProcessedPage = paginated.page;
           _hasMore = paginated.hasNextPage;
+          _isLoadingMore = false;
         });
       });
     });
+
+    // Reset loading state on error
+    if (pubsAsync.hasError && _isLoadingMore) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _isLoadingMore = false);
+      });
+    }
 
     return pubsAsync.when(
       loading: () =>
@@ -468,23 +558,29 @@ class _PapersTabState extends ConsumerState<_PapersTab>
       itemCount: _allPapers.length + (_hasMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index >= _allPapers.length) {
-          // Show more button
+          // Show more button with loading effect
           return Padding(
             padding: const EdgeInsets.all(AppDimensions.base),
             child: Center(
               child: Column(
                 children: [
                   Text(
-                    'Showing ${_allPapers.length} of $_totalCount papers',
+                    'Showing ${_allPapers.length} of ${Formatter.formatCitationCount(_totalCount)} papers',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: AppDimensions.sm),
-                  FilledButton.tonal(
-                    onPressed: _showMore,
-                    child: const Text('Show more'),
-                  ),
+                  _isLoadingMore
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : FilledButton.tonal(
+                          onPressed: _showMore,
+                          child: const Text('Show more'),
+                        ),
                 ],
               ),
             ),
@@ -492,14 +588,152 @@ class _PapersTabState extends ConsumerState<_PapersTab>
         }
 
         final pub = _allPapers[index];
-        return _PublicationTile(
-          publication: pub,
-          onTap: () => context.push(
-            '/publication/${Uri.encodeComponent(pub.id)}',
-            extra: pub,
-          ),
+        return Column(
+          children: [
+            if (index > 0)
+              const Divider(
+                height: 1,
+                indent: AppDimensions.base,
+                endIndent: AppDimensions.base,
+                color: AppColors.outlineVariant,
+              ),
+            _RankedPublicationTile(
+              rank: index + 1,
+              publication: pub,
+              onTap: () => context.push(
+                '/publication/${Uri.encodeComponent(pub.id)}',
+                extra: pub,
+              ),
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+// ── Rank Badge ────────────────────────────────────────────────────────────────
+
+class _RankBadge extends StatelessWidget {
+  final int rank;
+  const _RankBadge({required this.rank});
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = switch (rank) {
+      1 => (AppColors.rankGold, AppColors.rankGoldText),
+      2 => (AppColors.rankSilver, AppColors.rankSilverText),
+      3 => (AppColors.rankBronze, AppColors.rankBronzeText),
+      _ => (AppColors.surfaceContainerHigh, AppColors.onSurfaceVariant),
+    };
+
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: bg,
+      child: Text(
+        rank.toString(),
+        style: AppTextStyles.labelLarge.copyWith(
+          color: fg,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Ranked Publication Tile ───────────────────────────────────────────────────
+
+class _RankedPublicationTile extends StatelessWidget {
+  final int rank;
+  final Publication publication;
+  final VoidCallback? onTap;
+
+  const _RankedPublicationTile({
+    required this.rank,
+    required this.publication,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.base,
+          vertical: AppDimensions.md,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _RankBadge(rank: rank),
+            const SizedBox(width: AppDimensions.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    publication.title,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onSurface,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: AppDimensions.xs),
+                  Row(
+                    children: [
+                      if (publication.publicationYear != null) ...[
+                        Text(
+                          '${publication.publicationYear}',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(width: AppDimensions.md),
+                      ],
+                      Icon(
+                        Icons.format_quote,
+                        size: 12,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: AppDimensions.xs),
+                      Text(
+                        '${Formatter.formatCitationCount(publication.citedByCount)} citations',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (publication.authors.isNotEmpty) ...[
+                    const SizedBox(height: AppDimensions.xs),
+                    Text(
+                      publication.authors
+                              .map((a) => a.displayName)
+                              .take(3)
+                              .join(', ') +
+                          (publication.authors.length > 3 ? ' et al.' : ''),
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              color: AppColors.onSurfaceVariant,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -175,13 +175,27 @@ final topJournalsProvider = Provider<List<JournalWithCount>>((ref) {
 /// Fetches live domain categories for the trending chips.
 final trendingCategoriesProvider = domainsProvider;
 
+/// Current page for trending publications pagination.
+final trendingPageProvider = StateProvider.family<int, String?>((_, _) => 1);
+
 /// Fetches trending publications filtered by an optional OpenAlex domain ID.
+/// Now returns paginated result with totalCount from the API.
 final trendingPublicationsProvider =
-    FutureProvider.family<List<Publication>, String?>((ref, domainId) async {
-      final models = await ref
+    FutureProvider.family<PaginatedResult<Publication>, String?>((
+      ref,
+      domainId,
+    ) async {
+      final page = ref.watch(trendingPageProvider(domainId));
+      final response = await ref
           .read(remoteDataSourceProvider)
-          .getTrending(domainId: domainId);
-      return models.map((m) => m.toEntity()).toList();
+          .getTrending(domainId: domainId, page: page, perPage: 50);
+      final pubs = response.results.map((m) => m.toEntity()).toList();
+      return PaginatedResult(
+        items: pubs,
+        totalCount: response.totalCount,
+        page: page,
+        perPage: 50,
+      );
     });
 
 // ── Sort ──────────────────────────────────────────────────────────────────────

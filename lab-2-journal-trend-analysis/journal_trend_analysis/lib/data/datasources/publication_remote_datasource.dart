@@ -31,9 +31,11 @@ abstract class PublicationRemoteDataSource {
   Future<List<PublicationModel>> getTopPapers({String? topic});
 
   /// Recent (2022-present) high-impact papers, optionally scoped to a domain.
-  Future<List<PublicationModel>> getTrending({
+  /// Returns paginated results with total count.
+  Future<PaginatedApiResponse> getTrending({
     String? domainId,
-    int perPage = 30,
+    int page = 1,
+    int perPage = 50,
   });
 }
 
@@ -136,9 +138,10 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
   }
 
   @override
-  Future<List<PublicationModel>> getTrending({
+  Future<PaginatedApiResponse> getTrending({
     String? domainId,
-    int perPage = 30,
+    int page = 1,
+    int perPage = 50,
   }) async {
     try {
       final filter = domainId != null
@@ -150,9 +153,16 @@ class PublicationRemoteDataSourceImpl implements PublicationRemoteDataSource {
           'filter': filter,
           'sort': 'cited_by_count:desc',
           'per_page': perPage,
+          'page': page,
         },
       );
-      return _parseResults(response.data);
+
+      final data = response.data;
+      final meta = data?['meta'] as Map<String, dynamic>? ?? {};
+      final totalCount = meta['count'] as int? ?? 0;
+      final results = _parseResults(data);
+
+      return PaginatedApiResponse(results: results, totalCount: totalCount);
     } on DioException catch (e) {
       throw Exception('Network error: ${e.message}');
     } catch (e) {

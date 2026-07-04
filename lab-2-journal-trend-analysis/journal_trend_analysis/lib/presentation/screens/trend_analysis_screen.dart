@@ -161,7 +161,6 @@ class _TrendAnalysisScreenState extends ConsumerState<TrendAnalysisScreen> {
     final trendData = ref.watch(filteredTrendDataProvider);
     final topJournals = ref.watch(topJournalsProvider);
     final topAuthors = ref.watch(topAuthorsProvider);
-    final query = ref.watch(searchQueryProvider);
     final yearRange = ref.watch(trendYearRangeProvider);
     final summary = ref.watch(dashboardSummaryProvider);
 
@@ -233,75 +232,6 @@ class _TrendAnalysisScreenState extends ConsumerState<TrendAnalysisScreen> {
 
           return Column(
             children: [
-              // Sticky topic context bar
-              if (query.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.base,
-                    vertical: AppDimensions.sm,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: AppColors.surfaceContainerLowest,
-                    border: Border(
-                      bottom: BorderSide(
-                        color: AppColors.outlineVariant,
-                        width: 0.5,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Topic:',
-                        style: AppTextStyles.labelMedium.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(width: AppDimensions.sm),
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimensions.md,
-                            vertical: AppDimensions.xs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.secondaryContainer,
-                            borderRadius: BorderRadius.circular(
-                              AppDimensions.shapeSm,
-                            ),
-                          ),
-                          child: Text(
-                            query,
-                            style: AppTextStyles.labelMedium.copyWith(
-                              color: AppColors.onSecondaryContainer,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppDimensions.sm),
-                      if (yearRange != null) ...[
-                        Text(
-                          '${yearRange.$1}–${yearRange.$2}',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.primaryContainer,
-                          ),
-                        ),
-                        const SizedBox(width: AppDimensions.sm),
-                        GestureDetector(
-                          onTap: () =>
-                              ref.read(trendYearRangeProvider.notifier).state =
-                                  null,
-                          child: const Icon(
-                            Icons.close,
-                            size: 16,
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ] else
-                        const SizedBox.shrink(),
-                    ],
-                  ),
-                ),
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(

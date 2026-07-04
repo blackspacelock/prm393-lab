@@ -11,6 +11,12 @@ import '../providers/journal_providers.dart';
 import '../widgets/error_state.dart';
 import '../widgets/shimmer_loader.dart';
 
+// ── Sort enums ────────────────────────────────────────────────────────────────
+
+enum _AuthorSort { papers, citations }
+
+enum _PaperSort { citations, year }
+
 class JournalDetailScreen extends ConsumerStatefulWidget {
   final Journal journal;
 
@@ -25,11 +31,17 @@ class _JournalDetailScreenState extends ConsumerState<JournalDetailScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
+  // Shared topic filter
+  String _topicFilter = '';
+
+  // Per-tab sort
+  _AuthorSort _authorSort = _AuthorSort.papers;
+  _PaperSort _paperSort = _PaperSort.citations;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    // Reset pagination when entering detail
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(journalPubsPageProvider.notifier).state = 1;
     });
@@ -39,6 +51,29 @@ class _JournalDetailScreenState extends ConsumerState<JournalDetailScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _showTopicFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppDimensions.shapeMd),
+        ),
+      ),
+      builder: (_) => _TopicFilterSheet(
+        currentFilter: _topicFilter,
+        onSelect: (value) {
+          setState(() => _topicFilter = value);
+          Navigator.of(context).pop();
+        },
+        onClear: () {
+          setState(() => _topicFilter = '');
+          Navigator.of(context).pop();
+        },
+      ),
+    );
   }
 
   @override
@@ -60,8 +95,77 @@ class _JournalDetailScreenState extends ConsumerState<JournalDetailScreen>
       ),
       body: Column(
         children: [
-          // Journal info header
           _JournalInfoHeader(journal: journal),
+          // Topic filter row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimensions.base,
+              AppDimensions.sm,
+              AppDimensions.base,
+              AppDimensions.sm,
+            ),
+            child: GestureDetector(
+              onTap: _showTopicFilterSheet,
+              child: Container(
+                width: double.infinity,
+                height: 40,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.md,
+                ),
+                decoration: BoxDecoration(
+                  color: _topicFilter.isNotEmpty
+                      ? AppColors.primaryContainer.withValues(alpha: 0.12)
+                      : AppColors.surfaceContainer,
+                  borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
+                  border: Border.all(
+                    color: _topicFilter.isNotEmpty
+                        ? AppColors.primaryContainer
+                        : AppColors.outlineVariant,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.filter_list,
+                      size: 16,
+                      color: _topicFilter.isNotEmpty
+                          ? AppColors.primaryContainer
+                          : AppColors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: AppDimensions.sm),
+                    Expanded(
+                      child: Text(
+                        _topicFilter.isNotEmpty
+                            ? 'Topic: $_topicFilter'
+                            : 'Filter by Topic',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: _topicFilter.isNotEmpty
+                              ? AppColors.primaryContainer
+                              : AppColors.onSurfaceVariant,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (_topicFilter.isNotEmpty)
+                      GestureDetector(
+                        onTap: () => setState(() => _topicFilter = ''),
+                        child: const Icon(
+                          Icons.close,
+                          size: 16,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      )
+                    else
+                      const Icon(
+                        Icons.expand_more,
+                        size: 16,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
           // Tab bar
           Container(
             decoration: const BoxDecoration(
@@ -87,9 +191,144 @@ class _JournalDetailScreenState extends ConsumerState<JournalDetailScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _AuthorsTab(journal: journal),
-                _PapersTab(journal: journal),
+                _AuthorsTab(
+                  journal: journal,
+                  topicFilter: _topicFilter,
+                  sort: _authorSort,
+                  onSortChanged: (s) => setState(() => _authorSort = s),
+                ),
+                _PapersTab(
+                  journal: journal,
+                  topicFilter: _topicFilter,
+                  sort: _paperSort,
+                  onSortChanged: (s) => setState(() => _paperSort = s),
+                ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Topic Filter Bottom Sheet ─────────────────────────────────────────────────
+
+class _TopicFilterSheet extends StatefulWidget {
+  final String currentFilter;
+  final ValueChanged<String> onSelect;
+  final VoidCallback onClear;
+
+  const _TopicFilterSheet({
+    required this.currentFilter,
+    required this.onSelect,
+    required this.onClear,
+  });
+
+  @override
+  State<_TopicFilterSheet> createState() => _TopicFilterSheetState();
+}
+
+class _TopicFilterSheetState extends State<_TopicFilterSheet> {
+  final _controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.text = widget.currentFilter;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppDimensions.base,
+        AppDimensions.sm,
+        AppDimensions.base,
+        MediaQuery.of(context).viewInsets.bottom + AppDimensions.xl,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: AppDimensions.base),
+              decoration: BoxDecoration(
+                color: AppColors.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              const Icon(
+                Icons.filter_list,
+                size: 20,
+                color: AppColors.primaryContainer,
+              ),
+              const SizedBox(width: AppDimensions.sm),
+              Text(
+                'Filter by Topic',
+                style: AppTextStyles.headlineSmall.copyWith(
+                  color: AppColors.onSurface,
+                ),
+              ),
+              const Spacer(),
+              if (widget.currentFilter.isNotEmpty)
+                TextButton(
+                  onPressed: widget.onClear,
+                  child: const Text('Clear'),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppDimensions.base),
+          Text(
+            'Enter a Domain, Field, Subfield, or Topic keyword to filter:',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppDimensions.sm),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'e.g. Machine Learning, Biology...',
+              hintStyle: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: AppColors.surfaceContainer,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.shapeFull),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (value) {
+              final trimmed = value.trim();
+              if (trimmed.isNotEmpty) widget.onSelect(trimmed);
+            },
+          ),
+          const SizedBox(height: AppDimensions.md),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () {
+                final trimmed = _controller.text.trim();
+                if (trimmed.isNotEmpty) widget.onSelect(trimmed);
+              },
+              child: const Text('Apply Filter'),
             ),
           ),
         ],
@@ -114,7 +353,6 @@ class _JournalInfoHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Journal name prominently displayed
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -179,7 +417,6 @@ class _JournalInfoHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppDimensions.md),
-          // Stats row
           Row(
             children: [
               _InfoChip(
@@ -204,7 +441,6 @@ class _JournalInfoHeader extends StatelessWidget {
 class _InfoChip extends StatelessWidget {
   final IconData icon;
   final String label;
-
   const _InfoChip({required this.icon, required this.label});
 
   @override
@@ -229,8 +465,16 @@ class _InfoChip extends StatelessWidget {
 
 class _AuthorsTab extends ConsumerStatefulWidget {
   final Journal journal;
+  final String topicFilter;
+  final _AuthorSort sort;
+  final ValueChanged<_AuthorSort> onSortChanged;
 
-  const _AuthorsTab({required this.journal});
+  const _AuthorsTab({
+    required this.journal,
+    required this.topicFilter,
+    required this.sort,
+    required this.onSortChanged,
+  });
 
   @override
   ConsumerState<_AuthorsTab> createState() => _AuthorsTabState();
@@ -256,79 +500,120 @@ class _AuthorsTabState extends ConsumerState<_AuthorsTab>
             ref.invalidate(journalPublicationsProvider(widget.journal.id)),
       ),
       data: (paginated) {
-        // Extract unique authors from publications
+        // Filter by topic keyword
+        var pubs = paginated.items;
+        if (widget.topicFilter.isNotEmpty) {
+          final filter = widget.topicFilter.toLowerCase();
+          pubs = pubs
+              .where(
+                (p) => p.concepts.any((c) => c.toLowerCase().contains(filter)),
+              )
+              .toList();
+        }
+
+        // Extract unique authors
         final authorMap = <String, _AuthorInfo>{};
-        for (final pub in paginated.items) {
+        for (final pub in pubs) {
           for (final author in pub.authors) {
             final existing = authorMap[author.id];
+            final totalCitations =
+                (existing?._totalCitations ?? 0) + pub.citedByCount;
             authorMap[author.id] = _AuthorInfo(
               id: author.id,
               name: author.displayName,
               paperCount: (existing?.paperCount ?? 0) + 1,
               publications: [...(existing?.publications ?? []), pub],
+              totalCitations: totalCitations,
             );
           }
         }
 
-        final authors = authorMap.values.toList()
-          ..sort((a, b) => b.paperCount.compareTo(a.paperCount));
+        var authors = authorMap.values.toList();
+        // Sort
+        switch (widget.sort) {
+          case _AuthorSort.papers:
+            authors.sort((a, b) => b.paperCount.compareTo(a.paperCount));
+          case _AuthorSort.citations:
+            authors.sort(
+              (a, b) => b._totalCitations.compareTo(a._totalCitations),
+            );
+        }
 
         if (authors.isEmpty) {
-          return const Center(
-            child: Text('No authors found for this journal.'),
-          );
+          return const Center(child: Text('No authors found for this filter.'));
         }
 
         final visibleAuthors = authors.take(_visibleCount).toList();
         final hasMore = authors.length > _visibleCount;
 
-        return ListView.builder(
-          itemCount: visibleAuthors.length + (hasMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index >= visibleAuthors.length) {
-              // Show more button
-              return Padding(
-                padding: const EdgeInsets.all(AppDimensions.base),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Text(
-                        'Showing $_visibleCount of ${authors.length} authors',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.onSurfaceVariant,
+        return Column(
+          children: [
+            // Sort dropdown
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimensions.base,
+                AppDimensions.sm,
+                AppDimensions.base,
+                AppDimensions.xs,
+              ),
+              child: _SortRow<_AuthorSort>(
+                value: widget.sort,
+                items: const [
+                  (_AuthorSort.papers, 'Sort: Papers'),
+                  (_AuthorSort.citations, 'Sort: Citations'),
+                ],
+                onChanged: widget.onSortChanged,
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: visibleAuthors.length + (hasMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index >= visibleAuthors.length) {
+                    return Padding(
+                      padding: const EdgeInsets.all(AppDimensions.base),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Text(
+                              'Showing $_visibleCount of ${authors.length} authors',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: AppDimensions.sm),
+                            FilledButton.tonal(
+                              onPressed: () =>
+                                  setState(() => _visibleCount += 50),
+                              child: const Text('Show more'),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: AppDimensions.sm),
-                      FilledButton.tonal(
-                        onPressed: () {
-                          setState(() => _visibleCount += 50);
-                        },
-                        child: const Text('Show more'),
+                    );
+                  }
+
+                  final author = visibleAuthors[index];
+                  return Column(
+                    children: [
+                      if (index > 0)
+                        const Divider(
+                          height: 1,
+                          indent: AppDimensions.base,
+                          endIndent: AppDimensions.base,
+                          color: AppColors.outlineVariant,
+                        ),
+                      _AuthorTile(
+                        rank: index + 1,
+                        author: author,
+                        onTap: () => _showAuthorPapers(context, author),
                       ),
                     ],
-                  ),
-                ),
-              );
-            }
-
-            final author = visibleAuthors[index];
-            return Column(
-              children: [
-                if (index > 0)
-                  const Divider(
-                    height: 1,
-                    indent: AppDimensions.base,
-                    endIndent: AppDimensions.base,
-                    color: AppColors.outlineVariant,
-                  ),
-                _AuthorTile(
-                  rank: index + 1,
-                  author: author,
-                  onTap: () => _showAuthorPapers(context, author),
-                ),
-              ],
-            );
-          },
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
     );
@@ -351,7 +636,6 @@ class _AuthorsTabState extends ConsumerState<_AuthorsTab>
         expand: false,
         builder: (_, scrollController) => Column(
           children: [
-            // Handle
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppDimensions.sm),
               child: Container(
@@ -363,7 +647,6 @@ class _AuthorsTabState extends ConsumerState<_AuthorsTab>
                 ),
               ),
             ),
-            // Title
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppDimensions.base,
@@ -377,7 +660,6 @@ class _AuthorsTabState extends ConsumerState<_AuthorsTab>
               ),
             ),
             const Divider(height: 1, color: AppColors.outlineVariant),
-            // Papers list
             Expanded(
               child: ListView.separated(
                 controller: scrollController,
@@ -410,79 +692,38 @@ class _AuthorsTabState extends ConsumerState<_AuthorsTab>
   }
 }
 
+// ── Author Info model ─────────────────────────────────────────────────────────
+
 class _AuthorInfo {
   final String id;
   final String name;
   final int paperCount;
   final List<Publication> publications;
+  final int _totalCitations;
 
   const _AuthorInfo({
     required this.id,
     required this.name,
     required this.paperCount,
     required this.publications,
-  });
-}
-
-class _AuthorTile extends StatelessWidget {
-  final int rank;
-  final _AuthorInfo author;
-  final VoidCallback? onTap;
-
-  const _AuthorTile({required this.rank, required this.author, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.base,
-          vertical: AppDimensions.md,
-        ),
-        child: Row(
-          children: [
-            _RankBadge(rank: rank),
-            const SizedBox(width: AppDimensions.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    author.name,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${author.paperCount} paper${author.paperCount == 1 ? '' : 's'} in this journal',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right,
-              color: AppColors.onSurfaceVariant,
-              size: 20,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    int totalCitations = 0,
+  }) : _totalCitations = totalCitations;
 }
 
 // ── Papers Tab ────────────────────────────────────────────────────────────────
 
 class _PapersTab extends ConsumerStatefulWidget {
   final Journal journal;
+  final String topicFilter;
+  final _PaperSort sort;
+  final ValueChanged<_PaperSort> onSortChanged;
 
-  const _PapersTab({required this.journal});
+  const _PapersTab({
+    required this.journal,
+    required this.topicFilter,
+    required this.sort,
+    required this.onSortChanged,
+  });
 
   @override
   ConsumerState<_PapersTab> createState() => _PapersTabState();
@@ -529,7 +770,6 @@ class _PapersTabState extends ConsumerState<_PapersTab>
       });
     });
 
-    // Reset loading state on error
     if (pubsAsync.hasError && _isLoadingMore) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _isLoadingMore = false);
@@ -554,60 +794,220 @@ class _PapersTabState extends ConsumerState<_PapersTab>
   }
 
   Widget _buildPaperList() {
-    return ListView.builder(
-      itemCount: _allPapers.length + (_hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index >= _allPapers.length) {
-          // Show more button with loading effect
-          return Padding(
-            padding: const EdgeInsets.all(AppDimensions.base),
-            child: Center(
-              child: Column(
-                children: [
-                  Text(
-                    'Showing ${_allPapers.length} of ${Formatter.formatCitationCount(_totalCount)} papers',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.onSurfaceVariant,
+    // Apply topic filter
+    var papers = _allPapers;
+    if (widget.topicFilter.isNotEmpty) {
+      final filter = widget.topicFilter.toLowerCase();
+      papers = papers
+          .where((p) => p.concepts.any((c) => c.toLowerCase().contains(filter)))
+          .toList();
+    }
+
+    // Apply sort
+    switch (widget.sort) {
+      case _PaperSort.citations:
+        papers = List.from(papers)
+          ..sort((a, b) => b.citedByCount.compareTo(a.citedByCount));
+      case _PaperSort.year:
+        papers = List.from(papers)
+          ..sort(
+            (a, b) =>
+                (b.publicationYear ?? 0).compareTo(a.publicationYear ?? 0),
+          );
+    }
+
+    final hasMoreAfterFilter = widget.topicFilter.isEmpty && _hasMore;
+
+    return Column(
+      children: [
+        // Sort dropdown
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppDimensions.base,
+            AppDimensions.sm,
+            AppDimensions.base,
+            AppDimensions.xs,
+          ),
+          child: _SortRow<_PaperSort>(
+            value: widget.sort,
+            items: const [
+              (_PaperSort.citations, 'Sort: Citations'),
+              (_PaperSort.year, 'Sort: Year'),
+            ],
+            onChanged: widget.onSortChanged,
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: papers.length + (hasMoreAfterFilter ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index >= papers.length) {
+                return Padding(
+                  padding: const EdgeInsets.all(AppDimensions.base),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Text(
+                          'Showing ${_allPapers.length} of ${Formatter.formatCitationCount(_totalCount)} papers',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: AppDimensions.sm),
+                        _isLoadingMore
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : FilledButton.tonal(
+                                onPressed: _showMore,
+                                child: const Text('Show more'),
+                              ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: AppDimensions.sm),
-                  _isLoadingMore
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : FilledButton.tonal(
-                          onPressed: _showMore,
-                          child: const Text('Show more'),
-                        ),
+                );
+              }
+
+              final pub = papers[index];
+              return Column(
+                children: [
+                  if (index > 0)
+                    const Divider(
+                      height: 1,
+                      indent: AppDimensions.base,
+                      endIndent: AppDimensions.base,
+                      color: AppColors.outlineVariant,
+                    ),
+                  _RankedPublicationTile(
+                    rank: index + 1,
+                    publication: pub,
+                    onTap: () => context.push(
+                      '/publication/${Uri.encodeComponent(pub.id)}',
+                      extra: pub,
+                    ),
+                  ),
                 ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Sort Row (generic dropdown) ───────────────────────────────────────────────
+
+class _SortRow<T> extends StatelessWidget {
+  final T value;
+  final List<(T, String)> items;
+  final ValueChanged<T> onChanged;
+
+  const _SortRow({
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 36,
+      child: DropdownButtonFormField<T>(
+        value: value,
+        isExpanded: true,
+        decoration: InputDecoration(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.md,
+            vertical: 0,
+          ),
+          filled: true,
+          fillColor: AppColors.surfaceContainer,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
+            borderSide: BorderSide.none,
+          ),
+        ),
+        icon: const Icon(Icons.expand_more, size: 18),
+        items: items.map((item) {
+          return DropdownMenuItem<T>(
+            value: item.$1,
+            child: Text(
+              item.$2,
+              style: AppTextStyles.labelMedium.copyWith(
+                color: AppColors.onSurface,
               ),
             ),
           );
-        }
+        }).toList(),
+        onChanged: (v) {
+          if (v != null) onChanged(v);
+        },
+      ),
+    );
+  }
+}
 
-        final pub = _allPapers[index];
-        return Column(
+// ── Author Tile ───────────────────────────────────────────────────────────────
+
+class _AuthorTile extends StatelessWidget {
+  final int rank;
+  final _AuthorInfo author;
+  final VoidCallback? onTap;
+
+  const _AuthorTile({required this.rank, required this.author, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.base,
+          vertical: AppDimensions.md,
+        ),
+        child: Row(
           children: [
-            if (index > 0)
-              const Divider(
-                height: 1,
-                indent: AppDimensions.base,
-                endIndent: AppDimensions.base,
-                color: AppColors.outlineVariant,
-              ),
-            _RankedPublicationTile(
-              rank: index + 1,
-              publication: pub,
-              onTap: () => context.push(
-                '/publication/${Uri.encodeComponent(pub.id)}',
-                extra: pub,
+            _RankBadge(rank: rank),
+            const SizedBox(width: AppDimensions.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    author.name,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${author.paperCount} papers \u2022 ${Formatter.formatCitationCount(author._totalCitations)} citations',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
+            const Icon(
+              Icons.chevron_right,
+              color: AppColors.onSurfaceVariant,
+              size: 20,
+            ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -626,7 +1026,6 @@ class _RankBadge extends StatelessWidget {
       3 => (AppColors.rankBronze, AppColors.rankBronzeText),
       _ => (AppColors.surfaceContainerHigh, AppColors.onSurfaceVariant),
     };
-
     return CircleAvatar(
       radius: 16,
       backgroundColor: bg,
@@ -738,7 +1137,7 @@ class _RankedPublicationTile extends StatelessWidget {
   }
 }
 
-// ── Shared Publication Tile ───────────────────────────────────────────────────
+// ── Publication Tile (for bottom sheet) ───────────────────────────────────────
 
 class _PublicationTile extends StatelessWidget {
   final Publication publication;
@@ -799,22 +1198,6 @@ class _PublicationTile extends StatelessWidget {
                 ),
               ],
             ),
-            if (publication.authors.isNotEmpty) ...[
-              const SizedBox(height: AppDimensions.xs),
-              Text(
-                publication.authors
-                        .map((a) => a.displayName)
-                        .take(3)
-                        .join(', ') +
-                    (publication.authors.length > 3 ? ' et al.' : ''),
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                  fontStyle: FontStyle.italic,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
           ],
         ),
       ),

@@ -31,32 +31,6 @@ class HeatmapScreen extends ConsumerWidget {
       backgroundColor: AppColors.surface,
       body: Column(
         children: [
-          // Current topic indicator
-          if (query.isNotEmpty)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.base,
-                vertical: AppDimensions.sm,
-              ),
-              color: AppColors.citationChipBg,
-              child: Row(
-                children: [
-                  const Icon(Icons.topic, size: 16, color: AppColors.primary),
-                  const SizedBox(width: AppDimensions.sm),
-                  Expanded(
-                    child: Text(
-                      'Topic: $query',
-                      style: AppTextStyles.labelLarge.copyWith(
-                        color: AppColors.citationChipText,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
           // View mode toggle
           Padding(
             padding: const EdgeInsets.all(AppDimensions.base),

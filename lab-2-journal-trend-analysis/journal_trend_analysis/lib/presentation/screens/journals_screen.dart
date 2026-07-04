@@ -186,54 +186,17 @@ class _JournalsScreenState extends ConsumerState<JournalsScreen> {
               ),
             ),
 
-            // Sort options
+            // Sort dropdown (full-width)
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.base,
+              padding: const EdgeInsets.fromLTRB(
+                AppDimensions.base,
+                0,
+                AppDimensions.base,
+                AppDimensions.sm,
               ),
-              child: SizedBox(
-                height: 40,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _SortChip(
-                      label: 'Papers',
-                      icon: Icons.article_outlined,
-                      selected:
-                          ref.watch(journalSortProvider) ==
-                          JournalSortOption.papers,
-                      onTap: () => _onSortChanged(JournalSortOption.papers),
-                    ),
-                    const SizedBox(width: AppDimensions.sm),
-                    _SortChip(
-                      label: 'Citations',
-                      icon: Icons.format_quote,
-                      selected:
-                          ref.watch(journalSortProvider) ==
-                          JournalSortOption.citations,
-                      onTap: () => _onSortChanged(JournalSortOption.citations),
-                    ),
-                    const SizedBox(width: AppDimensions.sm),
-                    _SortChip(
-                      label: 'Authors',
-                      icon: Icons.people_outlined,
-                      selected:
-                          ref.watch(journalSortProvider) ==
-                          JournalSortOption.authors,
-                      onTap: () => _onSortChanged(JournalSortOption.authors),
-                    ),
-                    const SizedBox(width: AppDimensions.sm),
-                    _SortChip(
-                      label: 'Recently Active',
-                      icon: Icons.schedule,
-                      selected:
-                          ref.watch(journalSortProvider) ==
-                          JournalSortOption.recentlyActive,
-                      onTap: () =>
-                          _onSortChanged(JournalSortOption.recentlyActive),
-                    ),
-                  ],
-                ),
+              child: _JournalSortDropdown(
+                value: ref.watch(journalSortProvider),
+                onChanged: _onSortChanged,
               ),
             ),
 
@@ -555,51 +518,78 @@ class _SortValueBadge extends StatelessWidget {
   }
 }
 
-class _SortChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
+class _JournalSortDropdown extends StatelessWidget {
+  final JournalSortOption value;
+  final ValueChanged<JournalSortOption> onChanged;
 
-  const _SortChip({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
+  const _JournalSortDropdown({required this.value, required this.onChanged});
+
+  String _label(JournalSortOption opt) => switch (opt) {
+    JournalSortOption.papers => 'Sort: Most Papers',
+    JournalSortOption.citations => 'Sort: Most Citations',
+    JournalSortOption.authors => 'Sort: Most Authors',
+    JournalSortOption.recentlyActive => 'Sort: Recently Active',
+  };
+
+  IconData _icon(JournalSortOption opt) => switch (opt) {
+    JournalSortOption.papers => Icons.article_outlined,
+    JournalSortOption.citations => Icons.format_quote,
+    JournalSortOption.authors => Icons.people_outlined,
+    JournalSortOption.recentlyActive => Icons.schedule,
+  };
 
   @override
   Widget build(BuildContext context) {
-    return FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 14,
-            color: selected
-                ? AppColors.primaryContainer
-                : AppColors.onSurfaceVariant,
+    return SizedBox(
+      width: double.infinity,
+      child: DropdownButtonFormField<JournalSortOption>(
+        value: value,
+        isExpanded: true,
+        decoration: InputDecoration(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.md,
+            vertical: AppDimensions.sm,
           ),
-          const SizedBox(width: AppDimensions.xs),
-          Text(label),
-        ],
+          filled: true,
+          fillColor: AppColors.surfaceContainer,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.shapeMd),
+            borderSide: const BorderSide(
+              color: AppColors.primaryContainer,
+              width: 1.5,
+            ),
+          ),
+        ),
+        icon: const Icon(Icons.expand_more, size: 20),
+        items: JournalSortOption.values.map((opt) {
+          return DropdownMenuItem(
+            value: opt,
+            child: Row(
+              children: [
+                Icon(_icon(opt), size: 16, color: AppColors.onSurfaceVariant),
+                const SizedBox(width: AppDimensions.sm),
+                Text(
+                  _label(opt),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+        onChanged: (v) {
+          if (v != null) onChanged(v);
+        },
       ),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      selectedColor: AppColors.primaryContainer.withValues(alpha: 0.12),
-      checkmarkColor: AppColors.primaryContainer,
-      labelStyle: AppTextStyles.labelMedium.copyWith(
-        color: selected
-            ? AppColors.primaryContainer
-            : AppColors.onSurfaceVariant,
-      ),
-      side: BorderSide(
-        color: selected ? AppColors.primaryContainer : AppColors.outlineVariant,
-      ),
-      shape: const StadiumBorder(),
-      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.xs),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }

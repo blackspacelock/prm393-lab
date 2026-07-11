@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "278890277715",
+    "project_id": "journaltrend-8cc04",
+    "storage_bucket": "journaltrend-8cc04.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:278890277715:android:97ec4acb0ceb325c304fa6",
+        "android_client_info": {
+          "package_name": "com.blackspace.journaltrend"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "278890277715-4kreunusaf15g6okbf68rp3p1bpivd92.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.blackspace.journaltrend",
+            "certificate_hash": "cc86c26222307908ccb9e1f5682ba79e30977744"
+          }
+        },
+        {
+          "client_id": "278890277715-u7191e0lm9eu75li5k63pnqal76krmfp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIeN61yOCC8EF7ki0NPJ97hSB6cQ8qCrY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "278890277715-u7191e0lm9eu75li5k63pnqal76krmfp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

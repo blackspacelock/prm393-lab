@@ -1,4 +1,4 @@
-package com.example.journal_trend_analysis
+package com.blackspace.journaltrend
 
 import io.flutter.embedding.android.FlutterActivity
 

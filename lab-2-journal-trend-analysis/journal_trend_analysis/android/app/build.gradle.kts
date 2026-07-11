@@ -1,10 +1,14 @@
 plugins {
     id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
+    // END: FlutterFire Configuration
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
-    namespace = "com.example.journal_trend_analysis"
+    namespace = "com.blackspace.journaltrend"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -14,7 +18,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.journal_trend_analysis"
+        applicationId = "com.blackspace.journaltrend"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode

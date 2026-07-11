@@ -1,25 +1,55 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'firebase_options.dart';
+import 'presentation/providers/auth_providers.dart';
+import 'presentation/screens/login_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(
     // ProviderScope is the DI container for all Riverpod providers.
     const ProviderScope(child: JournalTrendAnalyzerApp()),
   );
 }
 
-class JournalTrendAnalyzerApp extends StatelessWidget {
+class JournalTrendAnalyzerApp extends ConsumerWidget {
   const JournalTrendAnalyzerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Journal Trend Analyzer',
-      theme: AppTheme.lightTheme,
-      routerConfig: appRouter,
-      debugShowCheckedModeBanner: false,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    return authState.when(
+      data: (user) => user == null
+          ? MaterialApp(
+              title: 'Journal Trend Analyzer',
+              theme: AppTheme.lightTheme,
+              debugShowCheckedModeBanner: false,
+              home: const LoginScreen(),
+            )
+          : MaterialApp.router(
+              title: 'Journal Trend Analyzer',
+              theme: AppTheme.lightTheme,
+              routerConfig: appRouter,
+              debugShowCheckedModeBanner: false,
+            ),
+      loading: () => MaterialApp(
+        theme: AppTheme.lightTheme,
+        debugShowCheckedModeBanner: false,
+        home: const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (error, _) => MaterialApp(
+        theme: AppTheme.lightTheme,
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(body: Center(child: Text('Authentication error: $error'))),
+      ),
     );
   }
 }

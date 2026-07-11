@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../providers/auth_providers.dart';
 
 /// Profile page with user info, navigation to saved papers, and upcoming features.
 class ProfileScreen extends ConsumerWidget {
@@ -22,7 +23,7 @@ class ProfileScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppDimensions.base),
         children: [
-          const _PlaceholderUserCard(),
+          const _UserCard(),
           const SizedBox(height: AppDimensions.lg),
           // Saved Paper action box (UR-01)
           _ProfileActionSection(
@@ -71,35 +72,52 @@ class ProfileScreen extends ConsumerWidget {
 
 // ── User Card ─────────────────────────────────────────────────────────────────
 
-class _PlaceholderUserCard extends StatelessWidget {
-  const _PlaceholderUserCard();
+class _UserCard extends ConsumerWidget {
+  const _UserCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).value;
     return Card(
       child: ListTile(
         contentPadding: const EdgeInsets.all(AppDimensions.base),
         leading: CircleAvatar(
           radius: 24,
           backgroundColor: AppColors.primaryContainer.withValues(alpha: 0.12),
-          child: const Icon(Icons.person, color: AppColors.primaryContainer),
+          backgroundImage: user?.photoURL == null
+              ? null
+              : NetworkImage(user!.photoURL!),
+          child: user?.photoURL == null
+              ? const Icon(Icons.person, color: AppColors.primaryContainer)
+              : null,
         ),
         title: Text(
-          'Guest User',
+          user?.displayName ?? 'Google user',
           style: AppTextStyles.titleMedium.copyWith(
             color: AppColors.onSurface,
             fontWeight: FontWeight.w700,
           ),
         ),
         subtitle: Text(
-          'Sign in to see your profile',
+          user?.email ?? '',
           style: AppTextStyles.bodySmall.copyWith(
             color: AppColors.onSurfaceVariant,
           ),
         ),
-        trailing: FilledButton.tonal(
-          onPressed: () {},
-          child: const Text('Sign In'),
+        trailing: TextButton(
+          key: const Key('signOutButton'),
+          onPressed: () async {
+            try {
+              await ref.read(authServiceProvider).signOut();
+            } catch (error) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Sign out failed: $error')),
+                );
+              }
+            }
+          },
+          child: const Text('Sign Out'),
         ),
       ),
     );

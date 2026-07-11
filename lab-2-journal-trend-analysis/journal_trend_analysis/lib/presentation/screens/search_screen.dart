@@ -259,6 +259,7 @@ class _PaperCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
+      key: Key('publicationResult-$rank'),
       onTap: () => context.push(
         '/publication/${Uri.encodeComponent(publication.id)}',
         extra: publication,

@@ -292,6 +292,7 @@ class _JournalsScreenState extends ConsumerState<JournalsScreen> {
                 color: AppColors.outlineVariant,
               ),
             _RankedJournalTile(
+              key: Key('journalResult-${index + 1}'),
               rank: index + 1,
               journal: journal,
               sortOption: ref.watch(journalSortProvider),
@@ -316,6 +317,7 @@ class _RankedJournalTile extends StatelessWidget {
   final VoidCallback? onTap;
 
   const _RankedJournalTile({
+    super.key,
     required this.rank,
     required this.journal,
     required this.sortOption,

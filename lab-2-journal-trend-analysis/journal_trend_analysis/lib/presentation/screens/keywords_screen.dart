@@ -175,6 +175,7 @@ class _KeywordsScreenState extends ConsumerState<KeywordsScreen>
                   0,
                 ),
                 child: TextField(
+                  key: const Key('topicSearchField'),
                   controller: _searchController,
                   focusNode: _focusNode,
                   decoration: InputDecoration(

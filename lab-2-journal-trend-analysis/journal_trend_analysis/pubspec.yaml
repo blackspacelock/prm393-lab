@@ -46,6 +46,11 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
   patrol: ^4.6.1
 
+patrol:
+  app_name: Journal Trend Analyzer
+  android:
+    package_name: com.blackspace.journaltrend
+
 flutter:
   uses-material-design: true
 

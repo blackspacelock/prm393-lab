@@ -270,6 +270,7 @@ class _RankedPublicationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
+      key: Key('homePublication-$rank'),
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(

@@ -5,6 +5,10 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../providers/auth_providers.dart';
+import '../providers/providers.dart';
+import '../providers/report_providers.dart';
+import '../providers/notification_providers.dart';
+import '../providers/remote_config_providers.dart';
 
 /// Profile page with user info, navigation to saved papers, and upcoming features.
 class ProfileScreen extends ConsumerWidget {
@@ -34,28 +38,11 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppDimensions.sm),
           // Upcoming features
-          _ComingSection(
-            icon: Icons.notifications_outlined,
-            title: 'Notification Center',
-            phaseBadge: 'Phase B7',
-            detail:
-                'Push notifications and received message history appear here.',
-          ),
+          const _NotificationCenter(),
           const SizedBox(height: AppDimensions.sm),
-          const _ComingSection(
-            icon: Icons.picture_as_pdf_outlined,
-            title: 'Export PDF Report',
-            phaseBadge: 'Phase B6',
-            detail: 'Generate and upload PDF reports for the active topic.',
-          ),
+          const _PdfExportCard(),
           const SizedBox(height: AppDimensions.sm),
-          const _ComingSection(
-            icon: Icons.tune_outlined,
-            title: 'Remote Config',
-            phaseBadge: 'Phase B8',
-            detail:
-                'Runtime configuration values will be displayed and refreshed here.',
-          ),
+          const _RemoteConfigCard(),
           const SizedBox(height: AppDimensions.sm),
           const _ComingSection(
             icon: Icons.bug_report_outlined,
@@ -65,6 +52,227 @@ class ProfileScreen extends ConsumerWidget {
                 'Crash logging controls and demo actions are added in Phase B.',
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RemoteConfigCard extends ConsumerWidget {
+  const _RemoteConfigCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final limits = ref.watch(remoteLimitsProvider);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.base),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(
+                Icons.tune_outlined,
+                color: AppColors.primaryContainer,
+              ),
+              title: const Text('Remote Config'),
+              subtitle: const Text('Display limits controlled by Firebase.'),
+              trailing: IconButton(
+                key: const Key('refreshRemoteConfigButton'),
+                tooltip: 'Refresh Remote Config',
+                onPressed: () => ref.invalidate(remoteLimitsProvider),
+                icon: const Icon(Icons.refresh),
+              ),
+            ),
+            limits.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Text('Remote Config failed: $error'),
+              data: (value) => Column(
+                key: const Key('remoteConfigValues'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Maximum journals displayed: ${value.maxJournals}'),
+                  Text('Maximum keywords displayed: ${value.maxKeywords}'),
+                  Text(
+                    value.updated
+                        ? 'New values activated.'
+                        : 'Using current or default values.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationCenter extends ConsumerStatefulWidget {
+  const _NotificationCenter();
+
+  @override
+  ConsumerState<_NotificationCenter> createState() =>
+      _NotificationCenterState();
+}
+
+class _NotificationCenterState extends ConsumerState<_NotificationCenter> {
+  bool _enabling = false;
+  String? _token;
+
+  Future<void> _enable() async {
+    setState(() => _enabling = true);
+    try {
+      final token = await ref.read(notificationServiceProvider).enable();
+      if (mounted) setState(() => _token = token);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Notifications failed: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _enabling = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final history = ref.watch(notificationHistoryProvider).value ?? [];
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.base),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(
+                Icons.notifications_outlined,
+                color: AppColors.primaryContainer,
+              ),
+              title: const Text('Notification Center'),
+              subtitle: Text(
+                history.isEmpty
+                    ? 'No notifications received yet.'
+                    : '${history.length} notification(s)',
+              ),
+              trailing: FilledButton.tonal(
+                key: const Key('enableNotificationsButton'),
+                onPressed: _enabling ? null : _enable,
+                child: _enabling
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Enable'),
+              ),
+            ),
+            if (_token != null) ...[
+              const Text('FCM test token:'),
+              SelectableText(_token!, key: const Key('fcmToken')),
+              const SizedBox(height: AppDimensions.sm),
+            ],
+            ...history.map(
+              (item) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(item.title),
+                subtitle: Text(item.body),
+                trailing: Text(
+                  '${item.receivedAt.hour.toString().padLeft(2, '0')}:${item.receivedAt.minute.toString().padLeft(2, '0')}',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PdfExportCard extends ConsumerStatefulWidget {
+  const _PdfExportCard();
+
+  @override
+  ConsumerState<_PdfExportCard> createState() => _PdfExportCardState();
+}
+
+class _PdfExportCardState extends ConsumerState<_PdfExportCard> {
+  bool _uploading = false;
+  String? _url;
+
+  Future<void> _export() async {
+    final user = ref.read(authStateProvider).value;
+    final topic = ref.read(searchQueryProvider).trim();
+    final publications = ref.read(publicationsProvider).value ?? [];
+    if (user == null || topic.isEmpty || publications.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Search for a topic before exporting.')),
+      );
+      return;
+    }
+
+    setState(() => _uploading = true);
+    try {
+      final url = await ref.read(reportServiceProvider).export(
+        userId: user.uid,
+        topic: topic,
+        summary: ref.read(dashboardSummaryProvider),
+        authors: ref.read(topAuthorsProvider),
+        journals: ref.read(topJournalsProvider),
+        publications: publications,
+      );
+      if (mounted) setState(() => _url = url);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF export failed: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.base),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(
+                Icons.picture_as_pdf_outlined,
+                color: AppColors.primaryContainer,
+              ),
+              title: const Text('Export PDF Report'),
+              subtitle: const Text(
+                'Generate and upload analytics for the active topic.',
+              ),
+              trailing: FilledButton.tonal(
+                key: const Key('exportPdfButton'),
+                onPressed: _uploading ? null : _export,
+                child: _uploading
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Export'),
+              ),
+            ),
+            if (_url != null) ...[
+              const SizedBox(height: AppDimensions.sm),
+              const Text('Uploaded file URL:'),
+              SelectableText(_url!, key: const Key('uploadedPdfUrl')),
+            ],
+          ],
+        ),
       ),
     );
   }

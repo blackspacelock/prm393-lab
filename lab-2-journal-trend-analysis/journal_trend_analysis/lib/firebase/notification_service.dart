@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../firebase_options.dart';
 
@@ -58,6 +59,15 @@ class NotificationService {
     final settings = await FirebaseMessaging.instance.requestPermission();
     if (settings.authorizationStatus == AuthorizationStatus.denied) {
       throw StateError('Notification permission was denied.');
+    }
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      for (var attempt = 0; attempt < 20; attempt++) {
+        if (await FirebaseMessaging.instance.getAPNSToken() != null) break;
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      }
+      if (await FirebaseMessaging.instance.getAPNSToken() == null) {
+        throw StateError('APNs token is not available. Check iOS push setup.');
+      }
     }
     return FirebaseMessaging.instance.getToken();
   }

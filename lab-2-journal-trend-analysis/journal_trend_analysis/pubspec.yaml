@@ -50,6 +50,8 @@ patrol:
   app_name: Journal Trend Analyzer
   android:
     package_name: com.blackspace.journaltrend
+  ios:
+    bundle_id: com.blackspace.journaltrend
 
 flutter:
   uses-material-design: true

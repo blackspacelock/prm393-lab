@@ -9,6 +9,7 @@ import '../providers/providers.dart';
 import '../providers/report_providers.dart';
 import '../providers/notification_providers.dart';
 import '../providers/remote_config_providers.dart';
+import '../../firebase/crashlytics_service.dart';
 
 /// Profile page with user info, navigation to saved papers, and upcoming features.
 class ProfileScreen extends ConsumerWidget {
@@ -44,14 +45,83 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: AppDimensions.sm),
           const _RemoteConfigCard(),
           const SizedBox(height: AppDimensions.sm),
-          const _ComingSection(
-            icon: Icons.bug_report_outlined,
-            title: 'Crashlytics Demo',
-            phaseBadge: 'Phase B9',
-            detail:
-                'Crash logging controls and demo actions are added in Phase B.',
+          const _CrashlyticsCard(),
+        ],
+      ),
+    );
+  }
+}
+
+class _CrashlyticsCard extends StatelessWidget {
+  const _CrashlyticsCard();
+
+  Future<void> _handled(BuildContext context) async {
+    await crashlyticsService.recordHandledException();
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Handled exception recorded.')),
+      );
+    }
+  }
+
+  Future<void> _crash(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Crash the app?'),
+        content: const Text(
+          'The app will close immediately. Reopen it to upload the test crash.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('confirmTestCrashButton'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Crash app'),
           ),
         ],
+      ),
+    );
+    if (confirmed == true) crashlyticsService.testCrash();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.base),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                Icons.bug_report_outlined,
+                color: AppColors.primaryContainer,
+              ),
+              title: Text('Crashlytics Demo'),
+              subtitle: Text('Send non-fatal and fatal test reports.'),
+            ),
+            Wrap(
+              spacing: AppDimensions.sm,
+              children: [
+                FilledButton.tonal(
+                  key: const Key('handledExceptionButton'),
+                  onPressed: () => _handled(context),
+                  child: const Text('Handled exception'),
+                ),
+                FilledButton.tonal(
+                  key: const Key('testCrashButton'),
+                  onPressed: () => _crash(context),
+                  child: const Text('Test crash'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

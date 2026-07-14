@@ -8,6 +8,7 @@ import '../../core/utils/formatter.dart';
 import '../../domain/entities/paginated_result.dart';
 import '../../domain/entities/publication.dart';
 import '../providers/providers.dart';
+import '../providers/remote_config_providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
 import '../widgets/shimmer_loader.dart';
@@ -108,6 +109,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(remoteLimitsProvider, (previous, next) {
+      final before = previous?.value?.maxKeywords;
+      final after = next.value?.maxKeywords;
+      if (after == null || before == after || _currentPage == 1) return;
+      _resetLocal();
+      ref.read(searchPageProvider.notifier).state = 1;
+    });
     final paginatedAsync = ref.watch(paginatedPublicationsProvider);
     final query = ref.watch(searchQueryProvider);
     final sortOption = ref.watch(paperSortOptionProvider);

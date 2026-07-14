@@ -27,7 +27,7 @@ class RemoteConfigService {
 
   final FirebaseRemoteConfig _config;
 
-  Future<RemoteLimits> fetch() async {
+  Stream<RemoteLimits> watch() async* {
     await _config.setDefaults(const {
       'max_journals_displayed': 10,
       'max_keywords_displayed': 10,
@@ -35,14 +35,33 @@ class RemoteConfigService {
     await _config.setConfigSettings(
       RemoteConfigSettings(
         fetchTimeout: const Duration(seconds: 15),
-        minimumFetchInterval: Duration.zero,
+        minimumFetchInterval: const Duration(hours: 1),
       ),
     );
-    final updated = await _config.fetchAndActivate();
-    return RemoteLimits.fromValues(
-      maxJournals: _config.getInt('max_journals_displayed'),
-      maxKeywords: _config.getInt('max_keywords_displayed'),
-      updated: updated,
-    );
+
+    var updated = false;
+    try {
+      updated = await _config.fetchAndActivate();
+    } catch (_) {
+      // Defaults keep search usable while offline.
+    }
+    yield _limits(updated: updated);
+
+    await for (final update in _config.onConfigUpdated) {
+      if (!update.updatedKeys.any(_limitKeys.contains)) continue;
+      await _config.activate();
+      yield _limits(updated: true);
+    }
   }
+
+  static const _limitKeys = {
+    'max_journals_displayed',
+    'max_keywords_displayed',
+  };
+
+  RemoteLimits _limits({required bool updated}) => RemoteLimits.fromValues(
+    maxJournals: _config.getInt('max_journals_displayed'),
+    maxKeywords: _config.getInt('max_keywords_displayed'),
+    updated: updated,
+  );
 }

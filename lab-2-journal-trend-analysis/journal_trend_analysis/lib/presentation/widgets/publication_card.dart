@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -60,7 +61,9 @@ class PublicationCard extends ConsumerWidget {
                         runSpacing: AppDimensions.xs,
                         children: [
                           _MetaChip(
-                            label: Formatter.formatYear(publication.publicationYear),
+                            label: Formatter.formatYear(
+                              publication.publicationYear,
+                            ),
                           ),
                           _MetaChip(
                             label:
@@ -80,9 +83,12 @@ class PublicationCard extends ConsumerWidget {
                         : AppColors.onSurfaceVariant,
                   ),
                   tooltip: isBookmarked ? 'Remove bookmark' : 'Bookmark',
-                  onPressed: () => ref
-                      .read(bookmarkNotifierProvider.notifier)
-                      .toggle(publication),
+                  onPressed: () async {
+                    final allowed = await ref
+                        .read(bookmarkNotifierProvider.notifier)
+                        .toggle(publication);
+                    if (!allowed && context.mounted) context.push('/login');
+                  },
                 ),
               ],
             ),

@@ -6,6 +6,6 @@ final remoteConfigServiceProvider = Provider(
   (_) => RemoteConfigService(FirebaseRemoteConfig.instance),
 );
 
-final remoteLimitsProvider = FutureProvider(
-  (ref) => ref.watch(remoteConfigServiceProvider).fetch(),
+final remoteLimitsProvider = StreamProvider(
+  (ref) => ref.watch(remoteConfigServiceProvider).watch(),
 );

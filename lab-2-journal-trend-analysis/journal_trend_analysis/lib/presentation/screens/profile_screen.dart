@@ -49,7 +49,7 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: AppDimensions.sm),
           const _PdfExportCard(),
           const SizedBox(height: AppDimensions.sm),
-          const _CrashlyticsCard(),
+          const _CrashlyticsActions(),
         ],
       ),
     );
@@ -107,8 +107,8 @@ class _GuestProfile extends StatelessWidget {
   }
 }
 
-class _CrashlyticsCard extends StatelessWidget {
-  const _CrashlyticsCard();
+class _CrashlyticsActions extends StatelessWidget {
+  const _CrashlyticsActions();
 
   Future<void> _handled(BuildContext context) async {
     await crashlyticsService.recordHandledException();
@@ -145,38 +145,25 @@ class _CrashlyticsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimensions.base),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                Icons.bug_report_outlined,
-                color: AppColors.primaryContainer,
-              ),
-              title: Text('Crashlytics Demo'),
-              subtitle: Text('Send non-fatal and fatal test reports.'),
-            ),
-            Wrap(
-              spacing: AppDimensions.sm,
-              children: [
-                FilledButton.tonal(
-                  key: const Key('handledExceptionButton'),
-                  onPressed: () => _handled(context),
-                  child: const Text('Handled exception'),
-                ),
-                FilledButton.tonal(
-                  key: const Key('testCrashButton'),
-                  onPressed: () => _crash(context),
-                  child: const Text('Test crash'),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton.filledTonal(
+            key: const Key('handledExceptionButton'),
+            tooltip: 'Test handled exception',
+            onPressed: () => _handled(context),
+            icon: const Icon(Icons.bug_report_outlined),
+          ),
+          const SizedBox(width: AppDimensions.sm),
+          IconButton.filledTonal(
+            key: const Key('testCrashButton'),
+            tooltip: 'Test fatal crash',
+            onPressed: () => _crash(context),
+            icon: const Icon(Icons.warning_amber_rounded),
+          ),
+        ],
       ),
     );
   }
@@ -192,13 +179,16 @@ class _NotificationCenter extends ConsumerStatefulWidget {
 
 class _NotificationCenterState extends ConsumerState<_NotificationCenter> {
   bool _enabling = false;
-  String? _token;
 
   Future<void> _enable() async {
     setState(() => _enabling = true);
     try {
-      final token = await ref.read(notificationServiceProvider).enable();
-      if (mounted) setState(() => _token = token);
+      await ref.read(notificationServiceProvider).enable();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Notifications enabled.')));
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -212,7 +202,6 @@ class _NotificationCenterState extends ConsumerState<_NotificationCenter> {
 
   @override
   Widget build(BuildContext context) {
-    final history = ref.watch(notificationHistoryProvider).value ?? [];
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppDimensions.base),
@@ -226,11 +215,7 @@ class _NotificationCenterState extends ConsumerState<_NotificationCenter> {
                 color: AppColors.primaryContainer,
               ),
               title: const Text('Notification Center'),
-              subtitle: Text(
-                history.isEmpty
-                    ? 'No notifications received yet.'
-                    : '${history.length} notification(s)',
-              ),
+              subtitle: const Text('Receive research update notifications.'),
               trailing: FilledButton.tonal(
                 key: const Key('enableNotificationsButton'),
                 onPressed: _enabling ? null : _enable,
@@ -240,21 +225,6 @@ class _NotificationCenterState extends ConsumerState<_NotificationCenter> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Text('Enable'),
-              ),
-            ),
-            if (_token != null) ...[
-              const Text('FCM test token:'),
-              SelectableText(_token!, key: const Key('fcmToken')),
-              const SizedBox(height: AppDimensions.sm),
-            ],
-            ...history.map(
-              (item) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(item.title),
-                subtitle: Text(item.body),
-                trailing: Text(
-                  '${item.receivedAt.hour.toString().padLeft(2, '0')}:${item.receivedAt.minute.toString().padLeft(2, '0')}',
-                ),
               ),
             ),
           ],

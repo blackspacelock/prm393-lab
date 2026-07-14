@@ -9,6 +9,8 @@ import '../../presentation/screens/keywords_screen.dart';
 import '../../presentation/screens/profile_screen.dart';
 import '../../presentation/screens/publication_detail_screen.dart';
 import '../../presentation/screens/trending_screen.dart';
+import '../../firebase/analytics_service.dart';
+import '../../presentation/widgets/analytics_view.dart';
 import '../theme/app_colors.dart';
 
 final appRouter = GoRouter(
@@ -32,14 +34,23 @@ final appRouter = GoRouter(
       path: '/publication/:id',
       builder: (context, state) {
         final pub = state.extra as Publication;
-        return PublicationDetailScreen(publication: pub);
+        return AnalyticsView(
+          onOpen: () => analyticsService.viewPublication(
+            pub.title,
+            pub.publicationYear,
+          ),
+          child: PublicationDetailScreen(publication: pub),
+        );
       },
     ),
     GoRoute(
       path: '/journals/:id',
       builder: (context, state) {
         final journal = state.extra as Journal;
-        return JournalDetailScreen(journal: journal);
+        return AnalyticsView(
+          onOpen: () => analyticsService.viewJournal(journal.displayName),
+          child: JournalDetailScreen(journal: journal),
+        );
       },
     ),
     GoRoute(

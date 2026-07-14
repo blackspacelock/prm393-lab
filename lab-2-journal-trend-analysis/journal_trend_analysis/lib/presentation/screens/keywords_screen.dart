@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../domain/entities/topic_hierarchy.dart';
+import '../../firebase/analytics_service.dart';
 import '../providers/providers.dart';
 import 'author_network_screen.dart';
 import 'heatmap_screen.dart';
@@ -78,6 +79,7 @@ class _KeywordsScreenState extends ConsumerState<KeywordsScreen>
     ref.read(selectedTopicFilterProvider.notifier).state = null;
     ref.read(searchPageProvider.notifier).state = 1;
     ref.read(searchQueryProvider.notifier).state = trimmed;
+    unawaited(analyticsService.searchTopic(trimmed));
   }
 
   void _selectTopicItem(TopicHierarchyItem item) {
@@ -88,6 +90,8 @@ class _KeywordsScreenState extends ConsumerState<KeywordsScreen>
     ref.read(selectedTopicFilterProvider.notifier).state = item;
     ref.read(searchPageProvider.notifier).state = 1;
     ref.read(searchQueryProvider.notifier).state = item.displayName;
+    unawaited(analyticsService.searchTopic(item.displayName));
+    unawaited(analyticsService.viewKeyword(item.displayName));
   }
 
   void _clearSearch() {
@@ -171,6 +175,7 @@ class _KeywordsScreenState extends ConsumerState<KeywordsScreen>
                   0,
                 ),
                 child: TextField(
+                  key: const Key('topicSearchField'),
                   controller: _searchController,
                   focusNode: _focusNode,
                   decoration: InputDecoration(

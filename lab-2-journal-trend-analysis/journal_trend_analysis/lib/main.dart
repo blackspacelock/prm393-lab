@@ -7,15 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
-import 'presentation/providers/auth_providers.dart';
-import 'presentation/screens/login_screen.dart';
 import 'firebase/notification_service.dart';
+import 'presentation/providers/remote_config_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
@@ -35,33 +32,12 @@ class JournalTrendAnalyzerApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
-    return authState.when(
-      data: (user) => user == null
-          ? MaterialApp(
-              title: 'Journal Trend Analyzer',
-              theme: AppTheme.lightTheme,
-              debugShowCheckedModeBanner: false,
-              home: const LoginScreen(),
-            )
-          : MaterialApp.router(
-              title: 'Journal Trend Analyzer',
-              theme: AppTheme.lightTheme,
-              routerConfig: appRouter,
-              debugShowCheckedModeBanner: false,
-            ),
-      loading: () => MaterialApp(
-        theme: AppTheme.lightTheme,
-        debugShowCheckedModeBanner: false,
-        home: const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
-      ),
-      error: (error, _) => MaterialApp(
-        theme: AppTheme.lightTheme,
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(body: Center(child: Text('Authentication error: $error'))),
-      ),
+    ref.watch(remoteLimitsProvider);
+    return MaterialApp.router(
+      title: 'Journal Trend Analyzer',
+      theme: AppTheme.lightTheme,
+      routerConfig: appRouter,
+      debugShowCheckedModeBanner: false,
     );
   }
 }

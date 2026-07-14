@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -8,7 +9,6 @@ import '../providers/auth_providers.dart';
 import '../providers/providers.dart';
 import '../providers/report_providers.dart';
 import '../providers/notification_providers.dart';
-import '../providers/remote_config_providers.dart';
 import '../../firebase/crashlytics_service.dart';
 
 /// Profile page with user info, navigation to saved papers, and upcoming features.
@@ -17,6 +17,12 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authStateProvider);
+    if (auth.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (auth.value == null) return const _GuestProfile();
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -43,10 +49,59 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: AppDimensions.sm),
           const _PdfExportCard(),
           const SizedBox(height: AppDimensions.sm),
-          const _RemoteConfigCard(),
-          const SizedBox(height: AppDimensions.sm),
           const _CrashlyticsCard(),
         ],
+      ),
+    );
+  }
+}
+
+class _GuestProfile extends StatelessWidget {
+  const _GuestProfile();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: const Text('Profile'),
+        backgroundColor: AppColors.surfaceContainerLowest,
+      ),
+      body: Center(
+        child: Card(
+          margin: const EdgeInsets.all(AppDimensions.base),
+          child: Padding(
+            padding: const EdgeInsets.all(AppDimensions.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.lock_outline,
+                  size: 48,
+                  color: AppColors.primaryContainer,
+                ),
+                const SizedBox(height: AppDimensions.md),
+                Text(
+                  'Sign in to use profile features',
+                  style: AppTextStyles.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppDimensions.sm),
+                const Text(
+                  'Saved papers, notifications, and PDF reports require an account.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppDimensions.lg),
+                FilledButton.icon(
+                  key: const Key('guestSignInButton'),
+                  onPressed: () => context.push('/login'),
+                  icon: const Icon(Icons.login),
+                  label: const Text('Sign in with Google'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -127,60 +182,6 @@ class _CrashlyticsCard extends StatelessWidget {
   }
 }
 
-class _RemoteConfigCard extends ConsumerWidget {
-  const _RemoteConfigCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final limits = ref.watch(remoteLimitsProvider);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimensions.base),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(
-                Icons.tune_outlined,
-                color: AppColors.primaryContainer,
-              ),
-              title: const Text('Remote Config'),
-              subtitle: const Text('Display limits controlled by Firebase.'),
-              trailing: IconButton(
-                key: const Key('refreshRemoteConfigButton'),
-                tooltip: 'Refresh Remote Config',
-                onPressed: () => ref.invalidate(remoteLimitsProvider),
-                icon: const Icon(Icons.refresh),
-              ),
-            ),
-            limits.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Text('Remote Config failed: $error'),
-              data: (value) => Column(
-                key: const Key('remoteConfigValues'),
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Maximum journals displayed: ${value.maxJournals}'),
-                  Text('Maximum keywords displayed: ${value.maxKeywords}'),
-                  Text(
-                    value.updated
-                        ? 'New values activated.'
-                        : 'Using current or default values.',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _NotificationCenter extends ConsumerStatefulWidget {
   const _NotificationCenter();
 
@@ -200,9 +201,9 @@ class _NotificationCenterState extends ConsumerState<_NotificationCenter> {
       if (mounted) setState(() => _token = token);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Notifications failed: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Notifications failed: $error')));
       }
     } finally {
       if (mounted) setState(() => _enabling = false);
@@ -287,23 +288,39 @@ class _PdfExportCardState extends ConsumerState<_PdfExportCard> {
 
     setState(() => _uploading = true);
     try {
-      final url = await ref.read(reportServiceProvider).export(
-        userId: user.uid,
-        topic: topic,
-        summary: ref.read(dashboardSummaryProvider),
-        authors: ref.read(topAuthorsProvider),
-        journals: ref.read(topJournalsProvider),
-        publications: publications,
-      );
+      final url = await ref
+          .read(reportServiceProvider)
+          .export(
+            userId: user.uid,
+            topic: topic,
+            summary: ref.read(dashboardSummaryProvider),
+            authors: ref.read(topAuthorsProvider),
+            journals: ref.read(topJournalsProvider),
+            publications: publications,
+          );
       if (mounted) setState(() => _url = url);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF export failed: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('PDF export failed: $error')));
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  Future<void> _openPdf() async {
+    final url = _url;
+    if (url == null) return;
+    final opened = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the PDF link.')),
+      );
     }
   }
 
@@ -338,8 +355,12 @@ class _PdfExportCardState extends ConsumerState<_PdfExportCard> {
             ),
             if (_url != null) ...[
               const SizedBox(height: AppDimensions.sm),
-              const Text('Uploaded file URL:'),
-              SelectableText(_url!, key: const Key('uploadedPdfUrl')),
+              OutlinedButton.icon(
+                key: const Key('openPdfButton'),
+                onPressed: _openPdf,
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Open PDF'),
+              ),
             ],
           ],
         ),
@@ -473,96 +494,3 @@ class _ProfileActionSection extends StatelessWidget {
 }
 
 // ── Coming Soon Section ───────────────────────────────────────────────────────
-
-class _ComingSection extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String phaseBadge;
-  final String detail;
-
-  const _ComingSection({
-    required this.icon,
-    required this.title,
-    required this.phaseBadge,
-    required this.detail,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimensions.base),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: AppColors.primaryContainer.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(AppDimensions.shapeSm),
-              ),
-              child: Icon(icon, color: AppColors.primaryContainer),
-            ),
-            const SizedBox(width: AppDimensions.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: AppTextStyles.titleMedium.copyWith(
-                            color: AppColors.onSurface,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      _PhaseBadge(label: phaseBadge),
-                    ],
-                  ),
-                  const SizedBox(height: AppDimensions.xs),
-                  Text(
-                    detail,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PhaseBadge extends StatelessWidget {
-  final String label;
-
-  const _PhaseBadge({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.sm,
-        vertical: AppDimensions.xs,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(AppDimensions.shapeFull),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.onSurfaceVariant,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}

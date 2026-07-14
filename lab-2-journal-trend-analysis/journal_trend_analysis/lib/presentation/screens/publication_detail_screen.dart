@@ -116,9 +116,12 @@ class PublicationDetailScreen extends ConsumerWidget {
                       : AppColors.onSurfaceVariant,
                 ),
                 tooltip: isBookmarked ? 'Remove bookmark' : 'Bookmark',
-                onPressed: () => ref
-                    .read(bookmarkNotifierProvider.notifier)
-                    .toggle(publication),
+                onPressed: () async {
+                  final allowed = await ref
+                      .read(bookmarkNotifierProvider.notifier)
+                      .toggle(publication);
+                  if (!allowed && context.mounted) context.push('/login');
+                },
               );
             },
           ),

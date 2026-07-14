@@ -7,6 +7,7 @@ import '../../domain/entities/paginated_result.dart';
 import '../../domain/entities/publication.dart';
 import '../../domain/repositories/journal_repository.dart';
 import 'providers.dart';
+import 'remote_config_providers.dart';
 
 // ── Infrastructure ────────────────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ final journalListProvider = FutureProvider<PaginatedResult<Journal>>((
   final query = ref.watch(journalSearchQueryProvider);
   final page = ref.watch(journalPageProvider);
   final sort = ref.watch(journalSortProvider);
+  final perPage = ref.watch(remoteLimitsProvider).value?.maxJournals ?? 10;
 
   // Map sort enum to API sort string
   final sortParam = switch (sort) {
@@ -65,14 +67,14 @@ final journalListProvider = FutureProvider<PaginatedResult<Journal>>((
         .read(journalRepositoryProvider)
         .getRecentJournals(
           page: page,
-          perPage: 50,
+          perPage: perPage,
           sort: sortParam,
           filter: extraFilter,
         );
   }
   return ref
       .read(journalRepositoryProvider)
-      .searchJournals(query, page: page, perPage: 50, sort: sortParam);
+      .searchJournals(query, page: page, perPage: perPage, sort: sortParam);
 });
 
 // ── Journal Detail ────────────────────────────────────────────────────────────

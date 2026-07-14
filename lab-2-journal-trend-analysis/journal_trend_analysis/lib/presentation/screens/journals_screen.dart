@@ -9,6 +9,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/formatter.dart';
 import '../../domain/entities/journal.dart';
 import '../providers/journal_providers.dart';
+import '../providers/remote_config_providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
 import '../widgets/shimmer_loader.dart';
@@ -88,6 +89,13 @@ class _JournalsScreenState extends ConsumerState<JournalsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(remoteLimitsProvider, (previous, next) {
+      final before = previous?.value?.maxJournals;
+      final after = next.value?.maxJournals;
+      if (after == null || before == after || _currentPage == 1) return;
+      _resetList();
+      ref.read(journalPageProvider.notifier).state = 1;
+    });
     final journalListAsync = ref.watch(journalListProvider);
 
     // ERR-01 fix: Keep controller in sync with provider when not focused

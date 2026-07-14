@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/entities/journal.dart';
@@ -6,6 +7,7 @@ import '../../presentation/screens/bookmarks_screen.dart';
 import '../../presentation/screens/journal_detail_screen.dart';
 import '../../presentation/screens/journals_screen.dart';
 import '../../presentation/screens/keywords_screen.dart';
+import '../../presentation/screens/login_screen.dart';
 import '../../presentation/screens/profile_screen.dart';
 import '../../presentation/screens/publication_detail_screen.dart';
 import '../../presentation/screens/trending_screen.dart';
@@ -15,6 +17,11 @@ import '../theme/app_colors.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/home',
+  redirect: (_, state) =>
+      state.uri.path == '/profile/bookmarks' &&
+          FirebaseAuth.instance.currentUser == null
+      ? '/login'
+      : null,
   routes: [
     ShellRoute(
       builder: (context, state, child) =>
@@ -30,15 +37,14 @@ final appRouter = GoRouter(
         GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
       ],
     ),
+    GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
     GoRoute(
       path: '/publication/:id',
       builder: (context, state) {
         final pub = state.extra as Publication;
         return AnalyticsView(
-          onOpen: () => analyticsService.viewPublication(
-            pub.title,
-            pub.publicationYear,
-          ),
+          onOpen: () =>
+              analyticsService.viewPublication(pub.title, pub.publicationYear),
           child: PublicationDetailScreen(publication: pub),
         );
       },

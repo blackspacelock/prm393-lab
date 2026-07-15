@@ -10,6 +10,7 @@ import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 import 'firebase/notification_service.dart';
 import 'presentation/providers/auth_providers.dart';
+import 'presentation/screens/login_screen.dart';
 import 'presentation/providers/remote_config_providers.dart';
 import 'presentation/screens/login_screen.dart';
 

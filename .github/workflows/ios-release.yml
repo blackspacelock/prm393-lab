@@ -26,16 +26,17 @@ jobs:
         with:
           channel: "stable"
 
+      - name: Remove CocoaPods (plugins use Swift Package Manager)
+        run: |
+          rm -f ios/Podfile
+          rm -f ios/Podfile.lock
+          rm -rf ios/Pods
+
       - name: Install Dependencies
         run: flutter pub get
 
       - name: Fix iOS minimum deployment target
         run: sed -i '' 's/.iOS("13.0")/.iOS("15.0")/g' ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift
-
-      - name: Install CocoaPods dependencies
-        run: |
-          cd ios
-          pod install
 
       - name: Build iOS Application (unsigned)
         run: |

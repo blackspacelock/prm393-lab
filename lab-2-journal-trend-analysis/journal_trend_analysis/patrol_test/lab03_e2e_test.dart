@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,7 +22,12 @@ Future<void> _pumpApp(PatrolIntegrationTester $) async {
 }
 
 Future<void> _ensureSignedIn(PatrolIntegrationTester $) async {
-  if ($('Home').exists) return;
+  await $(NavigationDestination).at(3).tap();
+  if ($(#signOutButton).exists) {
+    await $(NavigationDestination).at(0).tap();
+    return;
+  }
+  await $(#guestSignInButton).tap();
   await $(#googleSignInButton).tap();
   await Future<void>.delayed(const Duration(seconds: 2));
   if (!$('Home').exists) {
@@ -32,13 +36,11 @@ Future<void> _ensureSignedIn(PatrolIntegrationTester $) async {
       timeout: const Duration(seconds: 30),
     );
   }
-  await $('Home').waitUntilVisible(timeout: _wait);
+  await $(#signOutButton).waitUntilVisible(timeout: _wait);
+  await $(NavigationDestination).at(0).tap();
 }
 
-Future<void> _searchTopic(
-  PatrolIntegrationTester $,
-  String topic,
-) async {
+Future<void> _searchTopic(PatrolIntegrationTester $, String topic) async {
   await $(NavigationDestination).at(2).tap();
   await $(#topicSearchField).enterText(topic);
   $.tester.testTextInput.receiveAction(TextInputAction.search);
@@ -51,7 +53,9 @@ Future<void> _openProfile(PatrolIntegrationTester $) async {
 }
 
 void main() {
-  patrolTest('TC01 Google Sign-In navigates to Home', ($) async {
+  patrolTest('TC01 guest can browse and Google Sign-In unlocks profile', (
+    $,
+  ) async {
     await _pumpApp($);
     await _ensureSignedIn($);
     expect($('Home'), findsWidgets);
@@ -125,34 +129,33 @@ void main() {
     expect($('Export PDF Report'), findsOneWidget);
   });
 
-  patrolTest('TC09 PDF report uploads and displays its URL', ($) async {
+  patrolTest('TC09 PDF report uploads and can be opened', ($) async {
     await _pumpApp($);
     await _ensureSignedIn($);
     await _searchTopic($, 'artificial intelligence');
     await _openProfile($);
     await $(#exportPdfButton).scrollTo().tap();
-    await $(#uploadedPdfUrl).waitUntilVisible(
-      timeout: const Duration(seconds: 90),
-    );
-    expect($(#uploadedPdfUrl), findsOneWidget);
+    await $(
+      #openPdfButton,
+    ).waitUntilVisible(timeout: const Duration(seconds: 90));
+    expect($(#openPdfButton), findsOneWidget);
   });
 
-  patrolTest('TC10 Remote Config retrieves and displays both values', ($) async {
+  patrolTest('TC10 Remote Config diagnostics stay hidden from users', (
+    $,
+  ) async {
     await _pumpApp($);
     await _ensureSignedIn($);
     await _openProfile($);
-    await $(#refreshRemoteConfigButton).scrollTo().tap();
-    await $(#remoteConfigValues).waitUntilVisible(timeout: _wait);
-    expect($(RegExp('Maximum journals displayed:')), findsOneWidget);
-    expect($(RegExp('Maximum keywords displayed:')), findsOneWidget);
+    expect($('Remote Config'), findsNothing);
   });
 
-  patrolTest('TC11 logout returns to Login', ($) async {
+  patrolTest('TC11 logout returns to guest profile', ($) async {
     await _pumpApp($);
     await _ensureSignedIn($);
     await _openProfile($);
     await $(#signOutButton).tap();
-    await $('Continue with Google').waitUntilVisible(timeout: _wait);
-    expect($(#googleSignInButton), findsOneWidget);
+    await $(#guestSignInButton).waitUntilVisible(timeout: _wait);
+    expect($(#guestSignInButton), findsOneWidget);
   });
 }

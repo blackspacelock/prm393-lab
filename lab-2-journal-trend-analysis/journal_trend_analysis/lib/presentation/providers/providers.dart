@@ -14,6 +14,7 @@ import '../../domain/usecases/get_top_authors.dart';
 import '../../domain/usecases/get_top_journals.dart';
 import '../../domain/usecases/get_trend_data.dart';
 import '../../domain/usecases/search_publications.dart';
+import 'remote_config_providers.dart';
 
 // ── Infrastructure ────────────────────────────────────────────────────────────
 
@@ -69,15 +70,16 @@ final selectedTopicFilterProvider = StateProvider<TopicHierarchyItem?>(
 final searchPageProvider = StateProvider<int>((_) => 1);
 
 /// Results per page — fixed at 50 for "read more" loading.
-final searchPerPageProvider = StateProvider<int>((_) => 50);
-
 // ── Topic Autocomplete ────────────────────────────────────────────────────────
 
 /// Autocomplete results for the current search text input.
 final topicAutocompleteProvider =
     FutureProvider.family<List<TopicHierarchyItem>, String>((ref, query) async {
       if (query.trim().length < 2) return [];
-      return ref.read(topicDataSourceProvider).autocomplete(query);
+      final limit = ref.watch(remoteLimitsProvider).value?.maxKeywords ?? 10;
+      return (await ref.read(topicDataSourceProvider).autocomplete(query))
+          .take(limit)
+          .toList();
     });
 
 /// Cascading filter: domains
@@ -113,7 +115,7 @@ final paginatedPublicationsProvider =
       final topicFilter = ref.watch(selectedTopicFilterProvider);
       final query = ref.watch(searchQueryProvider);
       final page = ref.watch(searchPageProvider);
-      final perPage = ref.watch(searchPerPageProvider);
+      final perPage = ref.watch(remoteLimitsProvider).value?.maxKeywords ?? 10;
 
       if (topicFilter != null) {
         return ref
@@ -127,11 +129,11 @@ final paginatedPublicationsProvider =
       }
 
       if (query.isEmpty) {
-        return const PaginatedResult(
+        return PaginatedResult(
           items: [],
           totalCount: 0,
           page: 1,
-          perPage: 50,
+          perPage: perPage,
         );
       }
       return ref.read(searchPublicationsUseCaseProvider)(

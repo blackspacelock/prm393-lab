@@ -8,7 +8,10 @@ class AuthService {
   final FirebaseAuth _auth;
   final AnalyticsService _analytics;
   final GoogleSignIn _google = GoogleSignIn.instance;
-  late final Future<void> _googleReady = _google.initialize();
+  late final Future<void> _googleReady = _google.initialize(
+    serverClientId:
+        '278890277715-u7191e0lm9eu75li5k63pnqal76krmfp.apps.googleusercontent.com',
+  );
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 

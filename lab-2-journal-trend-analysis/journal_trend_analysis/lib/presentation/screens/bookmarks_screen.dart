@@ -6,6 +6,7 @@ import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../domain/entities/publication.dart';
 import '../providers/bookmark_providers.dart';
+import '../providers/auth_providers.dart';
 import '../widgets/publication_card.dart';
 
 enum _BookmarkSort { citations, yearNewest, yearOldest, title }
@@ -33,6 +34,15 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(authStateProvider).value == null) {
+      return Center(
+        child: FilledButton.icon(
+          onPressed: () => context.go('/login'),
+          icon: const Icon(Icons.login),
+          label: const Text('Sign in to view saved papers'),
+        ),
+      );
+    }
     final state = ref.watch(bookmarkNotifierProvider);
     final hasItems = state.value?.isNotEmpty ?? false;
 

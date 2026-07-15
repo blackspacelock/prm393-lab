@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../providers/auth_providers.dart';
 
@@ -17,6 +18,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _loading = true);
     try {
       await ref.read(authServiceProvider).signInWithGoogle();
+      if (mounted) context.go('/profile');
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

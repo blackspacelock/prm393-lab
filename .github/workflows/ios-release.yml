@@ -29,6 +29,10 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
+      - name: Install CocoaPods dependencies
+        run: pod install
+        working-directory: lab-2-journal-trend-analysis/journal_trend_analysis/ios
+
       - name: Build iOS Application
         run: flutter build ios --no-codesign
 

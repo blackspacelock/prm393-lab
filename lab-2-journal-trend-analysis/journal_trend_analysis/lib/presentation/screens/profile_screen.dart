@@ -17,6 +17,7 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!firebaseSupported) return const _GuestProfile(canSignIn: false);
     final auth = ref.watch(authStateProvider);
     if (auth.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -57,7 +58,9 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _GuestProfile extends StatelessWidget {
-  const _GuestProfile();
+  const _GuestProfile({this.canSignIn = true});
+
+  final bool canSignIn;
 
   @override
   Widget build(BuildContext context) {
@@ -91,13 +94,15 @@ class _GuestProfile extends StatelessWidget {
                   'Saved papers, notifications, and PDF reports require an account.',
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: AppDimensions.lg),
-                FilledButton.icon(
-                  key: const Key('guestSignInButton'),
-                  onPressed: () => context.push('/login'),
-                  icon: const Icon(Icons.login),
-                  label: const Text('Sign in with Google'),
-                ),
+                if (canSignIn) ...[
+                  const SizedBox(height: AppDimensions.lg),
+                  FilledButton.icon(
+                    key: const Key('guestSignInButton'),
+                    onPressed: () => context.push('/login'),
+                    icon: const Icon(Icons.login),
+                    label: const Text('Sign in with Google'),
+                  ),
+                ],
               ],
             ),
           ),

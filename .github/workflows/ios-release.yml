@@ -33,8 +33,13 @@ jobs:
         run: pod install
         working-directory: lab-2-journal-trend-analysis/journal_trend_analysis/ios
 
+      - name: Disable code signing
+        run: |
+          sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Development"/CODE_SIGN_IDENTITY = ""/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/DEVELOPMENT_TEAM = [^;]*/DEVELOPMENT_TEAM = ""/g' ios/Runner.xcodeproj/project.pbxproj
+
       - name: Build iOS Application
-        run: flutter build ios --no-codesign
+        run: flutter build ios --no-codesign --release
 
       - name: Pack .app into .ipa
         run: |

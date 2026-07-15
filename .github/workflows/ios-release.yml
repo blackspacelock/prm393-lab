@@ -33,8 +33,9 @@ jobs:
         run: sed -i '' 's/.iOS("13.0")/.iOS("15.0")/g' ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift
 
       - name: Install CocoaPods dependencies
-        run: pod install
-        working-directory: lab-2-journal-trend-analysis/journal_trend_analysis/ios
+        run: |
+          cd ios
+          pod install
 
       - name: Build iOS Application (unsigned)
         run: |

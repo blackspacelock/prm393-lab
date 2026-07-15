@@ -250,31 +250,39 @@ class _TopicFilterDialogState extends ConsumerState<_TopicFilterDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Row(
-        children: [
-          const Icon(
-            Icons.filter_list,
-            size: 20,
-            color: AppColors.primaryContainer,
-          ),
-          const SizedBox(width: AppDimensions.sm),
-          const Text('Filter by Topic'),
-        ],
-      ),
-      content: SizedBox(
-        width: double.maxFinite,
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.base),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Title
+            Row(
+              children: [
+                const Icon(
+                  Icons.filter_list,
+                  size: 20,
+                  color: AppColors.primaryContainer,
+                ),
+                const SizedBox(width: AppDimensions.sm),
+                Text(
+                  'Filter by Topic',
+                  style: AppTextStyles.titleLarge.copyWith(
+                    color: AppColors.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimensions.md),
             Text(
               'Enter a Domain, Field, Subfield, or Topic keyword:',
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: AppDimensions.md),
+            const SizedBox(height: AppDimensions.sm),
+            // Search field
             TextField(
               controller: _controller,
               autofocus: true,
@@ -297,26 +305,35 @@ class _TopicFilterDialogState extends ConsumerState<_TopicFilterDialog> {
                 if (trimmed.isNotEmpty) widget.onSelect(trimmed);
               },
             ),
-            // Autocomplete suggestions
+            // Suggestions (scrollable, constrained height)
             if (_query.length >= 2) _buildSuggestions(),
+            // Action buttons
+            const SizedBox(height: AppDimensions.md),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (widget.currentFilter.isNotEmpty)
+                  TextButton(
+                    onPressed: widget.onClear,
+                    child: const Text('Clear'),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                const SizedBox(width: AppDimensions.sm),
+                FilledButton(
+                  onPressed: () {
+                    final trimmed = _controller.text.trim();
+                    if (trimmed.isNotEmpty) widget.onSelect(trimmed);
+                  },
+                  child: const Text('Apply'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
-      actions: [
-        if (widget.currentFilter.isNotEmpty)
-          TextButton(onPressed: widget.onClear, child: const Text('Clear')),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final trimmed = _controller.text.trim();
-            if (trimmed.isNotEmpty) widget.onSelect(trimmed);
-          },
-          child: const Text('Apply'),
-        ),
-      ],
     );
   }
 

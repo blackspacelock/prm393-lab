@@ -159,9 +159,11 @@ class _KeywordsScreenState extends ConsumerState<KeywordsScreen>
           preferredSize: Size.fromHeight(
             48 + // TabBar
                 60 + // search bar
-                48 + // two dropdowns
-                (topicFilter != null ? 44.0 : 0) + // filter chip
-                (_showAutocomplete ? 0 : 4), // small gap
+                (_showAutocomplete
+                    ? 264 // suggestion panel (260) plus its top margin
+                    : 48 + // two dropdowns
+                          (topicFilter != null ? 44.0 : 0) + // filter chip
+                          4), // small gap
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -428,7 +430,7 @@ class _KeywordsAutocomplete extends ConsumerWidget {
     final autocompleteAsync = ref.watch(topicAutocompleteProvider(query));
 
     return Container(
-      constraints: const BoxConstraints(maxHeight: 260),
+      height: 260,
       margin: const EdgeInsets.fromLTRB(
         AppDimensions.base,
         AppDimensions.xs,

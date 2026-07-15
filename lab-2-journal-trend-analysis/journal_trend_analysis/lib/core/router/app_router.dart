@@ -12,16 +12,17 @@ import '../../presentation/screens/profile_screen.dart';
 import '../../presentation/screens/publication_detail_screen.dart';
 import '../../presentation/screens/trending_screen.dart';
 import '../../firebase/analytics_service.dart';
+import '../../presentation/providers/auth_providers.dart';
 import '../../presentation/widgets/analytics_view.dart';
 import '../theme/app_colors.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/home',
-  redirect: (_, state) =>
-      state.uri.path == '/profile/bookmarks' &&
-          FirebaseAuth.instance.currentUser == null
-      ? '/login'
-      : null,
+  redirect: (_, state) {
+    if (state.uri.path != '/profile/bookmarks') return null;
+    if (!firebaseSupported) return '/profile';
+    return FirebaseAuth.instance.currentUser == null ? '/login' : null;
+  },
   routes: [
     ShellRoute(
       builder: (context, state, child) =>

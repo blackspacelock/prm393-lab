@@ -1,7 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../firebase/auth_service.dart';
 import '../../firebase/analytics_service.dart';
+
+bool get firebaseSupported =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS);
 
 final authServiceProvider = Provider(
   (_) => AuthService(FirebaseAuth.instance, analyticsService),

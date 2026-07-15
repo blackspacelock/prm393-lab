@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "278890277715-erscjt9i59a1fp4b6ndetnjc7tjdub02.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.blackspace.journaltrend",
+            "certificate_hash": "62243851ff8fd7cef798832d998dcdd6a00a1e99"
+          }
+        },
+        {
           "client_id": "278890277715-u7191e0lm9eu75li5k63pnqal76krmfp.apps.googleusercontent.com",
           "client_type": 3
         }

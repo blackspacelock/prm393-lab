@@ -7,7 +7,9 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/formatter.dart';
 import '../../domain/entities/journal.dart';
 import '../../domain/entities/publication.dart';
+import '../../domain/entities/topic_hierarchy.dart';
 import '../providers/journal_providers.dart';
+import '../providers/providers.dart';
 import '../widgets/error_state.dart';
 import '../widgets/shimmer_loader.dart';
 
@@ -54,15 +56,9 @@ class _JournalDetailScreenState extends ConsumerState<JournalDetailScreen>
   }
 
   void _showTopicFilterSheet() {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      backgroundColor: AppColors.surfaceContainerLowest,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppDimensions.shapeMd),
-        ),
-      ),
-      builder: (_) => _TopicFilterSheet(
+      builder: (_) => _TopicFilterDialog(
         currentFilter: _topicFilter,
         onSelect: (value) {
           setState(() => _topicFilter = value);
@@ -212,30 +208,38 @@ class _JournalDetailScreenState extends ConsumerState<JournalDetailScreen>
   }
 }
 
-// ── Topic Filter Bottom Sheet ─────────────────────────────────────────────────
+// ── Topic Filter Dialog ────────────────────────────────────────────────────────
 
-class _TopicFilterSheet extends StatefulWidget {
+class _TopicFilterDialog extends ConsumerStatefulWidget {
   final String currentFilter;
   final ValueChanged<String> onSelect;
   final VoidCallback onClear;
 
-  const _TopicFilterSheet({
+  const _TopicFilterDialog({
     required this.currentFilter,
     required this.onSelect,
     required this.onClear,
   });
 
   @override
-  State<_TopicFilterSheet> createState() => _TopicFilterSheetState();
+  ConsumerState<_TopicFilterDialog> createState() => _TopicFilterDialogState();
 }
 
-class _TopicFilterSheetState extends State<_TopicFilterSheet> {
+class _TopicFilterDialogState extends ConsumerState<_TopicFilterDialog> {
   final _controller = TextEditingController();
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
     _controller.text = widget.currentFilter;
+    _query = widget.currentFilter;
+    _controller.addListener(() {
+      final text = _controller.text.trim();
+      if (text != _query) {
+        setState(() => _query = text);
+      }
+    });
   }
 
   @override
@@ -246,95 +250,165 @@ class _TopicFilterSheetState extends State<_TopicFilterSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppDimensions.base,
-        AppDimensions.sm,
-        AppDimensions.base,
-        MediaQuery.of(context).viewInsets.bottom + AppDimensions.xl,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return AlertDialog(
+      title: Row(
         children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: AppDimensions.base),
-              decoration: BoxDecoration(
-                color: AppColors.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
+          const Icon(
+            Icons.filter_list,
+            size: 20,
+            color: AppColors.primaryContainer,
           ),
-          Row(
-            children: [
-              const Icon(
-                Icons.filter_list,
-                size: 20,
-                color: AppColors.primaryContainer,
-              ),
-              const SizedBox(width: AppDimensions.sm),
-              Text(
-                'Filter by Topic',
-                style: AppTextStyles.headlineSmall.copyWith(
-                  color: AppColors.onSurface,
-                ),
-              ),
-              const Spacer(),
-              if (widget.currentFilter.isNotEmpty)
-                TextButton(
-                  onPressed: widget.onClear,
-                  child: const Text('Clear'),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppDimensions.base),
-          Text(
-            'Enter a Domain, Field, Subfield, or Topic keyword to filter:',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: AppDimensions.sm),
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            decoration: InputDecoration(
-              hintText: 'e.g. Machine Learning, Biology...',
-              hintStyle: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.onSurfaceVariant,
-              ),
-              prefixIcon: const Icon(Icons.search, size: 20),
-              filled: true,
-              fillColor: AppColors.surfaceContainer,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.shapeFull),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            textInputAction: TextInputAction.done,
-            onSubmitted: (value) {
-              final trimmed = value.trim();
-              if (trimmed.isNotEmpty) widget.onSelect(trimmed);
-            },
-          ),
-          const SizedBox(height: AppDimensions.md),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () {
-                final trimmed = _controller.text.trim();
-                if (trimmed.isNotEmpty) widget.onSelect(trimmed);
-              },
-              child: const Text('Apply Filter'),
-            ),
-          ),
+          const SizedBox(width: AppDimensions.sm),
+          const Text('Filter by Topic'),
         ],
       ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Enter a Domain, Field, Subfield, or Topic keyword:',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppDimensions.md),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'e.g. Machine Learning, Biology...',
+                hintStyle: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+                prefixIcon: const Icon(Icons.search, size: 20),
+                filled: true,
+                fillColor: AppColors.surfaceContainer,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.shapeFull),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (value) {
+                final trimmed = value.trim();
+                if (trimmed.isNotEmpty) widget.onSelect(trimmed);
+              },
+            ),
+            // Autocomplete suggestions
+            if (_query.length >= 2) _buildSuggestions(),
+          ],
+        ),
+      ),
+      actions: [
+        if (widget.currentFilter.isNotEmpty)
+          TextButton(onPressed: widget.onClear, child: const Text('Clear')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final trimmed = _controller.text.trim();
+            if (trimmed.isNotEmpty) widget.onSelect(trimmed);
+          },
+          child: const Text('Apply'),
+        ),
+      ],
     );
   }
+
+  Widget _buildSuggestions() {
+    final autocompleteAsync = ref.watch(topicAutocompleteProvider(_query));
+
+    return autocompleteAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.only(top: AppDimensions.sm),
+        child: Center(
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        // Show max 5 suggestions to keep dialog compact
+        final shown = items.take(5).toList();
+        return Padding(
+          padding: const EdgeInsets.only(top: AppDimensions.sm),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 200),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: shown.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (_, i) {
+                final item = shown[i];
+                return ListTile(
+                  dense: true,
+                  visualDensity: VisualDensity.compact,
+                  leading: Icon(
+                    _levelIcon(item.level),
+                    size: 16,
+                    color: _levelColor(item.level),
+                  ),
+                  title: Text(
+                    item.displayName,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimensions.xs,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _levelColor(item.level).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(
+                        AppDimensions.shapeXs,
+                      ),
+                    ),
+                    child: Text(
+                      item.levelLabel,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: _levelColor(item.level),
+                        fontSize: 9,
+                      ),
+                    ),
+                  ),
+                  onTap: () => widget.onSelect(item.displayName),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  IconData _levelIcon(TopicLevel level) => switch (level) {
+    TopicLevel.domain => Icons.public,
+    TopicLevel.field => Icons.category,
+    TopicLevel.subfield => Icons.folder_outlined,
+    TopicLevel.topic => Icons.topic_outlined,
+    TopicLevel.journal => Icons.library_books,
+    TopicLevel.author => Icons.person,
+  };
+
+  Color _levelColor(TopicLevel level) => switch (level) {
+    TopicLevel.domain => AppColors.metricPurple,
+    TopicLevel.field => AppColors.primaryContainer,
+    TopicLevel.subfield => AppColors.metricOrange,
+    TopicLevel.topic => AppColors.metricGreen,
+    TopicLevel.journal => AppColors.primaryContainer,
+    TopicLevel.author => AppColors.metricPurple,
+  };
 }
 
 // ── Journal Info Header ───────────────────────────────────────────────────────

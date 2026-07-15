@@ -150,12 +150,6 @@ class _JournalDetailScreenState extends ConsumerState<JournalDetailScreen>
                           size: 16,
                           color: AppColors.onSurfaceVariant,
                         ),
-                      )
-                    else
-                      const Icon(
-                        Icons.expand_more,
-                        size: 16,
-                        color: AppColors.onSurfaceVariant,
                       ),
                   ],
                 ),
@@ -359,7 +353,7 @@ class _TopicFilterDialogState extends ConsumerState<_TopicFilterDialog> {
         return Padding(
           padding: const EdgeInsets.only(top: AppDimensions.sm),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 200),
+            constraints: const BoxConstraints(maxHeight: 100),
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: shown.length,

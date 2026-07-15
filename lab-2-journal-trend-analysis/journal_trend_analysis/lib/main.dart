@@ -16,14 +16,17 @@ import 'presentation/screens/login_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase is only configured for Android; skip on other platforms.
+  // Firebase is configured for Android and iOS.
   final firebaseSupported =
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
 
   if (firebaseSupported) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    // FCM & Crashlytics are available on both Android and iOS
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
@@ -44,7 +47,9 @@ class JournalTrendAnalyzerApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // On platforms without Firebase (e.g. Windows/Linux), skip auth.
     final firebaseAvailable =
-        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
 
     if (!firebaseAvailable) {
       return MaterialApp.router(

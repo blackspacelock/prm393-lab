@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../firebase_options.dart';
 
 const _messagesKey = 'fcm_messages';
+const notificationTopic = 'journaltrend_updates';
 
 class ReceivedNotification {
   const ReceivedNotification({
@@ -55,7 +56,7 @@ class NotificationService {
     if (initialMessage != null) await _receive(initialMessage);
   }
 
-  Future<String?> enable() async {
+  Future<void> enable() async {
     final settings = await FirebaseMessaging.instance.requestPermission();
     if (settings.authorizationStatus == AuthorizationStatus.denied) {
       throw StateError('Notification permission was denied.');
@@ -69,7 +70,7 @@ class NotificationService {
         throw StateError('APNs token is not available. Check iOS push setup.');
       }
     }
-    return FirebaseMessaging.instance.getToken();
+    await FirebaseMessaging.instance.subscribeToTopic(notificationTopic);
   }
 
   Future<void> _receive(RemoteMessage message) async {

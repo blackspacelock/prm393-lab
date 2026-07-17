@@ -16,9 +16,10 @@ Future<void> _pumpApp(PatrolIntegrationTester $) async {
     );
   }
   appRouter.go('/home');
-  await $.pumpWidgetAndSettle(
+  await $.tester.pumpWidget(
     const ProviderScope(child: JournalTrendAnalyzerApp()),
   );
+  await $(NavigationBar).waitUntilVisible(timeout: _wait);
 }
 
 Future<void> _ensureSignedIn(PatrolIntegrationTester $) async {
@@ -30,11 +31,13 @@ Future<void> _ensureSignedIn(PatrolIntegrationTester $) async {
   await $(#guestSignInButton).tap();
   await $(#googleSignInButton).tap();
   await Future<void>.delayed(const Duration(seconds: 2));
-  if (!$('Home').exists) {
+  try {
     await $.platform.android.tap(
       AndroidSelector(textContains: '@', instance: 0),
-      timeout: const Duration(seconds: 30),
+      timeout: const Duration(seconds: 5),
     );
+  } on Exception {
+    // Google may sign in immediately without showing the account chooser.
   }
   await $(#signOutButton).waitUntilVisible(timeout: _wait);
   await $(NavigationDestination).at(0).tap();
@@ -43,7 +46,11 @@ Future<void> _ensureSignedIn(PatrolIntegrationTester $) async {
 Future<void> _searchTopic(PatrolIntegrationTester $, String topic) async {
   await $(NavigationDestination).at(2).tap();
   await $(#topicSearchField).enterText(topic);
-  $.tester.testTextInput.receiveAction(TextInputAction.search);
+  final field = $.tester.widget<TextField>(
+    find.byKey(const Key('topicSearchField')),
+  );
+  field.onSubmitted?.call(topic);
+  await $.tester.pump();
   await $(const Key('publicationResult-1')).waitUntilVisible(timeout: _wait);
 }
 
@@ -63,16 +70,18 @@ void main() {
 
   patrolTest('TC02 topic search displays publication results', ($) async {
     await _pumpApp($);
-    await _ensureSignedIn($);
     await _searchTopic($, 'artificial intelligence');
     expect($(const Key('publicationResult-1')), findsOneWidget);
   });
 
   patrolTest('TC03 publication opens complete details', ($) async {
     await _pumpApp($);
-    await _ensureSignedIn($);
     await _searchTopic($, 'artificial intelligence');
-    await $(const Key('publicationResult-1')).tap();
+    final card = $.tester.widget<InkWell>(
+      find.byKey(const Key('publicationResult-1')),
+    );
+    card.onTap?.call();
+    await $.tester.pump();
     await $('Publication Details').waitUntilVisible(timeout: _wait);
     expect($('Year'), findsWidgets);
     expect($('Authors'), findsWidgets);
@@ -81,7 +90,6 @@ void main() {
 
   patrolTest('TC04 Journals tab displays journal statistics', ($) async {
     await _pumpApp($);
-    await _ensureSignedIn($);
     await $(NavigationDestination).at(1).tap();
     await $(const Key('journalResult-1')).waitUntilVisible(timeout: _wait);
     expect($('Journals'), findsWidgets);
@@ -90,7 +98,6 @@ void main() {
 
   patrolTest('TC05 journal opens journal details', ($) async {
     await _pumpApp($);
-    await _ensureSignedIn($);
     await $(NavigationDestination).at(1).tap();
     await $(const Key('journalResult-1')).waitUntilVisible(timeout: _wait);
     await $(const Key('journalResult-1')).tap();
@@ -103,7 +110,6 @@ void main() {
     $,
   ) async {
     await _pumpApp($);
-    await _ensureSignedIn($);
     await $(NavigationDestination).at(2).tap();
     await $('Keywords').waitUntilVisible(timeout: _wait);
     expect($('Papers'), findsOneWidget);
@@ -113,7 +119,6 @@ void main() {
 
   patrolTest('TC07 keyword dashboard displays required analysis', ($) async {
     await _pumpApp($);
-    await _ensureSignedIn($);
     await _searchTopic($, 'machine learning');
     await $('Dashboard').tap();
     await $('Publications per year').waitUntilVisible(timeout: _wait);

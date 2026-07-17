@@ -73,6 +73,11 @@ class NotificationService {
     await FirebaseMessaging.instance.subscribeToTopic(notificationTopic);
   }
 
+  Future<List<ReceivedNotification>> refresh() async {
+    _messages = await _readMessages();
+    return messages;
+  }
+
   Future<void> _receive(RemoteMessage message) async {
     await saveMessage(message);
     _messages = await _readMessages();

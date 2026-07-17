@@ -185,6 +185,53 @@ class _NotificationCenter extends ConsumerStatefulWidget {
 class _NotificationCenterState extends ConsumerState<_NotificationCenter> {
   bool _enabling = false;
 
+  Future<void> _showMessages() async {
+    final messages = await ref.read(notificationServiceProvider).refresh();
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * 0.65,
+          child: Column(
+            children: [
+              const ListTile(
+                leading: Icon(Icons.notifications_outlined),
+                title: Text('Past notifications'),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: messages.isEmpty
+                    ? const Center(child: Text('No notifications received yet.'))
+                    : ListView.separated(
+                        itemCount: messages.length,
+                        separatorBuilder: (_, _) => const Divider(height: 1),
+                        itemBuilder: (_, index) {
+                          final message = messages[index];
+                          final receivedAt = message.receivedAt.toLocal();
+                          final localizations = MaterialLocalizations.of(
+                            sheetContext,
+                          );
+                          return ListTile(
+                            title: Text(message.title),
+                            subtitle: Text(
+                              '${message.body}\n'
+                              '${localizations.formatMediumDate(receivedAt)} - '
+                              '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(receivedAt))}',
+                            ),
+                            isThreeLine: true,
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _enable() async {
     setState(() => _enabling = true);
     try {
@@ -214,7 +261,9 @@ class _NotificationCenterState extends ConsumerState<_NotificationCenter> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ListTile(
+              key: const Key('notificationCenter'),
               contentPadding: EdgeInsets.zero,
+              onTap: _showMessages,
               leading: const Icon(
                 Icons.notifications_outlined,
                 color: AppColors.primaryContainer,

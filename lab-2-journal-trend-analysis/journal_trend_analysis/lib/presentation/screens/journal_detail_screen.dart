@@ -424,13 +424,16 @@ class _TopicFilterDialogState extends ConsumerState<_TopicFilterDialog> {
 
 // ── Journal Info Header ───────────────────────────────────────────────────────
 
-class _JournalInfoHeader extends StatelessWidget {
+class _JournalInfoHeader extends ConsumerWidget {
   final Journal journal;
 
   const _JournalInfoHeader({required this.journal});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detailAsync = ref.watch(journalDetailProvider(journal.id));
+    final detail = detailAsync.value ?? journal;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppDimensions.base),
@@ -460,64 +463,138 @@ class _JournalInfoHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      journal.displayName,
+                      detail.displayName,
                       style: AppTextStyles.titleMedium.copyWith(
                         color: AppColors.onSurface,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    if (journal.publisher != null) ...[
+                    if (detail.publisher != null) ...[
                       const SizedBox(height: AppDimensions.xs),
                       Text(
-                        journal.publisher!,
+                        detail.publisher!,
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.onSurfaceVariant,
                         ),
                       ),
                     ],
-                    if (journal.type != null) ...[
-                      const SizedBox(height: AppDimensions.xs),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.sm,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondaryContainer,
-                          borderRadius: BorderRadius.circular(
-                            AppDimensions.shapeXs,
+                    const SizedBox(height: AppDimensions.xs),
+                    Wrap(
+                      spacing: AppDimensions.xs,
+                      runSpacing: AppDimensions.xs,
+                      children: [
+                        if (detail.type != null) _TagChip(label: detail.type!),
+                        if (detail.countryCode != null)
+                          _TagChip(label: detail.countryCode!),
+                        if (detail.isOa == true)
+                          _TagChip(
+                            label: 'Open Access',
+                            color: AppColors.metricGreen,
                           ),
-                        ),
-                        child: Text(
-                          journal.type!,
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.onSecondaryContainer,
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: AppDimensions.md),
-          Row(
+          Wrap(
+            spacing: AppDimensions.md,
+            runSpacing: AppDimensions.sm,
             children: [
               _InfoChip(
                 icon: Icons.article_outlined,
                 label:
-                    '${Formatter.formatCitationCount(journal.worksCount)} works',
+                    '${Formatter.formatCitationCount(detail.worksCount)} works',
               ),
-              const SizedBox(width: AppDimensions.md),
               _InfoChip(
                 icon: Icons.format_quote,
                 label:
-                    '${Formatter.formatCitationCount(journal.citedByCount)} citations',
+                    '${Formatter.formatCitationCount(detail.citedByCount)} citations',
               ),
+              if (detail.hIndex != null)
+                _InfoChip(
+                  icon: Icons.leaderboard_outlined,
+                  label: 'h-index: ${detail.hIndex}',
+                ),
+              if (detail.meanCitedness != null)
+                _InfoChip(
+                  icon: Icons.trending_up,
+                  label:
+                      '2yr cite: ${detail.meanCitedness!.toStringAsFixed(1)}',
+                ),
+              if (detail.firstPublicationYear != null)
+                _InfoChip(
+                  icon: Icons.calendar_today,
+                  label: 'Since ${detail.firstPublicationYear}',
+                ),
+              if (detail.issn != null)
+                _InfoChip(icon: Icons.tag, label: 'ISSN: ${detail.issn}'),
             ],
           ),
+          if (detail.topTopics.isNotEmpty) ...[
+            const SizedBox(height: AppDimensions.md),
+            Text(
+              'Top Topics',
+              style: AppTextStyles.labelMedium.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppDimensions.xs),
+            Wrap(
+              spacing: AppDimensions.xs,
+              runSpacing: AppDimensions.xs,
+              children: detail.topTopics.take(3).map((t) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.sm,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondaryContainer,
+                    borderRadius: BorderRadius.circular(AppDimensions.shapeXs),
+                  ),
+                  child: Text(
+                    t.displayName,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.onSecondaryContainer,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  final String label;
+  final Color? color;
+  const _TagChip({required this.label, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.sm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: (color ?? AppColors.primaryContainer).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppDimensions.shapeXs),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.labelSmall.copyWith(
+          color: color ?? AppColors.onSecondaryContainer,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
